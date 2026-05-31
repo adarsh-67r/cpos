@@ -2,7 +2,7 @@
 name = "cpos"
 version = "0.1.0"
 edition = "2024"
-description = "Competitive Programming Operating System — a TUI command center for Codeforces, CSES, and AtCoder"
+description = "Competitive Programming Operating System — terminal app, VS Code extension, and browser companion for Codeforces and CSES"
 license = "MIT"
 repository = "https://github.com/Soham109/cpos"
 keywords = ["competitive-programming", "codeforces", "cses", "tui", "cli"]
