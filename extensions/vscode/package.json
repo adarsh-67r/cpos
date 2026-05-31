@@ -1,0 +1,192 @@
+{
+  "name": "cpos-vscode",
+  "displayName": "CPOS",
+  "description": "Capture Codeforces & CSES problems, run sample tests, and submit — all from VS Code.",
+  "version": "0.3.6",
+  "publisher": "sohamaggarwal",
+  "license": "MIT",
+  "icon": "media/icon128.png",
+  "galleryBanner": {
+    "color": "#0d0d14",
+    "theme": "dark"
+  },
+  "homepage": "https://github.com/Soham109/cpos",
+  "bugs": {
+    "url": "https://github.com/Soham109/cpos/issues"
+  },
+  "keywords": [
+    "competitive programming",
+    "codeforces",
+    "cses",
+    "cpc",
+    "contests",
+    "algorithm"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Soham109/cpos.git",
+    "directory": "extensions/vscode"
+  },
+  "engines": {
+    "vscode": "^1.90.0"
+  },
+  "categories": [
+    "Education",
+    "Programming Languages"
+  ],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "cpos.startCaptureServer",
+        "title": "CPOS: Start Capture Server"
+      },
+      {
+        "command": "cpos.stopCaptureServer",
+        "title": "CPOS: Stop Capture Server"
+      },
+      {
+        "command": "cpos.runSamples",
+        "title": "CPOS: Run Samples"
+      },
+      {
+        "command": "cpos.submitActiveFile",
+        "title": "CPOS: Submit Active File"
+      },
+      {
+        "command": "cpos.openProblem",
+        "title": "CPOS: Open Problem in Browser"
+      }
+    ],
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "cpos",
+          "title": "CPOS",
+          "icon": "media/cpos.svg"
+        }
+      ]
+    },
+    "views": {
+      "cpos": [
+        {
+          "id": "cpos.actions",
+          "name": "Actions",
+          "type": "webview"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "CPOS",
+      "properties": {
+        "cpos.capturePort": {
+          "type": "number",
+          "default": 27122,
+          "description": "Local port used by the VS Code capture server."
+        },
+        "cpos.saveLocation": {
+          "type": "string",
+          "default": "workspaceFolder",
+          "enum": [
+            "workspaceFolder",
+            "fixed"
+          ],
+          "enumDescriptions": [
+            "Create captured files inside the folder you currently have open.",
+            "Always create captured files inside the fixed folder below."
+          ],
+          "description": "Where captured solution files are created."
+        },
+        "cpos.fixedDir": {
+          "type": "string",
+          "default": "~/cpos",
+          "description": "Folder used when Save Location is 'fixed', or when no folder is open."
+        },
+        "cpos.subfolderPerPlatform": {
+          "type": "boolean",
+          "default": false,
+          "description": "Group captured files into codeforces/ and cses/ subfolders. Off by default so files drop straight into your project."
+        },
+        "cpos.defaultLanguage": {
+          "type": "string",
+          "default": "cpp",
+          "enum": [
+            "c",
+            "cpp",
+            "python",
+            "pypy",
+            "java",
+            "kotlin",
+            "rust",
+            "go",
+            "csharp",
+            "javascript",
+            "ruby",
+            "haskell",
+            "pascal"
+          ],
+          "description": "Default language for newly captured solutions. If unset, inherits from your CPOS app config."
+        },
+        "cpos.templateFile": {
+          "type": "string",
+          "default": "",
+          "description": "Optional template file used when creating new solutions. If unset, inherits the template from your CPOS app config."
+        },
+        "cpos.autoStartCaptureServer": {
+          "type": "boolean",
+          "default": true,
+          "description": "Start the browser capture server when VS Code starts."
+        },
+        "cpos.openOnCapture": {
+          "type": "boolean",
+          "default": true,
+          "description": "Open the solution file after a browser capture."
+        },
+        "cpos.saveSamplesNextToSolution": {
+          "type": "boolean",
+          "default": false,
+          "description": "Also save samples as <solution>.samples.json next to the solution file."
+        },
+        "cpos.runTimeoutMs": {
+          "type": "number",
+          "default": 5000,
+          "description": "Timeout for each sample run."
+        },
+        "cpos.compileCommands": {
+          "type": "object",
+          "default": {},
+          "description": "Language overrides. Each key maps to { compile, run, extension } with {source}, {output}, and {dir} placeholders. If unset, inherits compile commands from your CPOS app config."
+        }
+      }
+    },
+    "menus": {
+      "editor/title": [
+        {
+          "command": "cpos.runSamples",
+          "group": "navigation",
+          "when": "resourceLangId =~ /^(c|cpp|python|java|rust|go|javascript|typescript|ruby|haskell|pascal|csharp)$/"
+        },
+        {
+          "command": "cpos.submitActiveFile",
+          "group": "navigation",
+          "when": "resourceLangId =~ /^(c|cpp|python|java|rust|go|javascript|typescript|ruby|haskell|pascal|csharp)$/"
+        }
+      ]
+    }
+  },
+  "scripts": {
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "package": "vsce package",
+    "publish": "vsce publish"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.0",
+    "@types/vscode": "^1.90.0",
+    "@vscode/vsce": "^3.0.0",
+    "typescript": "^5.4.0"
+  }
+}
