@@ -106,9 +106,11 @@ Change the save location anytime in **Settings → Extensions → CPOS** (`cpos.
 
 ## Install
 
+Install both extensions from their stores — no manual download or repo clone needed.
+
 | What | Where |
 | --- | --- |
-| Browser companion | [Chrome Web Store](https://chromewebstore.google.com/detail/gjnbapmjonegeeamdeahcoojgokeogmm) (also works in Edge/Brave) |
+| Browser companion | [Chrome Web Store](https://chromewebstore.google.com/detail/gjnbapmjonegeeamdeahcoojgokeogmm) (Chrome, Edge, Brave) |
 | VS Code extension | [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=sohamaggarwal.cpos-vscode) |
 | Terminal app | `cargo install --git https://github.com/Soham109/cpos` |
 
@@ -126,7 +128,7 @@ That pulls the latest version and reinstalls — whether you originally used `ca
 
 **VS Code extension** — updates automatically from the Marketplace if **Extensions: Auto Update** is on. Otherwise open **Extensions → CPOS → Update**.
 
-**Browser companion** — updates automatically from the Chrome Web Store. If you loaded it unpacked, open `chrome://extensions` and click **Reload** after pulling the repo.
+**Browser companion** — updates automatically from the Chrome Web Store.
 
 <p align="center">
   <img src="docs/problems.png" alt="Problems" width="410">

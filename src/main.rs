@@ -1038,10 +1038,21 @@ fn generate_setup_html(port: u16, ext_dir: &std::path::Path, bookmarklet: &str) 
       }});
   </script>
 
-  <h2>Option A: Chrome / Edge / Brave Extension (recommended)</h2>
+  <h2>Install the browser companion</h2>
   <div class="section">
-    <p><strong>Published extension:</strong> install CPOS Companion from the Chrome Web Store once it is listed.</p>
-    <p><strong>Local development build:</strong></p>
+    <p>Install <strong>CPOS Companion</strong> from the
+       <a href="https://chromewebstore.google.com/detail/gjnbapmjonegeeamdeahcoojgokeogmm" target="_blank" rel="noopener">Chrome Web Store</a>
+       (works in Chrome, Edge, and Brave).</p>
+    <p>Pair it with the
+       <a href="https://marketplace.visualstudio.com/items?itemName=sohamaggarwal.cpos-vscode" target="_blank" rel="noopener">CPOS VS Code extension</a>
+       from the Marketplace, or run the CPOS terminal app (<code>cpos</code>).</p>
+    <p>Done! The extension auto-captures every Codeforces/CSES problem you open.
+       It also syncs your CSES solved status when you visit the problemset list page.</p>
+  </div>
+
+  <h2>Contributors: local extension build</h2>
+  <div class="section">
+    <p>Only needed if you are developing the extension from source:</p>
     <ol>
       <li>Open <code>chrome://extensions</code> (or <code>edge://extensions</code> / <code>brave://extensions</code>)</li>
       <li>Enable <strong>Developer mode</strong> (toggle in the top-right)</li>
@@ -1049,11 +1060,9 @@ fn generate_setup_html(port: u16, ext_dir: &std::path::Path, bookmarklet: &str) 
       <li>Select this folder:</li>
     </ol>
     <code class="path">{ext_path}</code>
-    <p>Done! The extension auto-captures every Codeforces/CSES problem you open.
-       It also syncs your CSES solved status when you visit the problemset list page.</p>
   </div>
 
-  <h2>Option B: Bookmarklet (Safari / Firefox / any browser)</h2>
+  <h2>Bookmarklet (Safari / Firefox / any browser)</h2>
   <div class="section">
     <p>Drag this link to your bookmarks bar, then click it on any CF/CSES problem page:</p>
     <a class="bookmarklet" href="{bookmarklet_escaped}">CPOS Capture</a>

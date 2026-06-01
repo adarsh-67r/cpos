@@ -51,11 +51,9 @@ Open the `extensions/vscode` folder in VS Code/Cursor and press **F5** to launch
 
 ### Browser companion
 
-1. Go to `chrome://extensions`
-2. Enable **Developer mode**
-3. **Load unpacked** → select `extensions/chrome`
+Install **[CPOS Companion](https://chromewebstore.google.com/detail/gjnbapmjonegeeamdeahcoojgokeogmm)** from the Chrome Web Store (Chrome, Edge, Brave).
 
-See [`extensions/chrome/README.md`](extensions/chrome/README.md) for store packaging.
+To work on the extension locally, load unpacked from `extensions/chrome` — see [`extensions/chrome/README.md`](extensions/chrome/README.md) and the publish script there.
 
 ### Landing page
 

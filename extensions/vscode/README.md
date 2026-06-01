@@ -10,7 +10,7 @@ Panel layout inspired by [CPH (Competitive Programming Helper)](https://marketpl
 
 ## How it works
 
-1. Install this extension and the [CPOS Companion](https://chromewebstore.google.com/detail/gjnbapmjonegeeamdeahcoojgokeogmm) browser extension
+1. Install from the **[VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=sohamaggarwal.cpos-vscode)** and the **[Chrome Web Store companion](https://chromewebstore.google.com/detail/gjnbapmjonegeeamdeahcoojgokeogmm)**
 2. **Open the folder** where you want your solution files — any folder you like
 3. Open a Codeforces or CSES problem in your browser
 4. CPOS automatically creates the file (e.g. `1971D.cpp`) with samples attached and opens it in VS Code
@@ -47,7 +47,7 @@ Click **◑ theme** in the panel header to change how the panel looks. Your choi
 
 By default, files are created in **whatever folder you currently have open** in VS Code.
 
-Submit opens the judge in your browser; the [CPOS browser companion](https://chromewebstore.google.com/detail/gjnbapmjonegeeamdeahcoojgokeogmm) fills the form and clicks Submit (reload the unpacked extension from this repo once if Codeforces autofill fails).
+Submit opens the judge in your browser; the [CPOS browser companion](https://chromewebstore.google.com/detail/gjnbapmjonegeeamdeahcoojgokeogmm) fills the form and clicks Submit.
 
 ## Links
 
