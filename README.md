@@ -194,3 +194,13 @@ codeforces = "your_handle"
 ## License
 
 MIT — see [LICENSE](LICENSE).
+
+---
+
+## Open source
+
+CPOS is fully open source. You're free to use it, fork it, and build on it.
+
+Contributions are welcome and appreciated — whether that's a bug report, a doc fix, a new platform, or a polish pass on the TUI. If you want to help, read **[CONTRIBUTING.md](CONTRIBUTING.md)** for project layout, dev setup, and PR guidelines.
+
+Questions or ideas: [GitHub Issues](https://github.com/Soham109/cpos/issues).
