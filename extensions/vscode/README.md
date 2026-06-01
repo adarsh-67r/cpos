@@ -4,6 +4,10 @@
 
 Open a problem in your browser. CPOS creates your solution file in the folder you have open, loads the sample tests, and gives you a side panel to run and submit.
 
+Panel layout inspired by [CPH (Competitive Programming Helper)](https://marketplace.visualstudio.com/items?itemName=DivyanshuRaj.competitive-programming-helper).
+
+![CPOS VS Code panel with test cases and a Codeforces solution](media/vscode-panel-ui.png)
+
 ## How it works
 
 1. Install this extension and the [CPOS Companion](https://chromewebstore.google.com/detail/gjnbapmjonegeeamdeahcoojgokeogmm) browser extension

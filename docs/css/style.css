@@ -210,6 +210,11 @@ kbd {
   max-width: 560px;
 }
 
+.headline-block h1 .h1-second {
+  display: block;
+  margin-top: 0.08em;
+}
+
 .sub {
   font-size: 1.02rem;
   color: var(--muted);
@@ -475,6 +480,28 @@ kbd {
   color: var(--text);
 }
 
+.eco-credit {
+  margin-top: 14px;
+  font-size: 0.8rem;
+  color: var(--dim);
+  line-height: 1.5;
+}
+
+.eco-credit a {
+  color: var(--muted);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  text-decoration-color: var(--line-hover);
+}
+
+.eco-credit a:hover {
+  color: var(--text);
+}
+
+.eco-shot-vscode img {
+  object-fit: contain;
+}
+
 /* ── Install ── */
 
 .install-block {
@@ -684,19 +711,71 @@ kbd {
   .headline-split { grid-template-columns: 1fr; gap: 28px; }
   .stat-strip { justify-content: flex-start; }
   .stat-strip div { text-align: left; }
+  .headline-block h1 { max-width: 100%; }
+  .sub { max-width: 100%; }
   .steps { grid-template-columns: repeat(2, 1fr); gap: 24px; }
   .steps li { border-right: none; padding: 0 !important; }
   .eco-card-top { grid-template-columns: 1fr; gap: 28px; }
   .eco-row,
   .eco-row-flip { grid-template-columns: 1fr; gap: 28px; padding: 36px 0; }
   .eco-row-flip .eco-shot { order: -1; }
+  .eco-row-flip.eco-row-vscode .eco-row-copy { order: 1; }
 }
 
 @media (max-width: 640px) {
   .wrap, .top { padding-left: 20px; padding-right: 20px; }
+  .top nav { gap: 12px; }
+  .nav-link { font-size: 0.82rem; }
+  .nav-cta { padding: 7px 14px; font-size: 0.82rem; }
+  .showcase { padding-bottom: 48px; }
+  .below { padding: 48px 0 40px; }
+  .headline-block h1 {
+    font-size: clamp(1.45rem, 6.8vw, 1.75rem);
+    line-height: 1.22;
+    max-width: 100%;
+  }
+  .headline-block h1 .h1-second {
+    margin-top: 0.12em;
+  }
+  .sub {
+    font-size: 0.94rem;
+    line-height: 1.65;
+    max-width: 100%;
+  }
+  .stat-strip {
+    flex-wrap: wrap;
+    gap: 18px 24px;
+    padding-bottom: 0;
+  }
+  .stat-strip dt { font-size: 1.65rem; }
+  .tab-caption {
+    font-size: 0.82rem;
+    line-height: 1.55;
+    margin-bottom: 12px;
+  }
+  .tabs { margin-bottom: 10px; }
+  .tab { padding: 9px 12px; font-size: 0.8rem; }
+  .frame .panel.loading { min-height: 200px; }
   .steps { grid-template-columns: 1fr; }
   .feat-grid { grid-template-columns: 1fr; }
   .eco-card-top { padding: 24px 20px 20px; }
+  .eco-head { margin-bottom: 32px; }
+  .eco-row,
+  .eco-row-flip {
+    gap: 24px;
+    padding: 28px 0;
+  }
+  .eco-row-copy h3 { font-size: 1.12rem; }
+  .eco-row-copy p,
+  .eco-bullets li {
+    font-size: 0.84rem;
+    line-height: 1.65;
+  }
+  .eco-bullets {
+    margin-top: 16px;
+    gap: 10px;
+  }
+  .eco-credit { font-size: 0.76rem; }
   .shortcut-bar { padding: 14px 20px; gap: 8px 14px; }
   .install-body { padding: 20px; }
   .foot-inner { flex-direction: column; align-items: flex-start; }

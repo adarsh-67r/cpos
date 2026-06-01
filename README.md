@@ -46,6 +46,12 @@ Both paths capture problems, run tests, and submit. Use whichever you prefer.
 
 Good if you like solving in an editor with a side panel and buttons.
 
+<p align="center">
+  <img src="docs/img/vscode-panel-ui.png" alt="CPOS VS Code panel with test cases, Run All, Submit, and a Codeforces solution open" width="900">
+</p>
+
+<p align="center"><sub>Panel layout inspired by <a href="https://marketplace.visualstudio.com/items?itemName=DivyanshuRaj.competitive-programming-helper">CPH</a> (Competitive Programming Helper).</sub></p>
+
 1. Install the [VS Code extension](https://marketplace.visualstudio.com/items?itemName=sohamaggarwal.cpos-vscode) and the [browser companion](https://chromewebstore.google.com/detail/gjnbapmjonegeeamdeahcoojgokeogmm).
 2. Open the **folder** you want your files in.
 3. Open a problem in your browser → the solution file opens in VS Code with samples loaded.
