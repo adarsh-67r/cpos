@@ -2,7 +2,7 @@
 
 Thanks for taking the time to contribute. CPOS is open source (MIT) — bug reports, ideas, docs fixes, and code are all welcome.
 
-Please read our [Code of Conduct](CODE_OF_CONDUCT.md). For security issues, see [SECURITY.md](SECURITY.md) — do not open public issues for vulnerabilities.
+For security issues, see [SECURITY.md](SECURITY.md) — do not open public issues for vulnerabilities.
 
 For how the pieces fit together, see [ARCHITECTURE.md](ARCHITECTURE.md). Release history is in [CHANGELOG.md](CHANGELOG.md).
 

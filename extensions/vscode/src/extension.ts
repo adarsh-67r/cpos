@@ -1187,26 +1187,110 @@ class CposActionsProvider implements vscode.WebviewViewProvider {
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <style>
   :root {
-    --bg: #0d0d14;
-    --fg: #d6d6e0;
-    --dim: #6c6c84;
-    --border: #3a3a52;
-    --accent: #b48eff;
-    --accent-dim: #7c5cbf;
-    --highlight: #262040;
-    --ok: #7ee787;
-    --bad: #f7768e;
-    --warn: #e3b341;
     --mono: var(--vscode-editor-font-family, ui-monospace, "SF Mono", Menlo, Consolas, monospace);
+    --radius: 6px;
+    --pad: 12px;
+    --fontsize: 12px;
   }
+
+  /* ── Theme: CPOS (signature purple) ───────────────────────── */
+  body[data-theme="cpos"] {
+    --bg: #0c0c13;
+    --panel: #14141f;
+    --input-bg: #0a0a11;
+    --fg: #e7e7f2;
+    --dim: #8d8da6;
+    --border: #2c2c40;
+    --border-soft: #20202e;
+    --accent: #b794ff;
+    --accent-dim: #7c5cbf;
+    --highlight: #221c3a;
+    --ok: #7ee787;
+    --bad: #ff7a93;
+    --warn: #f0c060;
+    --cf: #79b8ff;
+  }
+
+  /* ── Theme: Midnight (calm slate-blue) ────────────────────── */
+  body[data-theme="midnight"] {
+    --bg: #0d1117;
+    --panel: #161b22;
+    --input-bg: #0a0e14;
+    --fg: #e6edf3;
+    --dim: #8b98a8;
+    --border: #2a313c;
+    --border-soft: #1d242e;
+    --accent: #6cb6ff;
+    --accent-dim: #3b6ea5;
+    --highlight: #16263d;
+    --ok: #6fd58a;
+    --bad: #ff7a93;
+    --warn: #e3b341;
+    --cf: #79b8ff;
+  }
+
+  /* ── Theme: Amber (warm terminal) ─────────────────────────── */
+  body[data-theme="amber"] {
+    --bg: #14110a;
+    --panel: #1d1810;
+    --input-bg: #100d07;
+    --fg: #f0e6d2;
+    --dim: #a89878;
+    --border: #3a3220;
+    --border-soft: #2a2418;
+    --accent: #f0b860;
+    --accent-dim: #aa7c30;
+    --highlight: #2e2510;
+    --ok: #b8c46a;
+    --bad: #e88a6a;
+    --warn: #f0c060;
+    --cf: #d8b87a;
+  }
+
+  /* ── Theme: Paper (high-contrast grayscale) ───────────────── */
+  body[data-theme="paper"] {
+    --bg: #101010;
+    --panel: #191919;
+    --input-bg: #0b0b0b;
+    --fg: #f0f0f0;
+    --dim: #9a9a9a;
+    --border: #3a3a3a;
+    --border-soft: #2a2a2a;
+    --accent: #e0e0e0;
+    --accent-dim: #8a8a8a;
+    --highlight: #262626;
+    --ok: #c8d4c8;
+    --bad: #d6b0b0;
+    --warn: #d4c89c;
+    --cf: #c4c4c4;
+  }
+
+  /* ── Theme: Native (matches your VS Code color theme) ─────── */
+  body[data-theme="native"] {
+    --bg: var(--vscode-sideBar-background);
+    --panel: var(--vscode-editorWidget-background, var(--vscode-sideBar-background));
+    --input-bg: var(--vscode-input-background, var(--vscode-editor-background));
+    --fg: var(--vscode-sideBar-foreground, var(--vscode-foreground));
+    --dim: var(--vscode-descriptionForeground, #888);
+    --border: var(--vscode-panel-border, var(--vscode-editorWidget-border, #3a3a3a));
+    --border-soft: var(--vscode-panel-border, #2a2a2a);
+    --accent: var(--vscode-textLink-foreground, #4daafc);
+    --accent-dim: var(--vscode-textLink-activeForeground, var(--vscode-textLink-foreground, #3b6ea5));
+    --highlight: var(--vscode-list-hoverBackground, rgba(255,255,255,0.06));
+    --ok: var(--vscode-testing-iconPassed, var(--vscode-charts-green, #4caf50));
+    --bad: var(--vscode-testing-iconFailed, var(--vscode-errorForeground, #f14c4c));
+    --warn: var(--vscode-charts-yellow, #e3b341);
+    --cf: var(--vscode-charts-blue, #4daafc);
+  }
+
   * { box-sizing: border-box; }
   body {
     margin: 0;
-    padding: 12px 10px;
+    padding: var(--pad) 10px;
     color: var(--fg);
     background: var(--bg);
     font-family: var(--mono);
-    font-size: 12px;
+    font-size: var(--fontsize);
     line-height: 1.5;
   }
   .link { color: var(--accent); cursor: pointer; }
@@ -1215,18 +1299,65 @@ class CposActionsProvider implements vscode.WebviewViewProvider {
 
   .box {
     border: 1px solid var(--border);
-    border-radius: 4px;
-    background: var(--bg);
+    border-radius: var(--radius);
+    background: var(--panel);
   }
 
-  .head { padding: 10px 11px; margin-bottom: 10px; }
+  .head { padding: 11px 12px; margin-bottom: 10px; }
   .head .row { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
-  .title { font-weight: 700; font-size: 13px; color: var(--accent); letter-spacing: 0.04em; }
+  .brandrow { display: flex; align-items: center; gap: 7px; }
+  .logo {
+    width: 16px; height: 16px; border-radius: 4px; flex-shrink: 0;
+    background: linear-gradient(135deg, var(--accent), var(--accent-dim));
+    display: inline-block;
+  }
+  .title { font-weight: 700; font-size: 13px; color: var(--fg); letter-spacing: 0.08em; }
   .status { display: inline-flex; align-items: center; gap: 5px; font-size: 10px; color: var(--dim); }
   .dot { width: 6px; height: 6px; border-radius: 50%; display: inline-block; flex-shrink: 0; }
   .dot.on { background: var(--ok); }
   .dot.off { background: var(--warn); }
-  .rule { height: 1px; background: var(--border); margin: 9px 0; }
+  .rule { height: 1px; background: var(--border-soft); margin: 9px 0; }
+
+  /* theme switcher */
+  .iconbtn {
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--dim);
+    border-radius: 5px;
+    padding: 3px 7px;
+    font-size: 11px;
+    cursor: pointer;
+    line-height: 1;
+  }
+  .iconbtn:hover { color: var(--accent); border-color: var(--accent-dim); }
+  .themebar {
+    display: none;
+    gap: 7px;
+    flex-wrap: wrap;
+    padding: 9px 12px;
+    margin-bottom: 10px;
+  }
+  .themebar.open { display: flex; }
+  .swatch {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    cursor: pointer;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 6px 8px;
+    background: transparent;
+    color: var(--dim);
+    font-size: 9px;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    min-width: 52px;
+  }
+  .swatch:hover { border-color: var(--accent-dim); color: var(--fg); }
+  .swatch.active { border-color: var(--accent); color: var(--accent); }
+  .swatch .chips { display: flex; gap: 3px; }
+  .swatch .chip { width: 12px; height: 12px; border-radius: 3px; }
 
   .pline { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; margin-top: 2px; }
   .tag {
@@ -1237,11 +1368,11 @@ class CposActionsProvider implements vscode.WebviewViewProvider {
     color: var(--dim);
     letter-spacing: 0.06em;
   }
-  .tag.codeforces { color: #6cb6ff; border-color: #3a4a62; }
-  .tag.cses { color: var(--ok); border-color: #2a4a32; }
+  .tag.codeforces { color: var(--cf); border-color: var(--border); }
+  .tag.cses { color: var(--ok); border-color: var(--border); }
   .pid { font-weight: 700; font-size: 14px; color: var(--fg); }
   .rating { color: var(--warn); font-size: 11px; }
-  .pname { color: var(--dim); font-size: 11px; margin-top: 3px; }
+  .pname { color: var(--fg); opacity: 0.82; font-size: 11px; margin-top: 3px; }
   .fileline { margin-top: 7px; font-size: 10px; color: var(--dim); }
 
   .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-bottom: 10px; }
@@ -1304,30 +1435,31 @@ class CposActionsProvider implements vscode.WebviewViewProvider {
     color: var(--dim);
   }
 
-  .test { margin-bottom: 6px; }
-  .test.pass { border-color: #2a4a32; }
-  .test.fail { border-color: #4a2a32; }
+  .test { margin-bottom: 6px; overflow: hidden; }
+  .test.pass { border-color: color-mix(in srgb, var(--ok) 45%, var(--border)); }
+  .test.fail { border-color: color-mix(in srgb, var(--bad) 45%, var(--border)); }
   .test-head {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 5px 8px;
-    border-bottom: 1px solid var(--border);
+    padding: 6px 9px;
+    border-bottom: 1px solid var(--border-soft);
     background: var(--highlight);
   }
   .test-title { display: flex; align-items: center; gap: 8px; font-size: 11px; }
-  .test-title .idx { color: var(--accent); font-weight: 700; }
+  .test-title .idx { color: var(--fg); font-weight: 700; }
   .verdict {
     font-size: 9px;
     font-weight: 700;
-    padding: 1px 5px;
+    padding: 1px 6px;
+    border-radius: 3px;
     border: 1px solid var(--border);
     letter-spacing: 0.04em;
     color: var(--dim);
   }
-  .verdict.AC { color: var(--ok); border-color: #2a4a32; }
-  .verdict.WA, .verdict.CE { color: var(--bad); border-color: #4a2a32; }
-  .verdict.TLE, .verdict.RE { color: var(--warn); border-color: #4a3a22; }
+  .verdict.AC { color: var(--ok); border-color: color-mix(in srgb, var(--ok) 50%, var(--border)); }
+  .verdict.WA, .verdict.CE { color: var(--bad); border-color: color-mix(in srgb, var(--bad) 50%, var(--border)); }
+  .verdict.TLE, .verdict.RE { color: var(--warn); border-color: color-mix(in srgb, var(--warn) 50%, var(--border)); }
   .verdict.run { color: var(--accent); border-color: var(--accent-dim); }
   .test-body { padding: 8px; display: flex; flex-direction: column; gap: 7px; }
   .io-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; }
@@ -1345,9 +1477,9 @@ class CposActionsProvider implements vscode.WebviewViewProvider {
     font-family: var(--mono);
     font-size: 11px;
     padding: 6px 7px;
-    border-radius: 3px;
-    border: 1px solid var(--border);
-    background: #0a0a10;
+    border-radius: 4px;
+    border: 1px solid var(--border-soft);
+    background: var(--input-bg);
     color: var(--fg);
     line-height: 1.4;
     overflow-y: auto;
@@ -1358,13 +1490,13 @@ class CposActionsProvider implements vscode.WebviewViewProvider {
     font-family: var(--mono);
     font-size: 11px;
     padding: 6px 7px;
-    border-radius: 3px;
-    background: #0a0a10;
-    border: 1px solid var(--border);
+    border-radius: 4px;
+    background: var(--input-bg);
+    border: 1px solid var(--border-soft);
     max-height: 120px;
     overflow-y: auto;
   }
-  .got.fail { border-color: #4a2a32; color: var(--bad); }
+  .got.fail { border-color: color-mix(in srgb, var(--bad) 45%, var(--border)); color: var(--bad); }
   .test-actions { display: flex; gap: 4px; }
   .time { font-size: 10px; color: var(--ok); }
   .empty {
@@ -1382,6 +1514,10 @@ class CposActionsProvider implements vscode.WebviewViewProvider {
   const vscode = acquireVsCodeApi();
   let state = { tests: [], results: [], source: null };
   let renderedSource = undefined;
+  const saved = vscode.getState() || {};
+  let theme = saved.theme || 'cpos';
+  let themesOpen = false;
+  document.body.setAttribute('data-theme', theme);
 
   function send(type, extra) { vscode.postMessage(Object.assign({ type }, extra || {})); }
 
@@ -1461,11 +1597,42 @@ class CposActionsProvider implements vscode.WebviewViewProvider {
       : '<span class="muted">no file open</span>';
     const tests = state.tests.length + ' test' + (state.tests.length === 1 ? '' : 's');
     return '<div class="box head header">'
-      + '<div class="row"><span class="title">CPOS</span>' + status + '</div>'
+      + '<div class="row">'
+      + '<span class="brandrow"><span class="logo"></span><span class="title">CPOS</span></span>'
+      + '<span class="brandrow">' + status
+      + '<button class="iconbtn" data-act="toggleThemes" title="Themes">◑ theme</button></span>'
+      + '</div>'
       + '<div class="rule"></div>'
       + problemBlock
       + '<div class="fileline">' + file + ' · ' + tests + '</div>'
-      + '</div>';
+      + '</div>'
+      + themebar();
+  }
+
+  const THEMES = [
+    { id: 'cpos',     name: 'CPOS',     chips: ['#0c0c13', '#b794ff', '#7ee787'] },
+    { id: 'midnight', name: 'Midnight', chips: ['#0d1117', '#6cb6ff', '#6fd58a'] },
+    { id: 'amber',    name: 'Amber',    chips: ['#14110a', '#f0b860', '#b8c46a'] },
+    { id: 'paper',    name: 'Paper',    chips: ['#101010', '#e0e0e0', '#9a9a9a'] },
+    { id: 'native',   name: 'Native',   chips: ['#222', '#4daafc', '#4caf50'] }
+  ];
+
+  function themebar() {
+    const cells = THEMES.map(function (t) {
+      const chips = t.chips.map(function (c) {
+        return '<span class="chip" style="background:' + c + '"></span>';
+      }).join('');
+      const cls = t.id === theme ? 'swatch active' : 'swatch';
+      return '<button class="' + cls + '" data-act="setTheme" data-theme="' + t.id + '">'
+        + '<span class="chips">' + chips + '</span>' + t.name + '</button>';
+    }).join('');
+    return '<div class="box themebar' + (themesOpen ? ' open' : '') + '">' + cells + '</div>';
+  }
+
+  function applyTheme(id) {
+    theme = id;
+    document.body.setAttribute('data-theme', id);
+    vscode.setState(Object.assign({}, vscode.getState(), { theme: id }));
   }
 
   function statbar() {
@@ -1573,6 +1740,19 @@ class CposActionsProvider implements vscode.WebviewViewProvider {
       el.onclick = () => {
         const act = el.getAttribute("data-act");
         const idx = el.getAttribute("data-index");
+        if (act === "toggleThemes") {
+          themesOpen = !themesOpen;
+          const bar = document.querySelector(".themebar");
+          if (bar) bar.classList.toggle("open", themesOpen);
+          return;
+        }
+        if (act === "setTheme") {
+          applyTheme(el.getAttribute("data-theme"));
+          document.querySelectorAll(".swatch").forEach((s) => {
+            s.classList.toggle("active", s.getAttribute("data-theme") === theme);
+          });
+          return;
+        }
         if (act === "addTest") {
           syncStateFromDom();
           state.tests.push({ input: "", expected_output: "" });

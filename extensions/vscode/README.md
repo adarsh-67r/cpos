@@ -25,6 +25,18 @@ Click the **CPOS** icon in the left activity bar:
 
 This is the click-based workflow. Prefer keyboard commands and a full progress dashboard? Install the [CPOS terminal app](https://github.com/Soham109/cpos) — both work for capture and submit, and they sync over localhost.
 
+## Themes
+
+Click **◑ theme** in the panel header to change how the panel looks. Your choice is saved across reloads.
+
+| Theme | Look |
+| --- | --- |
+| **CPOS** | Signature purple — the default |
+| **Midnight** | Calm slate-blue |
+| **Amber** | Warm terminal / sepia |
+| **Paper** | High-contrast grayscale, minimal color |
+| **Native** | Inherits your active VS Code color theme — no custom background |
+
 ## Settings
 
 `Settings → Extensions → CPOS` — change save folder, language, template, compile commands, timeouts.

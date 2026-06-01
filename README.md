@@ -53,6 +53,7 @@ Good if you like solving in an editor with a side panel and buttons.
    - **Run All** — compile and test every sample
    - **Submit** — autofill the judge submit page
    - **Problem** — jump back to the statement
+   - **◑ theme** — switch the panel's look (5 themes, see below)
 
 You click buttons. Samples show pass/fail inline in the panel.
 
@@ -106,6 +107,58 @@ Change the save location anytime in **Settings → Extensions → CPOS** (`cpos.
 | Terminal app | `cargo install --git https://github.com/Soham109/cpos` |
 
 Minimum setup: **browser companion + one of VS Code or terminal**. All three together is the full experience.
+
+## Updating
+
+CPOS does **not** auto-update if you installed from git or a clone. Pull the latest code, then rebuild or reinstall the parts you use.
+
+### Terminal app
+
+**Installed with `cargo install --git` (no local clone):**
+
+```bash
+cargo install --git https://github.com/Soham109/cpos --force
+```
+
+**From a cloned repo:**
+
+```bash
+cd cpos
+git pull
+cargo install --path . --force
+```
+
+If you run from the build output instead of installing to `~/.cargo/bin`:
+
+```bash
+cd cpos
+git pull
+cargo build --release
+./target/release/cpos
+```
+
+### VS Code extension
+
+**From the Marketplace** — VS Code updates extensions automatically when **Extensions: Auto Update** is on (default). You can also open **Extensions**, find CPOS, and click **Update**.
+
+**From a clone or `.vsix` install** — pull the repo, rebuild, and reinstall:
+
+```bash
+cd cpos
+git pull
+cd extensions/vscode
+npm install
+npm run compile
+npx @vscode/vsce package
+```
+
+In VS Code: **Extensions → ⋯ → Install from VSIX…** and pick the new `cpos-vscode-*.vsix`. Reload the window after install.
+
+### Browser companion
+
+**From the Chrome Web Store** — updates automatically like other extensions.
+
+**Unpacked / developer load** — after `git pull`, open `chrome://extensions`, find CPOS Companion, and click **Reload**.
 
 <p align="center">
   <img src="docs/problems.png" alt="Problems" width="410">
@@ -168,6 +221,16 @@ Press **`r`** after solving more problems to refresh recommendations.
 | `cpos.defaultLanguage` | `cpp` | Language for new files |
 | `cpos.runTimeoutMs` | `5000` | Per-test timeout |
 
+**Panel themes** — click **◑ theme** in the CPOS panel header to switch the look. Your choice is remembered.
+
+| Theme | Look |
+| --- | --- |
+| `CPOS` | Signature purple — the default |
+| `Midnight` | Calm slate-blue |
+| `Amber` | Warm terminal / sepia |
+| `Paper` | High-contrast grayscale, minimal color |
+| `Native` | Inherits your active VS Code color theme — no custom background |
+
 **Terminal app** — `~/.config/cpos/config.toml` (Linux) or `~/Library/Application Support/cpos/config.toml` (macOS):
 
 ```toml
@@ -178,6 +241,8 @@ editor = "code {file}"
 [handles]
 codeforces = "your_handle"
 ```
+
+> `plain` is a neutral grayscale theme for a low-color terminal interface; `mono` is the single-accent minimal one.
 
 > **macOS C++:** run `brew install gcc` if you need `bits/stdc++.h` — CPOS auto-detects Homebrew's g++.
 
@@ -209,6 +274,5 @@ Contributions are welcome and appreciated — whether that's a bug report, a doc
 | [ARCHITECTURE.md](ARCHITECTURE.md) | How the components connect |
 | [CHANGELOG.md](CHANGELOG.md) | Version history |
 | [SECURITY.md](SECURITY.md) | Report vulnerabilities |
-| [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) | Community standards |
 
 Questions or ideas: [GitHub Issues](https://github.com/Soham109/cpos/issues).

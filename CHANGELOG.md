@@ -13,9 +13,10 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Added
-- Community docs: `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`, `SECURITY.md`, `ARCHITECTURE.md`
+- Community docs: `CONTRIBUTING.md`, `SECURITY.md`, `ARCHITECTURE.md`
 - GitHub Actions CI (`cargo test`, VS Code extension compile)
 - Issue and pull request templates
+- Terminal app: `plain` theme — neutral grayscale palette for a low-color interface
 
 ### Changed
 - Landing page redesign with optimized WebP screenshots and ecosystem section
@@ -30,6 +31,14 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Recommendation engine (30 unsolved problems targeting weak tags)
 - Localhost capture server on port `27121`
 - Sample test runner and browser submit autofill
+
+## VS Code extension — 0.3.8
+
+### Added
+- Panel themes: pick from **CPOS**, **Midnight**, **Amber**, **Paper**, and **Native** (matches your VS Code color theme) via the `◑ theme` button in the panel header — choice is remembered
+
+### Changed
+- Refreshed panel UI: higher text contrast, lifted surfaces, rounded cards, and a branded header — less generic, more in line with the CPOS look
 
 ## VS Code extension — 0.3.7
 
