@@ -4,6 +4,8 @@
 
 Open a problem in your browser. CPOS creates your solution file in the folder you have open, loads the sample tests, and gives you a side panel to run and submit.
 
+Part of the **CPOS ecosystem** — works alongside the [terminal app](https://github.com/Soham109/cpos) and [browser companion](https://chromewebstore.google.com/detail/gjnbapmjonegeeamdeahcoojgokeogmm). All three sync over localhost.
+
 Panel layout inspired by [CPH (Competitive Programming Helper)](https://marketplace.visualstudio.com/items?itemName=DivyanshuRaj.competitive-programming-helper).
 
 ![CPOS VS Code panel with test cases and a Codeforces solution](media/vscode-panel-ui.png)
@@ -27,7 +29,7 @@ Click the **CPOS** icon in the left activity bar:
 - **Problem** — open the statement again
 - Edit, add, or remove test cases — saved per file
 
-This is the click-based workflow. Prefer keyboard commands and a full progress dashboard? Install the [CPOS terminal app](https://github.com/Soham109/cpos) — both work for capture and submit, and they sync over localhost.
+This is the editor side of CPOS. Keep the **terminal app** running for browsing, recommendations, and analytics — captures and submits work through either one.
 
 ## Themes
 

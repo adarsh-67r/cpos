@@ -498,6 +498,21 @@ kbd {
   color: var(--text);
 }
 
+.eco-shot-terminal {
+  margin: 0 32px 28px;
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  background: #0a0a10;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.35);
+  line-height: 0;
+}
+
+.eco-shot-terminal img {
+  width: 100%;
+  height: auto;
+}
+
 .eco-shot-vscode img {
   object-fit: contain;
 }
@@ -782,6 +797,7 @@ kbd {
   .steps li { padding: 12px 14px; }
   .feat-grid { grid-template-columns: 1fr; }
   .eco-card-top { padding: 24px 20px 20px; }
+  .eco-shot-terminal { margin: 0 20px 20px; }
   .eco-head { margin-bottom: 32px; }
   .eco-row,
   .eco-row-flip {

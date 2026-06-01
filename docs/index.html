@@ -111,8 +111,8 @@
       <div class="wrap">
         <header class="eco-head">
           <p class="eyebrow">How it fits together</p>
-          <h2 class="eco-title">Three pieces. One workflow.</h2>
-          <p class="eco-lead">The terminal is where you live. The browser captures samples. VS Code is there if you want it.</p>
+          <h2 class="eco-title">Three pieces. One ecosystem.</h2>
+          <p class="eco-lead">Browse and plan in the terminal. Code in VS Code. Capture and submit in the browser. All three stay in sync over localhost.</p>
         </header>
 
         <article class="eco-card eco-terminal">
@@ -162,6 +162,12 @@
             <span><kbd>s</kbd> submit</span>
             <span><kbd>r</kbd> sync</span>
           </div>
+          <figure class="eco-shot eco-shot-terminal">
+            <picture>
+              <source srcset="img/dashboard.webp" type="image/webp">
+              <img src="img/dashboard.png" width="1105" height="716" alt="CPOS terminal dashboard with rating, streak, recommendations, and progress" loading="lazy" decoding="async">
+            </picture>
+          </figure>
         </article>
 
         <article class="eco-row">
@@ -174,7 +180,7 @@
           <div class="eco-row-copy">
             <span class="eco-tag">Browser · capture</span>
             <h3>Samples read automatically</h3>
-            <p>Visit a problem page once — CPOS pulls samples and metadata into your local workspace. When you submit, it autofills the judge form. The browser never replaces the terminal for browsing.</p>
+            <p>Visit a problem page once — CPOS pulls samples and metadata into your local workspace. When you submit, it autofills the judge form. Works with the terminal and VS Code at the same time.</p>
             <ul class="eco-bullets">
               <li>Auto-reads samples from Codeforces & CSES</li>
               <li>Submit form autofill</li>
@@ -185,14 +191,14 @@
 
         <article class="eco-row eco-row-flip eco-row-vscode">
           <div class="eco-row-copy">
-            <span class="eco-tag">VS Code · optional</span>
-            <h3>Same flow, familiar editor</h3>
-            <p>Prefer a GUI? The side panel mirrors the terminal — capture, run samples, submit — without leaving your editor. Files save to your open folder and sync over localhost.</p>
+            <span class="eco-tag">VS Code · editor</span>
+            <h3>Code, test, and submit</h3>
+            <p>The side panel runs samples and submits while the terminal tracks your catalog and progress. Same files, same localhost sync — use both together.</p>
             <p class="eco-credit">Panel layout inspired by <a href="https://marketplace.visualstudio.com/items?itemName=DivyanshuRaj.competitive-programming-helper" target="_blank" rel="noopener">CPH</a> (Competitive Programming Helper).</p>
             <ul class="eco-bullets">
               <li>13 languages supported</li>
-              <li>Syncs with the TUI automatically</li>
-              <li>Not required — terminal works alone</li>
+              <li>Run All, Submit, and inline verdicts</li>
+              <li>Syncs with the terminal automatically</li>
             </ul>
           </div>
           <figure class="eco-shot eco-shot-vscode">
@@ -208,8 +214,8 @@
     <section class="install-block" id="install">
       <div class="wrap">
         <header class="install-head">
-          <h2 class="install-title">Get started in three steps</h2>
-          <p class="install-sub">Terminal first. Browser companion second. VS Code only if you want it.</p>
+          <h2 class="install-title">Install the full stack</h2>
+          <p class="install-sub">Terminal, browser companion, and VS Code — built to run together.</p>
         </header>
 
         <ol class="install-steps">
@@ -239,13 +245,12 @@
               </a>
             </div>
           </li>
-          <li class="install-step install-step-optional">
+          <li class="install-step">
             <span class="install-n">3</span>
             <div class="install-body">
               <div class="install-label">
                 <svg class="install-ico"><use href="#i-vscode"/></svg>
                 <strong>VS Code extension</strong>
-                <span class="install-hint install-hint-muted">Optional</span>
               </div>
               <a class="install-link" href="https://marketplace.visualstudio.com/items?itemName=sohamaggarwal.cpos-vscode" target="_blank" rel="noopener">
                 Install from Marketplace <span aria-hidden="true">↗</span>
