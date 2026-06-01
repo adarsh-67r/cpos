@@ -259,6 +259,51 @@ mod tests {
     }
 
     #[test]
+    fn fills_thirty_when_pool_is_large() {
+        let problems: Vec<Problem> = (700u32..1300)
+            .flat_map(|r| {
+                (0..3).map(move |i| {
+                    prob(
+                        &format!("{r}{i}"),
+                        r,
+                        &[match i {
+                            0 => "dp",
+                            1 => "greedy",
+                            _ => "math",
+                        }],
+                    )
+                })
+            })
+            .collect();
+        let recs = recommend_problems(&[], &problems, Some(924), DEFAULT_COUNT);
+        assert_eq!(recs.len(), DEFAULT_COUNT);
+    }
+
+    #[test]
+    fn fills_thirty_from_local_cache_if_present() {
+        let cache = match crate::data::cache::Cache::open() {
+            Ok(c) => c,
+            Err(_) => return,
+        };
+        let mut problems = cache.get_problems(Platform::Codeforces).unwrap_or_default();
+        problems.extend(cache.get_problems(Platform::Cses).unwrap_or_default());
+        if problems.len() < 100 {
+            return;
+        }
+        let submissions = cache.get_all_submissions().unwrap_or_default();
+        let rating = cache
+            .get_rating_history(Platform::Codeforces)
+            .ok()
+            .and_then(|h| h.last().map(|r| r.new_rating));
+        let recs = recommend_problems(&submissions, &problems, rating, DEFAULT_COUNT);
+        assert!(
+            recs.len() >= 20,
+            "expected at least 20 recommendations from real cache, got {}",
+            recs.len()
+        );
+    }
+
+    #[test]
     fn skips_solved_problems() {
         let problems = vec![prob("1A", 1000, &["math"])];
         let subs = vec![Submission {

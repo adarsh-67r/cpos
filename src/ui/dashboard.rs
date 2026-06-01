@@ -287,7 +287,8 @@ fn draw_up_next(frame: &mut Frame, app: &App, area: Rect) {
         return;
     }
 
-    let visible = inner.height as usize;
+    let visible = inner.height.saturating_sub(1) as usize;
+    let total = app.recommendations.len();
     let rows: Vec<Row> = app
         .recommendations
         .iter()
@@ -314,6 +315,24 @@ fn draw_up_next(frame: &mut Frame, app: &App, area: Rect) {
 
     let table = Table::new(rows, widths);
     frame.render_widget(table, inner);
+
+    if total > visible {
+        let hint = Paragraph::new(format!(
+            " +{} more on Recommend tab ",
+            total - visible.min(total)
+        ))
+        .style(Style::default().fg(t.dim))
+        .alignment(Alignment::Right);
+        frame.render_widget(
+            hint,
+            Rect::new(
+                inner.x,
+                inner.y + inner.height.saturating_sub(1),
+                inner.width,
+                1,
+            ),
+        );
+    }
 }
 
 fn truncate(s: &str, max: usize) -> String {
