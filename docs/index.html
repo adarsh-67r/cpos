@@ -11,6 +11,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=Instrument+Sans:wght@500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/style.css">
+  <link rel="preload" as="image" href="img/dashboard.webp" type="image/webp">
 </head>
 <body>
 
@@ -36,8 +37,8 @@
       CPOS
     </a>
     <nav>
-      <a href="https://github.com/Soham109/cpos" target="_blank" rel="noopener">GitHub</a>
-      <a href="#install">Install</a>
+      <a href="https://github.com/Soham109/cpos" target="_blank" rel="noopener" class="nav-link">GitHub ↗</a>
+      <a href="#install" class="nav-cta">Install</a>
     </nav>
   </header>
 
@@ -52,150 +53,205 @@
           <button class="tab" data-screen="recommend">Recommend</button>
         </nav>
         <p class="tab-caption" id="caption">Rating, streak, progress, and what to solve next.</p>
-        <div class="frame">
-          <img class="panel active" id="screen-dashboard" src="dashboard.png" width="1105" height="716" alt="Dashboard" decoding="async" fetchpriority="high">
-          <img class="panel" id="screen-problems" src="problems.png" width="1105" height="716" alt="Problems" decoding="async" loading="lazy">
-          <img class="panel" id="screen-contests" src="contests.png" width="1105" height="716" alt="Contests" decoding="async" loading="lazy">
-          <img class="panel" id="screen-analytics" src="analytics.png" width="1105" height="716" alt="Analytics" decoding="async" loading="lazy">
-          <img class="panel" id="screen-recommend" src="recommend.png" width="1105" height="716" alt="Recommend" decoding="async" loading="lazy">
+        <div class="frame" id="frame">
+          <div class="panel active" id="screen-dashboard" data-screen="dashboard"></div>
+          <div class="panel" id="screen-problems" data-screen="problems"></div>
+          <div class="panel" id="screen-contests" data-screen="contests"></div>
+          <div class="panel" id="screen-analytics" data-screen="analytics"></div>
+          <div class="panel" id="screen-recommend" data-screen="recommend"></div>
         </div>
       </div>
     </section>
 
     <section class="below">
       <div class="wrap">
-        <div class="headline-block">
-          <p class="eyebrow">Competitive Programming Operating System</p>
-          <h1>Browse problems in the terminal.<br>Not on Codeforces.</h1>
-          <p class="sub">
-            Sync once. Search the full catalog, filter by rating, pick from recommendations —
-            all without opening a browser tab. Press <kbd>o</kbd> and CPOS creates your file,
-            loads samples, opens your editor.
-          </p>
+        <div class="headline-split">
+          <div class="headline-block">
+            <p class="eyebrow">Competitive Programming Operating System</p>
+            <h1>Browse problems in the terminal.<br>Not on Codeforces.</h1>
+            <p class="sub">
+              Sync once. Search the full catalog, filter by rating, pick from recommendations —
+              all without opening a browser tab. Press <kbd>o</kbd> and CPOS creates your file,
+              loads samples, opens your editor.
+            </p>
+          </div>
+          <dl class="stat-strip">
+            <div><dt>13</dt><dd>languages</dd></div>
+            <div><dt>30</dt><dd>recommendations</dd></div>
+            <div><dt>100%</dt><dd>local</dd></div>
+          </dl>
         </div>
 
-        <div class="pipeline">
-          <div class="pipe-step">
-            <div class="pipe-icon"><svg><use href="#i-sync"/></svg></div>
-            <div class="pipe-text"><strong>Sync</strong><span>Pull solves & catalog</span></div>
-          </div>
-          <div class="pipe-line"></div>
-          <div class="pipe-step">
-            <div class="pipe-icon"><svg><use href="#i-search"/></svg></div>
-            <div class="pipe-text"><strong>Browse</strong><span>Search & filter in TUI</span></div>
-          </div>
-          <div class="pipe-line"></div>
-          <div class="pipe-step">
-            <div class="pipe-icon"><svg><use href="#i-folder"/></svg></div>
-            <div class="pipe-text"><strong>Open</strong><span>File + samples ready</span></div>
-          </div>
-          <div class="pipe-line"></div>
-          <div class="pipe-step">
-            <div class="pipe-icon"><svg><use href="#i-play"/></svg></div>
-            <div class="pipe-text"><strong>Solve</strong><span>Test & submit</span></div>
-          </div>
-        </div>
+        <ol class="steps">
+          <li>
+            <span class="step-n">1</span>
+            <svg class="step-ico"><use href="#i-sync"/></svg>
+            <div><strong>Sync</strong><span>Pull solves & full catalog</span></div>
+          </li>
+          <li>
+            <span class="step-n">2</span>
+            <svg class="step-ico"><use href="#i-search"/></svg>
+            <div><strong>Browse</strong><span>Search & filter in the TUI</span></div>
+          </li>
+          <li>
+            <span class="step-n">3</span>
+            <svg class="step-ico"><use href="#i-folder"/></svg>
+            <div><strong>Open</strong><span>File created, samples loaded</span></div>
+          </li>
+          <li>
+            <span class="step-n">4</span>
+            <svg class="step-ico"><use href="#i-play"/></svg>
+            <div><strong>Solve</strong><span>Test & submit</span></div>
+          </li>
+        </ol>
+      </div>
+    </section>
 
-        <div class="feat-grid">
-          <div class="feat">
-            <div class="feat-icon"><svg><use href="#i-search"/></svg></div>
-            <h3>Problem browser</h3>
-            <p>Thousands of Codeforces & CSES problems locally. Search, filter, switch platforms — no website needed.</p>
-          </div>
-          <div class="feat">
-            <div class="feat-icon"><svg><use href="#i-target"/></svg></div>
-            <h3>Smart recommendations</h3>
-            <p>30 unsolved problems scored against your weak tags, rating fit, and unfinished attempts.</p>
-          </div>
-          <div class="feat">
-            <div class="feat-icon"><svg><use href="#i-trophy"/></svg></div>
-            <h3>Live contests</h3>
-            <p>Upcoming and running Codeforces contests with real-time countdowns.</p>
-          </div>
-          <div class="feat">
-            <div class="feat-icon"><svg><use href="#i-chart"/></svg></div>
-            <h3>Analytics</h3>
-            <p>Rating history, topic breakdown, activity heatmap — see where you're actually weak.</p>
-          </div>
-          <div class="feat">
-            <div class="feat-icon"><svg><use href="#i-download"/></svg></div>
-            <h3>Sample capture</h3>
-            <p>Browser companion reads public tests off the page when you visit a problem. Sent to localhost only.</p>
-          </div>
-          <div class="feat">
-            <div class="feat-icon"><svg><use href="#i-play"/></svg></div>
-            <h3>Run & submit</h3>
-            <p>Compile, test every sample, autofill the judge page. 13 languages supported.</p>
-          </div>
-        </div>
+    <section class="ecosystem">
+      <div class="wrap">
+        <header class="eco-head">
+          <p class="eyebrow">How it fits together</p>
+          <h2 class="eco-title">Three pieces. One workflow.</h2>
+          <p class="eco-lead">The terminal is where you live. The browser captures samples. VS Code is there if you want it.</p>
+        </header>
 
-        <div class="stack">
-          <article class="stack-card stack-main">
-            <div class="stack-head">
-              <div class="stack-icon"><svg><use href="#i-terminal"/></svg></div>
-              <div>
-                <span class="stack-tag">Core</span>
-                <h2>Terminal app</h2>
+        <article class="eco-card eco-terminal">
+          <div class="eco-card-top">
+            <div class="eco-card-copy">
+              <span class="eco-tag">Terminal · core</span>
+              <h3>Your CP command center</h3>
+              <p>Browse every problem locally. Track rating, contests, weak topics, and what to grind next — keyboard-first, built in Rust. You don't open Codeforces to pick problems; you open CPOS.</p>
+            </div>
+            <div class="feat-grid">
+              <div class="feat">
+                <svg><use href="#i-search"/></svg>
+                <div>
+                  <strong>Problem browser</strong>
+                  <span>Full catalog, search & filter</span>
+                </div>
+              </div>
+              <div class="feat">
+                <svg><use href="#i-target"/></svg>
+                <div>
+                  <strong>Recommendations</strong>
+                  <span>30 picks for weak tags</span>
+                </div>
+              </div>
+              <div class="feat">
+                <svg><use href="#i-trophy"/></svg>
+                <div>
+                  <strong>Contests</strong>
+                  <span>Live countdowns</span>
+                </div>
+              </div>
+              <div class="feat">
+                <svg><use href="#i-chart"/></svg>
+                <div>
+                  <strong>Analytics</strong>
+                  <span>Rating graph & heatmap</span>
+                </div>
               </div>
             </div>
-            <p>Your CP command center. This is where you browse problems, track progress, and decide what to grind — keyboard-first, built in Rust.</p>
-            <div class="chips">
-              <span class="chip"><kbd>/</kbd> search</span>
-              <span class="chip"><kbd>f</kbd> filter</span>
-              <span class="chip"><kbd>p</kbd> platform</span>
-              <span class="chip"><kbd>o</kbd> open</span>
-              <span class="chip"><kbd>T</kbd> test</span>
-              <span class="chip"><kbd>s</kbd> submit</span>
-              <span class="chip"><kbd>r</kbd> sync</span>
-            </div>
-          </article>
-          <div class="stack-side">
-            <article class="stack-card">
-              <div class="stack-head">
-                <div class="stack-icon stack-icon-sm"><svg><use href="#i-browser"/></svg></div>
-                <div><h2>Browser</h2></div>
-              </div>
-              <p>Not for browsing — for capture & submit. Reads samples when you're on a page. Autofills the judge form.</p>
-            </article>
-            <article class="stack-card">
-              <div class="stack-head">
-                <div class="stack-icon stack-icon-sm"><svg><use href="#i-vscode"/></svg></div>
-                <div><h2>VS Code</h2></div>
-              </div>
-              <p>Optional editor panel. Run All, Submit, inline results. Syncs with the terminal. Your folder, your files.</p>
-            </article>
           </div>
-        </div>
+          <div class="shortcut-bar" aria-label="Keyboard shortcuts">
+            <span><kbd>/</kbd> search</span>
+            <span><kbd>f</kbd> filter</span>
+            <span><kbd>p</kbd> platform</span>
+            <span><kbd>o</kbd> open</span>
+            <span><kbd>T</kbd> test</span>
+            <span><kbd>s</kbd> submit</span>
+            <span><kbd>r</kbd> sync</span>
+          </div>
+        </article>
+
+        <article class="eco-row">
+          <figure class="eco-shot">
+            <picture>
+              <source srcset="img/browser-flow.webp" type="image/webp">
+              <img src="img/browser-flow.png" width="640" height="400" alt="Browser companion capturing problem samples" loading="lazy" decoding="async">
+            </picture>
+          </figure>
+          <div class="eco-row-copy">
+            <span class="eco-tag">Browser · capture</span>
+            <h3>Samples read automatically</h3>
+            <p>Visit a problem page once — CPOS pulls samples and metadata into your local workspace. When you submit, it autofills the judge form. The browser never replaces the terminal for browsing.</p>
+            <ul class="eco-bullets">
+              <li>Auto-reads samples from Codeforces & CSES</li>
+              <li>Submit form autofill</li>
+              <li>Talks to terminal on <code>127.0.0.1</code></li>
+            </ul>
+          </div>
+        </article>
+
+        <article class="eco-row eco-row-flip">
+          <div class="eco-row-copy">
+            <span class="eco-tag">VS Code · optional</span>
+            <h3>Same flow, familiar editor</h3>
+            <p>Prefer a GUI? The side panel mirrors the terminal — capture, run samples, submit — without leaving your editor. Files save to your open folder and sync over localhost.</p>
+            <ul class="eco-bullets">
+              <li>13 languages supported</li>
+              <li>Syncs with the TUI automatically</li>
+              <li>Not required — terminal works alone</li>
+            </ul>
+          </div>
+          <figure class="eco-shot">
+            <picture>
+              <source srcset="img/vscode-workflow.webp" type="image/webp">
+              <img src="img/vscode-workflow.png" width="960" height="616" alt="CPOS VS Code extension with side panel, samples, and solution file open" loading="lazy" decoding="async">
+            </picture>
+          </figure>
+        </article>
       </div>
     </section>
 
     <section class="install-block" id="install">
       <div class="wrap">
-        <h2 class="install-title">Get started</h2>
-        <p class="install-sub">Browser + terminal is the core setup. Add VS Code if you want the panel.</p>
-        <div class="install-cards">
-          <a class="install-card" href="https://chromewebstore.google.com/detail/gjnbapmjonegeeamdeahcoojgokeogmm" target="_blank" rel="noopener">
-            <div class="install-card-icon"><svg><use href="#i-browser"/></svg></div>
-            <div>
-              <strong>Browser companion</strong>
-              <span>Chrome · Edge · Brave</span>
+        <header class="install-head">
+          <h2 class="install-title">Get started in three steps</h2>
+          <p class="install-sub">Terminal first. Browser companion second. VS Code only if you want it.</p>
+        </header>
+
+        <ol class="install-steps">
+          <li class="install-step install-step-main">
+            <span class="install-n">1</span>
+            <div class="install-body">
+              <div class="install-label">
+                <svg class="install-ico"><use href="#i-terminal"/></svg>
+                <strong>Install the terminal app</strong>
+              </div>
+              <div class="terminal-bar">
+                <code>cargo install --git https://github.com/Soham109/cpos</code>
+                <button class="btn-copy" data-copy="cargo install --git https://github.com/Soham109/cpos">Copy</button>
+              </div>
             </div>
-          </a>
-          <a class="install-card" href="https://marketplace.visualstudio.com/items?itemName=sohamaggarwal.cpos-vscode" target="_blank" rel="noopener">
-            <div class="install-card-icon"><svg><use href="#i-vscode"/></svg></div>
-            <div>
-              <strong>VS Code extension</strong>
-              <span>Marketplace</span>
+          </li>
+          <li class="install-step">
+            <span class="install-n">2</span>
+            <div class="install-body">
+              <div class="install-label">
+                <svg class="install-ico"><use href="#i-browser"/></svg>
+                <strong>Browser companion</strong>
+                <span class="install-hint">Chrome · Edge · Brave</span>
+              </div>
+              <a class="install-link" href="https://chromewebstore.google.com/detail/gjnbapmjonegeeamdeahcoojgokeogmm" target="_blank" rel="noopener">
+                Add to browser <span aria-hidden="true">↗</span>
+              </a>
             </div>
-          </a>
-          <button class="install-card install-card-btn" data-copy="cargo install --git https://github.com/Soham109/cpos">
-            <div class="install-card-icon"><svg><use href="#i-terminal"/></svg></div>
-            <div>
-              <strong>Terminal app</strong>
-              <code>cargo install --git https://github.com/Soham109/cpos</code>
+          </li>
+          <li class="install-step install-step-optional">
+            <span class="install-n">3</span>
+            <div class="install-body">
+              <div class="install-label">
+                <svg class="install-ico"><use href="#i-vscode"/></svg>
+                <strong>VS Code extension</strong>
+                <span class="install-hint install-hint-muted">Optional</span>
+              </div>
+              <a class="install-link" href="https://marketplace.visualstudio.com/items?itemName=sohamaggarwal.cpos-vscode" target="_blank" rel="noopener">
+                Install from Marketplace <span aria-hidden="true">↗</span>
+              </a>
             </div>
-          </button>
-        </div>
+          </li>
+        </ol>
       </div>
     </section>
 
@@ -205,10 +261,10 @@
           <svg class="foot-lock"><use href="#i-lock"/></svg>
           <p>Everything stays on your machine — <code>127.0.0.1</code>, no cloud, no account.</p>
         </div>
-        <nav>
-          <a href="https://github.com/Soham109/cpos" target="_blank" rel="noopener">GitHub</a>
-          <a href="https://marketplace.visualstudio.com/items?itemName=sohamaggarwal.cpos-vscode" target="_blank" rel="noopener">VS Code</a>
-          <a href="https://chromewebstore.google.com/detail/gjnbapmjonegeeamdeahcoojgokeogmm" target="_blank" rel="noopener">Chrome</a>
+        <nav class="foot-links">
+          <a href="https://github.com/Soham109/cpos" target="_blank" rel="noopener">GitHub ↗</a>
+          <a href="https://marketplace.visualstudio.com/items?itemName=sohamaggarwal.cpos-vscode" target="_blank" rel="noopener">VS Code ↗</a>
+          <a href="https://chromewebstore.google.com/detail/gjnbapmjonegeeamdeahcoojgokeogmm" target="_blank" rel="noopener">Chrome ↗</a>
         </nav>
       </div>
     </footer>

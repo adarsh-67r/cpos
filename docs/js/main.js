@@ -7,9 +7,55 @@
     recommend: "30 unsolved problems picked for your weak tags.",
   };
 
+  const labels = {
+    dashboard: "Dashboard",
+    problems: "Problems",
+    contests: "Contests",
+    analytics: "Analytics",
+    recommend: "Recommend",
+  };
+
+  const loaded = new Set();
   const captionEl = document.getElementById("caption");
   const tabs = document.querySelectorAll(".tab");
   const panels = document.querySelectorAll(".frame .panel");
+
+  function injectScreen(panel) {
+    const id = panel.dataset.screen;
+    if (!id || loaded.has(id)) return;
+
+    const picture = document.createElement("picture");
+    const source = document.createElement("source");
+    source.srcset = `img/${id}.webp`;
+    source.type = "image/webp";
+
+    const img = document.createElement("img");
+    img.src = `img/${id}.png`;
+    img.alt = labels[id] || id;
+    img.width = 1105;
+    img.height = 716;
+    img.decoding = "async";
+    if (id === "dashboard") img.fetchPriority = "high";
+
+    picture.append(source, img);
+    panel.append(picture);
+    panel.classList.remove("loading");
+    loaded.add(id);
+  }
+
+  function showScreen(id) {
+    panels.forEach((p) => {
+      const on = p.dataset.screen === id;
+      p.classList.toggle("active", on);
+      if (on && !loaded.has(id)) {
+        p.classList.add("loading");
+        injectScreen(p);
+      }
+    });
+  }
+
+  // Load dashboard immediately; prefetch next tab after idle.
+  injectScreen(document.getElementById("screen-dashboard"));
 
   tabs.forEach((tab) => {
     tab.addEventListener("click", () => {
@@ -18,10 +64,7 @@
 
       tabs.forEach((t) => t.classList.remove("active"));
       tab.classList.add("active");
-
-      panels.forEach((p) => p.classList.remove("active"));
-      const next = document.getElementById(`screen-${id}`);
-      if (next) next.classList.add("active");
+      showScreen(id);
 
       if (captionEl) {
         captionEl.classList.add("fade");
@@ -33,17 +76,18 @@
     });
   });
 
+  if ("requestIdleCallback" in window) {
+    requestIdleCallback(() => injectScreen(document.getElementById("screen-problems")));
+  }
+
   document.querySelectorAll("[data-copy]").forEach((btn) => {
     btn.addEventListener("click", async () => {
       const cmd = btn.dataset.copy;
       try {
         await navigator.clipboard.writeText(cmd);
-        const code = btn.querySelector("code");
-        if (code) {
-          const orig = code.textContent;
-          code.textContent = "copied!";
-          setTimeout(() => { code.textContent = orig; }, 1500);
-        }
+        const orig = btn.textContent;
+        btn.textContent = "Copied";
+        setTimeout(() => { btn.textContent = orig; }, 1500);
       } catch {
         window.prompt("Run:", cmd);
       }
