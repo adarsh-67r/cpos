@@ -25,18 +25,20 @@ const CF_LANGUAGE_IDS = {
 let handling = false;
 
 async function fetchPending() {
-  for (const endpoint of ENDPOINTS) {
-    try {
-      const res = await fetch(`${endpoint.baseUrl}/pending-submit`);
-      if (!res.ok) continue;
-      const data = await res.json();
-      if (!data.ok || !data.code) continue;
-      return { endpoint, data };
-    } catch {
-      /* try next */
-    }
-  }
-  return null;
+  const hits = await Promise.all(
+    ENDPOINTS.map(async (endpoint) => {
+      try {
+        const res = await fetch(`${endpoint.baseUrl}/pending-submit`);
+        if (!res.ok) return null;
+        const data = await res.json();
+        if (!data.ok || !data.code) return null;
+        return { endpoint, data };
+      } catch {
+        return null;
+      }
+    })
+  );
+  return hits.find(Boolean) ?? null;
 }
 
 async function ack(endpoint) {
@@ -55,27 +57,6 @@ function sleep(ms) {
   return new Promise((r) => setTimeout(r, ms));
 }
 
-function waitForTab(tabId, timeoutMs = 15000) {
-  return new Promise((resolve) => {
-    const deadline = Date.now() + timeoutMs;
-    const listener = (id, info) => {
-      if (id === tabId && info.status === "complete") {
-        chrome.tabs.onUpdated.removeListener(listener);
-        resolve(true);
-      }
-      if (Date.now() > deadline) {
-        chrome.tabs.onUpdated.removeListener(listener);
-        resolve(false);
-      }
-    };
-    chrome.tabs.onUpdated.addListener(listener);
-    setTimeout(() => {
-      chrome.tabs.onUpdated.removeListener(listener);
-      resolve(false);
-    }, timeoutMs);
-  });
-}
-
 function urlsMatch(a, b) {
   try {
     const ua = new URL(a);
@@ -86,21 +67,52 @@ function urlsMatch(a, b) {
   }
 }
 
+// Resolve as soon as the tab has committed to the target URL (navigation started).
+// We do NOT wait for "complete" — the injected script waits for its own elements,
+// so this shaves the slowest part of the perceived submit latency.
+async function waitForUrlCommitted(tabId, url, timeoutMs = 8000) {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    try {
+      const tab = await chrome.tabs.get(tabId);
+      const current = tab.url || tab.pendingUrl || "";
+      if (current && urlsMatch(current, url)) return true;
+    } catch {
+      return false;
+    }
+    await sleep(25);
+  }
+  return false;
+}
+
+/** Bring Chrome forward without blocking submit (windows.update can hang on macOS). */
+function bringTabToFront(tabId) {
+  if (tabId == null) return;
+  const task = (async () => {
+    const tab = await chrome.tabs.get(tabId);
+    await chrome.tabs.update(tab.id, { active: true });
+    if (tab.windowId != null) {
+      await chrome.windows.update(tab.windowId, { focused: true });
+    }
+  })();
+  void Promise.race([task, sleep(400)]).catch(() => undefined);
+}
+
 async function findOrOpenTab(url) {
   if (!url) return null;
 
-  for (let i = 0; i < 12; i++) {
-    const tabs = await chrome.tabs.query({});
-    const match = tabs.find((t) => t.url && urlsMatch(t.url, url));
-    if (match?.id != null) {
-      await waitForTab(match.id, 15000);
-      return match;
-    }
-    await sleep(400);
+  const tabs = await chrome.tabs.query({});
+  const match = tabs.find((t) => t.url && urlsMatch(t.url, url));
+  if (match?.id != null) {
+    bringTabToFront(match.id);
+    return match;
   }
 
   const tab = await chrome.tabs.create({ url, active: true });
-  if (tab.id != null) await waitForTab(tab.id, 15000);
+  if (tab.id != null) {
+    await waitForUrlCommitted(tab.id, url);
+    bringTabToFront(tab.id);
+  }
   return tab;
 }
 
@@ -147,44 +159,93 @@ async function cposSubmitOnPage(code, languageId, languageKey, problemIndex, sub
     }
   }
 
-  for (let i = 0; i < 100; i++) {
+  function syncAce(code) {
+    if (typeof window.ace === "undefined" || typeof window.ace.edit !== "function") return;
+    try {
+      const ed = window.ace.edit("editor");
+      if (ed && typeof ed.setValue === "function") {
+        ed.setValue(code, -1);
+        ed.clearSelection();
+        if (typeof ed.resize === "function") ed.resize();
+      }
+    } catch {
+      /* ignore */
+    }
+  }
+
+  function setProblemIndex(select, index) {
+    if (!select || !index) return false;
+    const want = String(index).toUpperCase();
+    for (const opt of select.options) {
+      const val = (opt.value || "").toUpperCase();
+      const text = (opt.textContent || "").trim().toUpperCase();
+      if (
+        val === want ||
+        text === want ||
+        text.startsWith(`${want} `) ||
+        text.startsWith(`${want}.`) ||
+        text.startsWith(`${want}—`) ||
+        text.startsWith(`${want}-`)
+      ) {
+        select.value = opt.value;
+        return true;
+      }
+    }
+    return false;
+  }
+
+  function clickSubmit() {
+    const candidates = [
+      document.getElementById("singlePageSubmitButton"),
+      document.querySelector('input.submit[type="submit"]'),
+      document.querySelector('form.submit-form input[type="submit"]'),
+      document.querySelector(".submit input[type='submit']"),
+      document.querySelector("button.submit"),
+      document.querySelector(".submit")
+    ];
+    for (const btn of candidates) {
+      if (btn && !btn.disabled) {
+        btn.disabled = false;
+        btn.click();
+        return true;
+      }
+    }
+    const form = document.querySelector("form.submit-form") || document.querySelector('form[action*="submit"]');
+    if (form && typeof form.requestSubmit === "function") {
+      form.requestSubmit();
+      return true;
+    }
+    return false;
+  }
+
+  for (let i = 0; i < 80; i++) {
     const sourceCodeEl = document.getElementById("sourceCodeTextarea");
     const languageEl = document.getElementsByName("programTypeId")[0];
-    const submitBtn = document.querySelector(".submit");
 
-    if (
-      sourceCodeEl &&
-      languageEl &&
-      languageEl.options.length > 1 &&
-      submitBtn &&
-      String(code).trim()
-    ) {
+    if (sourceCodeEl && languageEl && languageEl.options.length > 1 && String(code).trim()) {
       sourceCodeEl.value = code;
+      syncAce(code);
       pickLanguage(languageEl);
 
       if (submitByIndex && problemIndex) {
         const problemIndexEl = document.getElementsByName("submittedProblemIndex")[0];
-        if (problemIndexEl) {
-          problemIndexEl.value = String(problemIndex);
-        }
+        if (problemIndexEl) setProblemIndex(problemIndexEl, problemIndex);
       } else if (problemCode) {
         const codeInput = document.querySelector('input[name="submittedProblemCode"]');
-        if (codeInput) {
-          codeInput.value = String(problemCode);
-        }
+        if (codeInput) codeInput.value = String(problemCode);
       }
 
       if (!sourceCodeEl.value.trim()) {
-        await sleep(200);
-        continue;
+        sourceCodeEl.value = code;
+        syncAce(code);
       }
 
-      submitBtn.disabled = false;
-      submitBtn.click();
-      return { ok: true };
+      syncAce(sourceCodeEl.value || code);
+      if (clickSubmit()) return { ok: true };
+      return { ok: false, reason: "submit-btn-missing" };
     }
 
-    await sleep(250);
+    await sleep(60);
   }
 
   return { ok: false, reason: "form-timeout" };
@@ -287,8 +348,10 @@ async function handleCodeforces(pending, _endpoint) {
   const languageId = CF_LANGUAGE_IDS[pending.language] ?? null;
   const { submitByIndex, problemIndex, problemCode } = cfSubmitFlags(pending);
 
-  for (let attempt = 0; attempt < 8; attempt++) {
-    if (attempt > 0) await sleep(800);
+  // The injected script waits internally for the form, so a single inject usually
+  // suffices. Extra attempts only cover a tab that is still mid-navigation.
+  for (let attempt = 0; attempt < 10; attempt++) {
+    if (attempt > 0) await sleep(100);
 
     let ok = false;
     try {
@@ -307,15 +370,13 @@ async function handleCodeforces(pending, _endpoint) {
       });
       ok = results?.[0]?.result?.ok === true;
     } catch {
-      try {
-        const t = await chrome.tabs.get(tab.id);
-        if (t?.url && !/\/submit/.test(new URL(t.url).pathname)) ok = true;
-      } catch {
-        ok = true;
-      }
+      ok = false;
     }
 
-    if (ok) return true;
+    if (ok) {
+      bringTabToFront(tab.id);
+      return true;
+    }
   }
 
   return false;
@@ -332,7 +393,9 @@ async function handleCses(pending, _endpoint) {
     args: [pending.code, pending.fileName || "solution.cpp", pending.language || "cpp"]
   });
 
-  return results?.[0]?.result?.ok === true;
+  const ok = results?.[0]?.result?.ok === true;
+  if (ok && tab.id != null) bringTabToFront(tab.id);
+  return ok;
 }
 
 async function pollOnce() {
@@ -350,7 +413,7 @@ async function pollOnce() {
     } else if (platform === "cses") {
       ok = await handleCses(pending, found.endpoint);
     }
-    if (ok) await ack(found.endpoint);
+    if (ok) void ack(found.endpoint);
   } finally {
     handling = false;
   }
@@ -373,8 +436,8 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
           msg.languageId ?? null,
           msg.language || "cpp",
           msg.problemIndex ?? null,
-          msg.submitByIndex !== false,
-          msg.problemCode ?? null
+          msg.submitByIndex === true,
+          msg.problemCode ?? msg.problemId ?? null
         ]
       })
       .then((results) => {
@@ -391,5 +454,28 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   }
 });
 
-setInterval(pollOnce, 800);
+// --- Keep the MV3 service worker hot so submit pickup is near-instant --------
+// Without this, Chrome suspends the worker after ~30s idle and the first submit
+// after a pause waits for the worker to wake (the main source of slow submits).
+function keepAlivePing() {
+  try {
+    chrome.runtime.getPlatformInfo(() => void chrome.runtime.lastError);
+  } catch {
+    /* ignore */
+  }
+}
+
+setInterval(keepAlivePing, 20000);
+
+if (chrome.alarms) {
+  chrome.alarms.create("cpos-revive", { periodInMinutes: 0.5 });
+  chrome.alarms.onAlarm.addListener((alarm) => {
+    if (alarm.name === "cpos-revive") pollOnce();
+  });
+}
+
+if (chrome.runtime.onStartup) chrome.runtime.onStartup.addListener(() => pollOnce());
+if (chrome.runtime.onInstalled) chrome.runtime.onInstalled.addListener(() => pollOnce());
+
+setInterval(pollOnce, 150);
 pollOnce();

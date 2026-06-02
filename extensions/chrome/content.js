@@ -19,13 +19,15 @@
     return out.replace(/^\n+|\n+$/g, "");
   }
 
-  /** Block line counts + output offset from Codeforces test-example-line-N markup. */
-  function inputBlockMeta(el, expectedOutput) {
-    const lineEls = el.querySelectorAll(".test-example-line");
+  /** Block line counts from Codeforces test-example-line-N markup. */
+  function blockSizesFromExample(preEl) {
+    if (!preEl) return null;
+    const lineEls = preEl.querySelectorAll(".test-example-line");
     if (!lineEls.length) return undefined;
 
     const counts = new Map();
     lineEls.forEach((line) => {
+      if (/\btest-example-line-op\b/.test(line.className)) return;
       const m = line.className.match(/test-example-line-(\d+)/);
       const id = m ? parseInt(m[1], 10) : 0;
       counts.set(id, (counts.get(id) || 0) + 1);
@@ -34,13 +36,67 @@
     const ids = [...counts.keys()].sort((a, b) => a - b);
     const sizes = ids.map((id) => counts.get(id));
     if (!sizes.length) return undefined;
+    return { ids, sizes };
+  }
 
-    const expLines = String(expectedOutput || "").split("\n").filter((l) => l.trim().length > 0);
+  function parseCodeforcesOutputBlockSizes(expected) {
+    const lines = String(expected || "").split("\n");
+    const sizes = [];
+    let i = 0;
+    while (i < lines.length) {
+      const s = lines[i].trim();
+      if (!s) {
+        i++;
+        continue;
+      }
+      if (s === "NO") {
+        sizes.push(1);
+        i++;
+        continue;
+      }
+      if (s === "YES") {
+        i++;
+        const k = i < lines.length ? parseInt(lines[i].trim(), 10) : NaN;
+        if (!isNaN(k) && k >= 0) {
+          sizes.push(2 + k);
+          i++;
+          i += k;
+        } else {
+          sizes.push(2);
+        }
+        continue;
+      }
+      sizes.push(1);
+      i++;
+    }
+    return sizes.length ? sizes : null;
+  }
+
+  function inputOutputBlockMeta(inputPre, outputPre, expectedOutput) {
+    const inMeta = blockSizesFromExample(inputPre);
+    if (!inMeta) return undefined;
+    const outMeta = blockSizesFromExample(outputPre);
+    const sizes = inMeta.sizes;
+
+    let outputBlockSizes =
+      outMeta && outMeta.sizes.length ? outMeta.sizes : parseCodeforcesOutputBlockSizes(expectedOutput);
     let outputOffset = 0;
-    if (sizes.length === expLines.length + 1) outputOffset = 1;
-    else if (sizes.length > expLines.length && sizes[0] === 1) outputOffset = 1;
+    if (outputBlockSizes && sizes.length === outputBlockSizes.length + 1) {
+      outputOffset = 1;
+    } else if (outMeta && outMeta.ids.length) {
+      const firstOutId = outMeta.ids[0];
+      const idx = inMeta.ids.indexOf(firstOutId);
+      if (idx >= 0) outputOffset = idx;
+      else if (sizes.length === outMeta.sizes.length + 1 || (sizes.length > outMeta.sizes.length && sizes[0] === 1)) {
+        outputOffset = 1;
+      }
+    } else if (sizes.length > 1 && sizes[0] === 1 && outputBlockSizes && sizes.length === outputBlockSizes.length + 1) {
+      outputOffset = 1;
+    }
 
-    return { input_block_sizes: sizes, input_output_offset: outputOffset };
+    const row = { input_block_sizes: sizes, input_output_offset: outputOffset };
+    if (outputBlockSizes && outputBlockSizes.length) row.output_block_sizes = outputBlockSizes;
+    return row;
   }
 
   function toast(message, ok) {
@@ -211,7 +267,7 @@
       const outputs = document.querySelectorAll(".sample-test .output pre");
       for (let i = 0; i < Math.min(inputs.length, outputs.length); i++) {
         const expected = preText(outputs[i]);
-        const meta = inputBlockMeta(inputs[i], expected);
+        const meta = inputOutputBlockMeta(inputs[i], outputs[i], expected);
         const row = { input: preText(inputs[i]), expected_output: expected };
         if (meta) {
           row.input_block_sizes = meta.input_block_sizes;
@@ -624,6 +680,11 @@
   }
 
   function submitViaPageScript(pending) {
+    const pathname = location.pathname;
+    const submitByIndex =
+      /\/contest\/\d+\/submit/.test(pathname) ||
+      /\/gym\/\d+\/submit/.test(pathname) ||
+      /\/group\/[^/]+\/contest\/\d+\/submit/.test(pathname);
     return new Promise((resolve) => {
       try {
         chrome.runtime.sendMessage(
@@ -631,8 +692,10 @@
             type: "cpos-cf-submit",
             code: pending.code,
             languageId: CF_LANGUAGE_IDS[pending.language] ?? null,
+            language: pending.language || "cpp",
             problemIndex: pending.index ?? cfIndexFromUrl() ?? null,
-            problemId: pending.id ?? null
+            submitByIndex,
+            problemCode: submitByIndex ? null : pending.id ?? null
           },
           (resp) => {
             if (chrome.runtime.lastError) {
@@ -979,19 +1042,63 @@
     toast("CPOS · submit timed out — is CPOS running?", false);
   }
 
-  // Codeforces submit is owned entirely by the background worker (it can reach
-  // the page's MAIN-world Ace editor). Filling here too caused a race that left
-  // the editor empty. We only nudge the background to act on this tab.
   async function watchCodeforcesSubmit() {
-    for (let i = 0; i < 90; i++) {
+    for (let i = 0; i < 120; i++) {
       try {
         chrome.runtime.sendMessage({ type: "cpos-poll-submit" });
       } catch {
         /* background polls on its own timer too */
       }
-      // On a successful submit CF navigates away and unloads this script.
-      await sleep(1000);
+      // Fallback if background inject has not finished yet.
+      if (i === 2 || i === 5) {
+        try {
+          const { data: pending } = await getPendingSubmit();
+          if (pending?.ok && pending.code) {
+            const injected = await submitViaPageScript(pending);
+            if (injected.ok) {
+              await ackSubmit();
+              toast(`CPOS · submitted ${pending.id}`, true);
+              return;
+            }
+            try {
+              if (await postCodeforcesSubmit(pending)) {
+                await ackSubmit();
+                toast(`CPOS · submitted ${pending.id}`, true);
+                return;
+              }
+            } catch {
+              /* retry */
+            }
+          }
+        } catch {
+          /* pending not ready */
+        }
+      }
+      await sleep(200);
     }
+    toast("CPOS · submit timed out — use Chrome with CPOS extension and log in to Codeforces", false);
+  }
+
+  // On an open problem page, watch for a queued submit and immediately wake the
+  // background worker. This makes submit feel instant even if the service worker
+  // was suspended, because a runtime message revives it right away.
+  function startPendingSubmitNudge() {
+    let waking = false;
+    setInterval(async () => {
+      if (waking) return;
+      try {
+        const { data } = await get("/pending-submit");
+        if (data && data.ok && data.code) {
+          waking = true;
+          chrome.runtime.sendMessage({ type: "cpos-poll-submit" }, () => {
+            void chrome.runtime.lastError;
+            waking = false;
+          });
+        }
+      } catch {
+        /* no pending submit, or CPOS not running */
+      }
+    }, 300);
   }
 
   (async function main() {
@@ -1011,6 +1118,9 @@
         window.addEventListener("pageshow", () => captureCsesProgress());
         return;
       }
+
+      // Codeforces problem page or CSES task page: keep a fast submit watcher running.
+      startPendingSubmitNudge();
 
       const payload = captureProblem();
       if (!payload) return;

@@ -25,6 +25,7 @@ type TestCase = {
   input: string;
   expected_output: string;
   input_block_sizes?: number[];
+  output_block_sizes?: number[];
   input_output_offset?: number;
 };
 
@@ -56,6 +57,9 @@ let serverConflict = false;
 let status: vscode.StatusBarItem | undefined;
 let lastProblem: ProblemMeta | undefined;
 let actionsProvider: CposActionsProvider | undefined;
+let extContext: vscode.ExtensionContext | undefined;
+
+const PANEL_THEME_KEY = "cpos.panelTheme";
 
 const runResults = new Map<string, RunResult[]>();
 let runningFor: string | undefined;
@@ -107,6 +111,7 @@ const DEFAULT_TEMPLATES: Record<string, string> = {
 };
 
 export async function activate(context: vscode.ExtensionContext): Promise<void> {
+  extContext = context;
   status = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 80);
   status.command = "cpos.focusPanel";
   actionsProvider = new CposActionsProvider(context.extensionUri);
@@ -950,9 +955,8 @@ async function submitActiveFile(): Promise<void> {
     expiresAt: Date.now() + 120_000
   };
 
-  await vscode.env.clipboard.writeText(code);
-  await vscode.env.openExternal(vscode.Uri.parse(submitUrl));
-  vscode.window.showInformationMessage(`Submitting ${meta.id} in your browser…`);
+  void vscode.env.clipboard.writeText(code);
+  vscode.window.showInformationMessage(`Submitting ${meta.id} — opening submit page in Chrome…`);
 }
 
 function parseCodeforcesId(id: string): { contest?: string; index?: string } {
@@ -1073,6 +1077,7 @@ type PanelState = {
   serverRunning: boolean;
   serverConflict: boolean;
   running: boolean;
+  theme?: string;
 };
 
 async function currentState(): Promise<PanelState> {
@@ -1088,7 +1093,8 @@ async function currentState(): Promise<PanelState> {
     results,
     serverRunning: server !== undefined,
     serverConflict,
-    running: runningFor === source && source !== undefined
+    running: runningFor === source && source !== undefined,
+    theme: extContext?.globalState.get<string>(PANEL_THEME_KEY)
   };
 }
 
@@ -1118,10 +1124,18 @@ class CposActionsProvider implements vscode.WebviewViewProvider {
     void this.postState();
   }
 
-  private async onMessage(message: { type?: string; index?: number; tests?: TestCase[] }): Promise<void> {
+  private async onMessage(message: {
+    type?: string;
+    index?: number;
+    tests?: TestCase[];
+    theme?: string;
+  }): Promise<void> {
     switch (message.type) {
       case "ready":
         await this.postState();
+        break;
+      case "saveTheme":
+        if (message.theme) await extContext?.globalState.update(PANEL_THEME_KEY, message.theme);
         break;
       case "run":
         if (message.tests) await this.persistTests(message.tests);
@@ -1614,16 +1628,58 @@ class CposActionsProvider implements vscode.WebviewViewProvider {
     persistUiState();
   }
 
-  function inferOutputOffset(blockSizes, expected) {
+  function parseCodeforcesOutputBlockSizes(expected) {
+    const lines = String(expected || "").split("\\n");
+    const sizes = [];
+    let i = 0;
+    while (i < lines.length) {
+      const s = lines[i].trim();
+      if (!s) {
+        i++;
+        continue;
+      }
+      if (s === "NO") {
+        sizes.push(1);
+        i++;
+        continue;
+      }
+      if (s === "YES") {
+        i++;
+        const k = i < lines.length ? parseInt(lines[i].trim(), 10) : NaN;
+        if (!isNaN(k) && k >= 0) {
+          sizes.push(2 + k);
+          i++;
+          i += k;
+        } else {
+          sizes.push(2);
+        }
+        continue;
+      }
+      sizes.push(1);
+      i++;
+    }
+    return sizes.length ? sizes : null;
+  }
+
+  function inferOutputOffset(blockSizes, expected, outputBlockSizes) {
+    if (outputBlockSizes && blockSizes.length === outputBlockSizes.length + 1) return 1;
+    if (blockSizes.length > 1 && blockSizes[0] === 1) {
+      const t = parseInt(String(expected || "").split("\\n")[0] || "", 10);
+      const outN = outputBlockSizes ? outputBlockSizes.length : parseCodeforcesOutputBlockSizes(expected)?.length;
+      if (!isNaN(t) && outN && blockSizes.length === outN + 1) return 1;
+    }
     const expCount = String(expected || "").split("\\n").filter(function (l) { return l.trim().length > 0; }).length;
     if (blockSizes.length === expCount + 1) return 1;
     if (blockSizes.length > expCount && blockSizes[0] === 1) return 1;
     return 0;
   }
 
-  function computeInputBlocks(lines, expected, blockSizes, outputOffset) {
+  function computeInputBlocks(lines, expected, blockSizes, outputOffset, outputBlockSizes) {
     if (blockSizes && blockSizes.length) {
-      const offset = typeof outputOffset === "number" ? outputOffset : inferOutputOffset(blockSizes, expected);
+      const offset =
+        typeof outputOffset === "number"
+          ? outputOffset
+          : inferOutputOffset(blockSizes, expected, outputBlockSizes);
       const blocks = [];
       let idx = 0;
       for (let i = 0; i < blockSizes.length; i++) {
@@ -1677,6 +1733,21 @@ class CposActionsProvider implements vscode.WebviewViewProvider {
     return { blocks: [{ start: 0, end: Math.max(0, lines.length - 1), outIdx: -1 }], outputOffset: 0 };
   }
 
+  function computeOutputBlocks(lines, blockSizes) {
+    if (blockSizes && blockSizes.length) {
+      const blocks = [];
+      let idx = 0;
+      for (let i = 0; i < blockSizes.length; i++) {
+        const size = Math.max(1, blockSizes[i]);
+        blocks.push({ start: idx, end: idx + size - 1, outIdx: i });
+        idx += size;
+      }
+      if (idx < lines.length) blocks.push({ start: idx, end: lines.length - 1, outIdx: blocks.length });
+      return blocks;
+    }
+    return lines.map(function (_, i) { return { start: i, end: i, outIdx: i }; });
+  }
+
   function lineIndexFromTextarea(ta, clientY) {
     const style = getComputedStyle(ta);
     const lineHeight = parseFloat(style.lineHeight) || parseFloat(style.fontSize) * 1.4;
@@ -1718,23 +1789,35 @@ class CposActionsProvider implements vscode.WebviewViewProvider {
     const blockSizes = sizesRaw ? sizesRaw.split(",").map(Number).filter(function (n) { return n > 0; }) : null;
     const offsetRaw = card.getAttribute("data-output-offset");
     const outputOffset = offsetRaw != null && offsetRaw !== "" ? parseInt(offsetRaw, 10) : undefined;
-    const meta = computeInputBlocks(inLines, expTa.value, blockSizes && blockSizes.length ? blockSizes : null, outputOffset);
+    const expLines = expTa.value.split("\\n");
+    if (!expLines.length) expLines.push("");
+    const outSizesRaw = card.getAttribute("data-output-block-sizes");
+    let outputBlockSizes = outSizesRaw ? outSizesRaw.split(",").map(Number).filter(function (n) { return n > 0; }) : null;
+    if (!outputBlockSizes || !outputBlockSizes.length) {
+      outputBlockSizes = parseCodeforcesOutputBlockSizes(expTa.value);
+    }
+    const meta = computeInputBlocks(
+      inLines,
+      expTa.value,
+      blockSizes && blockSizes.length ? blockSizes : null,
+      outputOffset,
+      outputBlockSizes
+    );
     const blocks = meta.blocks;
     card._ioBlocks = blocks;
     card._ioOutputOffset = meta.outputOffset;
     const inBg = card.querySelector(".io-line-bg");
     const expBg = card.querySelector(".io-exp-line-bg");
     if (inBg) inBg.innerHTML = lineRowsHtml(inLines, blocks, true);
-    const expLines = expTa.value.split("\\n");
-    if (!expLines.length) expLines.push("");
-    const expBlocks = expLines.map(function (_, i) { return { start: i, end: i, outIdx: i }; });
+    const expBlocks = computeOutputBlocks(expLines, outputBlockSizes && outputBlockSizes.length ? outputBlockSizes : null);
+    card._expBlocks = expBlocks;
     if (expBg) expBg.innerHTML = lineRowsHtml(expLines, expBlocks, true);
     autoResizeTextareas(card);
   }
 
-  function setBlockHighlight(card, inputBlockIdx, expLineIdx) {
+  function setBlockHighlight(card, inputBlockIdx, expBlockIdx) {
     if (!card) return;
-    const key = inputBlockIdx + ":" + expLineIdx;
+    const key = inputBlockIdx + ":" + expBlockIdx;
     if (card._hiKey === key) return;
     card._hiKey = key;
     card.querySelectorAll(".io-line-bg .ln").forEach(function (ln) {
@@ -1742,8 +1825,8 @@ class CposActionsProvider implements vscode.WebviewViewProvider {
       ln.classList.toggle("blk-hi", inputBlockIdx >= 0 && blk === inputBlockIdx);
     });
     card.querySelectorAll(".io-exp-line-bg .ln").forEach(function (ln) {
-      const line = parseInt(ln.getAttribute("data-line"), 10);
-      ln.classList.toggle("blk-hi", expLineIdx >= 0 && line === expLineIdx);
+      const blk = parseInt(ln.getAttribute("data-blk"), 10);
+      ln.classList.toggle("blk-hi", expBlockIdx >= 0 && blk === expBlockIdx);
     });
   }
 
@@ -1790,8 +1873,17 @@ class CposActionsProvider implements vscode.WebviewViewProvider {
     function pickFromExpected(ev) {
       if (!expTa) return;
       const lineIdx = lineIndexFromTextarea(expTa, ev.clientY);
-      const offset = card._ioOutputOffset || 0;
-      setBlockHighlight(card, lineIdx >= 0 ? lineIdx + offset : -1, lineIdx);
+      const expBlocks = card._expBlocks || [{ start: 0, end: 0, outIdx: 0 }];
+      const outBlockIdx = blockForLine(expBlocks, lineIdx);
+      const inBlocks = card._ioBlocks || [];
+      let inBlockIdx = -1;
+      for (let j = 0; j < inBlocks.length; j++) {
+        if (inBlocks[j].outIdx === outBlockIdx) {
+          inBlockIdx = j;
+          break;
+        }
+      }
+      setBlockHighlight(card, inBlockIdx, outBlockIdx);
     }
 
     if (inBox) {
@@ -1804,17 +1896,21 @@ class CposActionsProvider implements vscode.WebviewViewProvider {
     }
   }
 
-  function inputLineHtml(text, expected, blockSizes, outputOffset) {
+  function inputLineHtml(text, expected, blockSizes, outputOffset, outputBlockSizes) {
     const lines = String(text == null ? "" : text).split("\\n");
     if (!lines.length) lines.push("");
-    const meta = computeInputBlocks(lines, expected, blockSizes, outputOffset);
+    let outSizes = outputBlockSizes;
+    if (!outSizes || !outSizes.length) outSizes = parseCodeforcesOutputBlockSizes(expected);
+    const meta = computeInputBlocks(lines, expected, blockSizes, outputOffset, outSizes);
     return lineRowsHtml(lines, meta.blocks, true);
   }
 
-  function expLineHtml(text) {
+  function expLineHtml(text, outputBlockSizes) {
     const lines = String(text == null ? "" : text).split("\\n");
     if (!lines.length) lines.push("");
-    const blocks = lines.map(function (_, i) { return { start: i, end: i }; });
+    let outSizes = outputBlockSizes;
+    if (!outSizes || !outSizes.length) outSizes = parseCodeforcesOutputBlockSizes(text);
+    const blocks = computeOutputBlocks(lines, outSizes && outSizes.length ? outSizes : null);
     return lineRowsHtml(lines, blocks, true);
   }
 
@@ -1874,6 +1970,11 @@ class CposActionsProvider implements vscode.WebviewViewProvider {
       }
       const offsetRaw = card.getAttribute("data-output-offset");
       if (offsetRaw != null && offsetRaw !== "") row.input_output_offset = parseInt(offsetRaw, 10);
+      const outSizesRaw = card.getAttribute("data-output-block-sizes");
+      if (outSizesRaw) {
+        const outSizes = outSizesRaw.split(",").map(Number).filter(function (n) { return n > 0; });
+        if (outSizes.length) row.output_block_sizes = outSizes;
+      }
       tests.push(row);
     });
     return tests;
@@ -1974,6 +2075,8 @@ class CposActionsProvider implements vscode.WebviewViewProvider {
     theme = id;
     document.body.setAttribute('data-theme', id);
     persistUiState();
+    // Persist to the extension's global storage so it survives restarts/reinstalls.
+    send('saveTheme', { theme: id });
   }
 
   function statbar() {
@@ -2013,7 +2116,10 @@ class CposActionsProvider implements vscode.WebviewViewProvider {
     const offsetAttr = typeof t.input_output_offset === "number"
       ? ' data-output-offset="' + t.input_output_offset + '"'
       : "";
-    return '<div class="box test ' + cardClass + '" data-index="' + i + '"' + blockAttr + offsetAttr + '>'
+    const outBlockAttr = t.output_block_sizes && t.output_block_sizes.length
+      ? ' data-output-block-sizes="' + t.output_block_sizes.join(",") + '"'
+      : "";
+    return '<div class="box test ' + cardClass + '" data-index="' + i + '"' + blockAttr + offsetAttr + outBlockAttr + '>'
       + '<div class="test-head">'
       + '<div class="test-title"><span class="idx">Test ' + (i + 1) + '</span><span class="verdict ' + vClass + '">' + verdict + '</span></div>'
       + '<div class="test-actions">'
@@ -2024,11 +2130,11 @@ class CposActionsProvider implements vscode.WebviewViewProvider {
       + '<div class="test-body">'
       + '<div class="io-grid" style="--io-in-pct:' + ioSplit + '%">'
       + '<div class="io-col io-col-input"><label>Input</label>'
-      + '<div class="io-input-box"><div class="io-line-bg">' + inputLineHtml(t.input, t.expected_output, t.input_block_sizes, t.input_output_offset) + '</div>'
+      + '<div class="io-input-box"><div class="io-line-bg">' + inputLineHtml(t.input, t.expected_output, t.input_block_sizes, t.input_output_offset, t.output_block_sizes) + '</div>'
       + '<textarea class="in" rows="' + inRows + '" spellcheck="false">' + esc(t.input) + '</textarea></div></div>'
       + '<div class="io-splitter" data-splitter title="Drag to resize"></div>'
       + '<div class="io-col io-col-exp"><label>Expected</label>'
-      + '<div class="io-exp-box"><div class="io-exp-line-bg">' + expLineHtml(t.expected_output) + '</div>'
+      + '<div class="io-exp-box"><div class="io-exp-line-bg">' + expLineHtml(t.expected_output, t.output_block_sizes) + '</div>'
       + '<textarea class="exp" rows="' + expRows + '" spellcheck="false">' + esc(t.expected_output) + '</textarea></div></div>'
       + '</div>'
       + got
@@ -2161,10 +2267,20 @@ class CposActionsProvider implements vscode.WebviewViewProvider {
     if (collected.length === state.tests.length) state.tests = collected;
   }
 
+  let themeFromHost = false;
   window.addEventListener("message", (event) => {
     const msg = event.data;
     if (msg.type === "state") {
       const incoming = msg.state;
+      // Adopt the theme saved in the extension once (source of truth across restarts).
+      if (!themeFromHost && incoming && typeof incoming.theme === "string" && incoming.theme) {
+        themeFromHost = true;
+        if (incoming.theme !== theme) {
+          theme = incoming.theme;
+          document.body.setAttribute("data-theme", theme);
+          persistUiState();
+        }
+      }
       const sameFile = incoming.source === renderedSource && renderedSource !== undefined;
       state = incoming;
       if (sameFile) patch();

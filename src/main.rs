@@ -514,16 +514,15 @@ fn submit_selected(app: &mut App) {
         app::queue_pending_submit(server, &problem, &action, &app.config.default_language);
     }
 
+    // The submit page is opened and filled by the CPOS Chrome companion, which
+    // polls this app on localhost. We deliberately do NOT open the system default
+    // browser here so the submission always lands in the logged-in Chrome session.
     let copied = copy_to_clipboard(&action.code);
-    open_url(&action.submit_url);
     app.status_message = if copied {
-        format!(
-            "Submitting {} — browser companion will auto-fill",
-            problem.id
-        )
+        format!("Submitting {} — opening submit page in Chrome…", problem.id)
     } else {
         format!(
-            "Opened submit page for {} (clipboard failed — paste manually if needed)",
+            "Submitting {} in Chrome (clipboard unavailable — code is queued)",
             problem.id
         )
     };
