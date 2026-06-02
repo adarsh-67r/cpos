@@ -6,6 +6,10 @@ Open a problem in your browser. CPOS creates your solution file in the folder yo
 
 Part of the **CPOS** project — works with the [terminal app](https://github.com/Soham109/cpos) and [browser companion](https://chromewebstore.google.com/detail/gjnbapmjonegeeamdeahcoojgokeogmm). All components sync over localhost.
 
+[![Watch the CPOS full demo on YouTube](https://img.youtube.com/vi/5HTatBfpK5A/maxresdefault.jpg)](https://youtu.be/5HTatBfpK5A)
+
+**▶ [Watch the full demo on YouTube](https://youtu.be/5HTatBfpK5A)** — capture, run samples, and submit end to end.
+
 ![CPOS VS Code panel with test cases and a Codeforces solution](https://raw.githubusercontent.com/Soham109/cpos/main/extensions/vscode/media/vscode-panel-ui.png)
 
 ## How it works
@@ -40,6 +44,7 @@ Submit requires the [browser companion](https://chromewebstore.google.com/detail
 
 ## Links
 
+- [Full demo on YouTube](https://youtu.be/5HTatBfpK5A)
 - [CPOS on GitHub](https://github.com/Soham109/cpos)
 - [Changelog](../../CHANGELOG.md)
 - [Architecture](../../ARCHITECTURE.md)

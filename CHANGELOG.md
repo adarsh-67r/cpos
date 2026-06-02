@@ -25,6 +25,7 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 - Landing page redesign with optimized WebP screenshots
+- Full demo video embedded on the [website](https://cpos.sohamaggarwal.com) and linked from README files
 
 ---
 

@@ -8,11 +8,19 @@ Open a problem in your browser. CPOS creates the file, loads the samples, and le
 
 <p align="center">
   <a href="https://cpos.sohamaggarwal.com"><img alt="Website" src="https://img.shields.io/badge/website-cpos-8b5cf6"></a>
+  <a href="https://youtu.be/5HTatBfpK5A"><img alt="Demo" src="https://img.shields.io/badge/demo-YouTube-red?logo=youtube&logoColor=white"></a>
   <a href="https://marketplace.visualstudio.com/items?itemName=sohamaggarwal.cpos-vscode"><img alt="VS Code" src="https://img.shields.io/badge/VS%20Code-Extension-007ACC?logo=visualstudiocode&logoColor=white"></a>
   <a href="https://chromewebstore.google.com/detail/gjnbapmjonegeeamdeahcoojgokeogmm"><img alt="Chrome" src="https://img.shields.io/badge/Chrome-Extension-4285F4?logo=googlechrome&logoColor=white"></a>
   <img alt="license" src="https://img.shields.io/badge/license-MIT-blue.svg">
   <img alt="rust" src="https://img.shields.io/badge/built%20with-Rust-orange.svg">
 </p>
+
+<p align="center">
+  <a href="https://youtu.be/5HTatBfpK5A">
+    <img src="https://img.youtube.com/vi/5HTatBfpK5A/maxresdefault.jpg" alt="Watch the CPOS full demo on YouTube — capture, run tests, and submit from VS Code" width="820">
+  </a>
+</p>
+<p align="center"><b>▶ <a href="https://youtu.be/5HTatBfpK5A">Watch the full demo on YouTube</a></b></p>
 
 <p align="center">
   <img src="docs/dashboard.png" alt="CPOS dashboard" width="820">
