@@ -15,16 +15,21 @@ Open a problem in your browser. CPOS creates the file, loads the samples, and le
   <img alt="rust" src="https://img.shields.io/badge/built%20with-Rust-orange.svg">
 </p>
 
-<p align="center">
-  <a href="https://youtu.be/5HTatBfpK5A">
-    <img src="https://img.youtube.com/vi/5HTatBfpK5A/maxresdefault.jpg" alt="Watch the CPOS full demo on YouTube — capture, run tests, and submit from VS Code" width="820">
-  </a>
-</p>
-<p align="center"><b>▶ <a href="https://youtu.be/5HTatBfpK5A">Watch the full demo on YouTube</a></b></p>
+## Demo
 
 <p align="center">
-  <img src="docs/dashboard.png" alt="CPOS dashboard" width="820">
+  <a href="https://youtu.be/5HTatBfpK5A">
+    <img src="https://img.shields.io/badge/▶_Full_walkthrough-FF0000?style=for-the-badge&logo=youtube&logoColor=white" alt="Watch the CPOS full demo on YouTube">
+  </a>
 </p>
+
+<p align="center">
+  <a href="https://youtu.be/5HTatBfpK5A">
+    <img src="https://img.youtube.com/vi/5HTatBfpK5A/maxresdefault.jpg" alt="Click to play the CPOS demo on YouTube" width="820">
+  </a>
+</p>
+
+<p align="center"><sub>Capture a problem · auto-create your file · run samples · submit from VS Code</sub></p>
 
 ---
 
