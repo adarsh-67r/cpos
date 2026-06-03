@@ -73,20 +73,32 @@ fn detect_method() -> Result<UpdateMethod> {
 }
 
 fn installed_by_homebrew() -> bool {
-    std::env::current_exe()
-        .ok()
-        .map(|p| p.to_string_lossy().contains("/Cellar/cpos/"))
-        .unwrap_or(false)
+    current_exe_paths()
+        .iter()
+        .any(|p| path_text(p).contains("/Cellar/cpos/"))
 }
 
 fn installed_by_scoop() -> bool {
-    std::env::current_exe()
-        .ok()
-        .map(|p| {
-            let s = p.to_string_lossy().replace('\\', "/").to_ascii_lowercase();
-            s.contains("/scoop/apps/cpos/")
-        })
-        .unwrap_or(false)
+    current_exe_paths()
+        .iter()
+        .any(|p| path_text(p).contains("/scoop/apps/cpos/"))
+}
+
+fn current_exe_paths() -> Vec<PathBuf> {
+    let Ok(exe) = std::env::current_exe() else {
+        return Vec::new();
+    };
+    let mut paths = vec![exe.clone()];
+    if let Ok(real) = std::fs::canonicalize(&exe) {
+        if real != exe {
+            paths.push(real);
+        }
+    }
+    paths
+}
+
+fn path_text(path: &Path) -> String {
+    path.to_string_lossy().replace('\\', "/").to_ascii_lowercase()
 }
 
 fn installed_by_cargo_bin() -> bool {
@@ -297,5 +309,11 @@ mod tests {
     fn ignores_git_install_key() {
         let key = "cpos 0.1.0 (git+https://github.com/Soham109/cpos#abc123)";
         assert!(parse_path_from_crate_key(key).is_none());
+    }
+
+    #[test]
+    fn normalizes_install_paths_for_detection() {
+        let path = PathBuf::from(r"C:\Users\dev\scoop\apps\cpos\current\cpos.exe");
+        assert!(path_text(&path).contains("/scoop/apps/cpos/"));
     }
 }

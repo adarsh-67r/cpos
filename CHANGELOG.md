@@ -4,7 +4,7 @@ All notable changes to CPOS are documented here. Components are versioned indepe
 
 | Component | Current version | Version file |
 | --- | --- | --- |
-| Terminal app | 0.1.0 | `Cargo.toml` |
+| Terminal app | 0.1.1 | `Cargo.toml` |
 | VS Code extension | 0.3.21 | `extensions/vscode/package.json` |
 | Browser companion | 0.6.12 | `extensions/chrome/manifest.json` |
 
@@ -31,6 +31,13 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Landing page redesign with higher-resolution WebP screenshots and package-manager-first TUI install commands
 - Full demo video embedded on the [website](https://cpos.sohamaggarwal.com) and linked from README files
 - Added [TROUBLESHOOTING.md](TROUBLESHOOTING.md) for TUI install, Run All, submit, capture, and source-build issues
+
+---
+
+## Terminal app — 0.1.1
+
+### Fixed
+- `cpos update` now detects Homebrew/Scoop installs through package-manager symlinks and shims before falling back to standalone binary updates.
 
 ---
 

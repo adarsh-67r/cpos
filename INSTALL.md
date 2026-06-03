@@ -71,13 +71,13 @@ Restart the terminal if `cpos` is not found immediately.
 macOS and Linux:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/Soham109/cpos/main/install.sh | CPOS_VERSION=0.1.0 sh
+curl -fsSL https://raw.githubusercontent.com/Soham109/cpos/main/install.sh | CPOS_VERSION=0.1.1 sh
 ```
 
 Windows PowerShell:
 
 ```powershell
-$env:CPOS_VERSION = "0.1.0"
+$env:CPOS_VERSION = "0.1.1"
 irm https://raw.githubusercontent.com/Soham109/cpos/main/install.ps1 | iex
 ```
 
