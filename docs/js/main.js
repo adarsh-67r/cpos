@@ -80,6 +80,32 @@
     requestIdleCallback(() => injectScreen(document.getElementById("screen-problems")));
   }
 
+  const themeToggle = document.querySelector(".theme-toggle");
+  const themeMeta = document.querySelector('meta[name="theme-color"]');
+
+  function setTheme(theme) {
+    document.documentElement.dataset.theme = theme;
+    try {
+      localStorage.setItem("cpos-theme", theme);
+    } catch {
+      // Theme still works for the current page even if persistence is blocked.
+    }
+    if (themeMeta) themeMeta.setAttribute("content", theme === "light" ? "#f7f9fb" : "#08090b");
+    if (themeToggle) {
+      themeToggle.setAttribute(
+        "aria-label",
+        theme === "light" ? "Switch to dark theme" : "Switch to light theme"
+      );
+    }
+  }
+
+  if (themeToggle) {
+    setTheme(document.documentElement.dataset.theme || "dark");
+    themeToggle.addEventListener("click", () => {
+      setTheme(document.documentElement.dataset.theme === "light" ? "dark" : "light");
+    });
+  }
+
   document.querySelectorAll("[data-copy]").forEach((btn) => {
     btn.addEventListener("click", async () => {
       const cmd = btn.dataset.copy;
