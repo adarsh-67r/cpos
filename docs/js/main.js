@@ -139,6 +139,87 @@
     });
   }
 
+  const liveSources = {
+    repo: "https://api.github.com/repos/Soham109/cpos",
+    latestRelease: "https://api.github.com/repos/Soham109/cpos/releases/latest",
+    vscodeDownloads: "https://badgen.net/vs-marketplace/d/sohamaggarwal.cpos-vscode",
+    redditPost: "https://www.reddit.com/r/codeforces/comments/1tvjxub/i_built_a_better_cph/.json?raw_json=1",
+  };
+
+  function setLiveStat(name, value) {
+    if (!value) return;
+    document.querySelectorAll(`[data-live-stat="${name}"]`).forEach((el) => {
+      el.textContent = value;
+    });
+  }
+
+  function formatCompact(value) {
+    const n = Number(value);
+    if (!Number.isFinite(n)) return "";
+    if (n >= 1000000) return `${trimDecimal(n / 1000000)}m`;
+    if (n >= 1000) return `${trimDecimal(n / 1000)}k`;
+    return String(Math.round(n));
+  }
+
+  function trimDecimal(value) {
+    return value.toFixed(value >= 10 ? 0 : 1).replace(/\.0$/, "");
+  }
+
+  function firstNumber(text) {
+    const match = String(text || "").match(/[\d,.]+/);
+    return match ? Number(match[0].replace(/,/g, "")) : NaN;
+  }
+
+  function badgeNumber(svgText) {
+    const labelMatch = String(svgText || "").match(/aria-label="[^"]*?:\s*([\d,.]+)/i);
+    return labelMatch ? Number(labelMatch[1].replace(/,/g, "")) : firstNumber(svgText);
+  }
+
+  async function fetchJson(url) {
+    const res = await fetch(url, { cache: "no-store" });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return res.json();
+  }
+
+  async function fetchText(url) {
+    const res = await fetch(url, { cache: "no-store" });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return res.text();
+  }
+
+  async function loadLiveStats() {
+    fetchJson(liveSources.latestRelease)
+      .then((release) => setLiveStat("release", release.tag_name || release.name))
+      .catch(() => {});
+
+    fetchJson(liveSources.repo)
+      .then((repo) => {
+        const stars = formatCompact(repo.stargazers_count);
+        if (stars) setLiveStat("github-stars", stars);
+      })
+      .catch(() => {});
+
+    fetchText(liveSources.vscodeDownloads)
+      .then((badgeSvg) => {
+        const downloads = badgeNumber(badgeSvg);
+        const formatted = formatCompact(downloads);
+        if (formatted) setLiveStat("vscode-downloads", formatted);
+      })
+      .catch(() => {});
+
+    fetchJson(liveSources.redditPost)
+      .then((listing) => {
+        const score = listing?.[0]?.data?.children?.[0]?.data?.score;
+        const upvotes = Math.max(Number(score) || 0, 150);
+        const formatted = `${formatCompact(upvotes)}+ upvotes`;
+        setLiveStat("reddit-upvotes", formatted);
+        setLiveStat("reddit-summary", `18k+ views · ${formatted}`);
+      })
+      .catch(() => {});
+  }
+
+  loadLiveStats();
+
   document.querySelectorAll("[data-copy]").forEach((btn) => {
     btn.addEventListener("click", async () => {
       const cmd = btn.dataset.copy;
