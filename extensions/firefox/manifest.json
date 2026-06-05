@@ -1,0 +1,58 @@
+{
+    "manifest_version": 3,
+    "name": "CPOS Companion",
+    "version": "0.0.1",
+    "description": "Capture Codeforces and CSES problems for the CPOS VS Code extension. All data stays on your computer (localhost only).",
+    "icons": {
+        "16": "icons/icon16.png",
+        "48": "icons/icon48.png",
+        "128": "icons/icon128.png"
+    },
+    "action": {
+        "default_title": "CPOS Companion - capture & submit via local CPOS",
+        "default_icon": {
+            "16": "icons/icon16.png",
+            "48": "icons/icon48.png",
+            "128": "icons/icon128.png"
+        }
+    },
+    "permissions": ["scripting", "tabs", "alarms"],
+    "host_permissions": [
+        "http://127.0.0.1:27121/*",
+        "http://127.0.0.1:27122/*",
+        "https://codeforces.com/*",
+        "https://cses.fi/*"
+    ],
+    "background": {
+        "scripts": ["background.js"]
+    },
+    "browser_specific_settings": {
+        "gecko": {
+            "id": "cpos-companion@local",
+            "strict_min_version": "128.0",
+            "data_collection_permissions": {
+                "required": ["none"]
+            }
+        }
+    },
+    "content_scripts": [
+        {
+            "matches": [
+                "https://codeforces.com/problemset/problem/*",
+                "https://codeforces.com/contest/*/problem/*",
+                "https://codeforces.com/contest/*/submit",
+                "https://codeforces.com/gym/*/problem/*",
+                "https://codeforces.com/gym/*/submit",
+                "https://codeforces.com/edu/*/submit",
+                "https://codeforces.com/group/*/contest/*/submit",
+                "https://codeforces.com/problemset/submit*",
+                "https://cses.fi/problemset/task/*",
+                "https://cses.fi/problemset/submit/*",
+                "https://cses.fi/problemset/list*",
+                "https://cses.fi/problemset/list/*"
+            ],
+            "js": ["content.js"],
+            "run_at": "document_idle"
+        }
+    ]
+}
