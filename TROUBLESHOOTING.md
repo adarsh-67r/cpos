@@ -40,6 +40,12 @@ If something isn’t listed here, open a [GitHub issue](https://github.com/Soham
 2. **Python:** ensure `python` is on PATH (Windows often has no `python3` command).
 3. Check **Output → CPOS** for the compile/run command and errors.
 
+### Windows: `"Hello".exe` or Python `Invalid argument` / quotes in the path
+
+**What it means:** CPOS was wrapping compile/run paths in extra quotes. MinGW then tried to create a file literally named `"Hello".exe`, and Python looked for a mangled path under `.cpos-vscode\build\`.
+
+**Fix:** Update to VS Code extension **0.3.23+**.
+
 ### All platforms
 
 - **CE in the panel** = the toolchain ran but the build failed — read stderr in the test row or CPOS output.

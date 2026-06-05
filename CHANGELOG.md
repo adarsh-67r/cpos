@@ -5,7 +5,7 @@ All notable changes to CPOS are documented here. Components are versioned indepe
 | Component | Current version | Version file |
 | --- | --- | --- |
 | Terminal app | 0.1.3 | `Cargo.toml` |
-| VS Code extension | 0.3.22 | `extensions/vscode/package.json` |
+| VS Code extension | 0.3.23 | `extensions/vscode/package.json` |
 | Browser companion (Chrome) | 0.6.13 | `extensions/chrome/manifest.json` |
 | Browser companion (Firefox) | 0.0.1 | `extensions/firefox/manifest.json` |
 
@@ -15,6 +15,13 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 - Firefox browser companion source build in `extensions/firefox`, with temporary add-on install instructions and XPI packaging for self-signing or future AMO distribution.
+
+---
+
+## VS Code extension — 0.3.23 - 2026-06-06
+
+### Fixed
+- **Windows Run All** — stop quoting `{output}` and `{source}` paths unnecessarily; fixes `"Hello".exe` linker errors and Python `can't open file … Invalid argument` (#6).
 
 ---
 

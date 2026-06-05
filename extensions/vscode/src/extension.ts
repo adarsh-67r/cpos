@@ -1090,18 +1090,29 @@ function languageForFile(source: string): string {
 }
 
 function expandCommand(command: string, source: string, outputName: string, buildDir: string): string {
+  const classname = path.parse(source).name;
+  // Replace compound tokens before `{output}` so we never produce `"Hello".exe`.
   return command
-    .replaceAll("{source}", shellQuote(source))
-    .replaceAll("{output}", shellQuote(outputName))
-    .replaceAll("{dir}", shellQuote(buildDir))
-    .replaceAll("{classname}", shellQuote(path.parse(source).name));
+    .replaceAll("{output}.jar", `${outputName}.jar`)
+    .replaceAll("{output}.exe", `${outputName}.exe`)
+    .replaceAll("{source}", quoteShellPath(source))
+    .replaceAll("{output}", outputName)
+    .replaceAll("{dir}", quoteShellPath(buildDir))
+    .replaceAll("{classname}", outputName === classname ? outputName : quoteShellPath(classname));
 }
 
-function shellQuote(value: string): string {
+/** Quote filesystem paths for the platform shell. */
+function quoteShellPath(value: string): string {
   if (process.platform === "win32") {
+    // cmd.exe + MinGW/Python: stray quotes become part of filenames/paths on Windows.
+    if (!needsWindowsQuoting(value)) return value;
     return `"${value.replace(/"/g, '""')}"`;
   }
   return `'${value.replaceAll("'", "'\\''")}'`;
+}
+
+function needsWindowsQuoting(value: string): boolean {
+  return /[\s"&|<>^()]/.test(value);
 }
 
 function runShell(
