@@ -2,7 +2,7 @@
   "name": "cpos-vscode",
   "displayName": "CPOS",
   "description": "Capture Codeforces & CSES problems, run sample tests, and submit — all from VS Code.",
-  "version": "0.3.22",
+  "version": "0.3.26",
   "publisher": "sohamaggarwal",
   "license": "MIT",
   "icon": "media/icon128.png",
@@ -57,6 +57,10 @@
         "title": "CPOS: Submit Active File"
       },
       {
+        "command": "cpos.publishActiveFile",
+        "title": "CPOS: Publish Accepted Solution"
+      },
+      {
         "command": "cpos.openProblem",
         "title": "CPOS: Open Problem in Browser"
       }
@@ -86,6 +90,11 @@
           "type": "number",
           "default": 27122,
           "description": "Local port used by the VS Code capture server."
+        },
+        "cpos.cliPath": {
+          "type": "string",
+          "default": "",
+          "description": "Optional path to the cpos CLI. Leave empty to auto-detect (prefers a build that supports publishing)."
         },
         "cpos.saveLocation": {
           "type": "string",

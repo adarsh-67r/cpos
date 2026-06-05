@@ -1,7 +1,7 @@
 use ratatui::prelude::*;
 use ratatui::widgets::*;
 
-use crate::app::{language_display, App, SetupStep, LANGUAGES};
+use crate::app::{App, LANGUAGES, SetupStep, language_display};
 
 pub fn draw(frame: &mut Frame, app: &App) {
     let t = &app.theme;
@@ -38,9 +38,11 @@ fn step_indicator(app: &App) -> Paragraph<'static> {
     let t = &app.theme;
     let steps = [
         (SetupStep::Handle, "1 Handle"),
-        (SetupStep::Language, "2 Language"),
+        (SetupStep::Language, "2 Lang"),
         (SetupStep::Template, "3 Template"),
         (SetupStep::Cses, "4 CSES"),
+        (SetupStep::Github, "5 GitHub"),
+        (SetupStep::Updates, "6 Updates"),
     ];
     let mut spans = vec![Span::raw(" ")];
     for (i, (step, label)) in steps.iter().enumerate() {
@@ -101,10 +103,16 @@ fn draw_body(frame: &mut Frame, app: &App, area: Rect) {
                     if *lang == app.setup_lang {
                         spans.push(Span::styled(
                             format!(" ▸ {label} "),
-                            Style::default().fg(t.bg).bg(t.accent).add_modifier(Modifier::BOLD),
+                            Style::default()
+                                .fg(t.bg)
+                                .bg(t.accent)
+                                .add_modifier(Modifier::BOLD),
                         ));
                     } else {
-                        spans.push(Span::styled(format!("   {label} "), Style::default().fg(t.dim)));
+                        spans.push(Span::styled(
+                            format!("   {label} "),
+                            Style::default().fg(t.dim),
+                        ));
                     }
                     spans.push(Span::raw("  "));
                 }
@@ -147,6 +155,61 @@ fn draw_body(frame: &mut Frame, app: &App, area: Rect) {
             }
             frame.render_widget(Paragraph::new(body), area);
         }
+        SetupStep::Github => {
+            let publish = app.setup_github_publish;
+            let body = vec![
+                Line::from(Span::styled(
+                    "Publish accepted solutions to GitHub automatically?",
+                    Style::default().fg(t.fg),
+                )),
+                Line::from(Span::styled(
+                    "CPOS will create/connect a GitHub repo, generate READMEs,",
+                    Style::default().fg(t.dim),
+                )),
+                Line::from(Span::styled(
+                    "and build a clean GitHub Pages site for your accepted code.",
+                    Style::default().fg(t.dim),
+                )),
+                Line::from(""),
+                choice_line(t, "GitHub publishing", publish),
+                choice_line(t, "GitHub Pages", app.setup_github_pages),
+                choice_line(t, "Ollama docs", app.setup_ollama_docs),
+                Line::from(""),
+                Line::from(Span::styled(
+                    "If Ollama is on, CPOS will install/start it and pull the model when you finish.",
+                    Style::default().fg(t.dim),
+                )),
+                Line::from(Span::styled(
+                    "Press G in Config after setup to connect GitHub.",
+                    Style::default().fg(t.dim),
+                )),
+            ];
+            frame.render_widget(Paragraph::new(body), area);
+        }
+        SetupStep::Updates => {
+            let enabled = app.setup_update_prompts;
+            let choice = if enabled { "On" } else { "Off" };
+            let color = if enabled { t.success } else { t.dim };
+            let body = vec![
+                Line::from(Span::styled(
+                    "CPOS can check for updates when it starts.",
+                    Style::default().fg(t.fg),
+                )),
+                Line::from(Span::styled(
+                    "When a new terminal build is available, CPOS will ask before installing it.",
+                    Style::default().fg(t.dim),
+                )),
+                Line::from(""),
+                Line::from(vec![
+                    Span::styled("  update prompts  ", Style::default().fg(t.dim)),
+                    Span::styled(
+                        choice,
+                        Style::default().fg(color).add_modifier(Modifier::BOLD),
+                    ),
+                ]),
+            ];
+            frame.render_widget(Paragraph::new(body), area);
+        }
     }
 }
 
@@ -154,10 +217,7 @@ fn draw_template_step(frame: &mut Frame, app: &App, area: Rect) {
     let t = &app.theme;
     let chunks = Layout::default()
         .direction(Direction::Vertical)
-        .constraints([
-            Constraint::Length(3),
-            Constraint::Min(4),
-        ])
+        .constraints([Constraint::Length(3), Constraint::Min(4)])
         .split(area);
 
     let intro = vec![
@@ -181,10 +241,17 @@ fn draw_template_step(frame: &mut Frame, app: &App, area: Rect) {
     };
 
     let block = Block::default()
-        .title(Span::styled(title, Style::default().fg(t.accent).add_modifier(Modifier::BOLD)))
+        .title(Span::styled(
+            title,
+            Style::default().fg(t.accent).add_modifier(Modifier::BOLD),
+        ))
         .borders(Borders::ALL)
         .border_type(BorderType::Rounded)
-        .border_style(Style::default().fg(if line_count == 0 { t.border } else { t.accent_dim }))
+        .border_style(Style::default().fg(if line_count == 0 {
+            t.border
+        } else {
+            t.accent_dim
+        }))
         .style(Style::default().bg(t.bg));
 
     let inner = block.inner(chunks[1]);
@@ -253,7 +320,12 @@ fn masked(s: &str) -> String {
 
 fn hint_line(app: &App) -> Line<'static> {
     let t = &app.theme;
-    let key = |k: &'static str| Span::styled(k, Style::default().fg(t.accent).add_modifier(Modifier::BOLD));
+    let key = |k: &'static str| {
+        Span::styled(
+            k,
+            Style::default().fg(t.accent).add_modifier(Modifier::BOLD),
+        )
+    };
     let lbl = |l: &'static str| Span::styled(l, Style::default().fg(t.dim));
     match app.setup_step {
         SetupStep::Handle => Line::from(vec![
@@ -288,11 +360,41 @@ fn hint_line(app: &App) -> Line<'static> {
             key("o"),
             lbl(" open login   "),
             key("Enter"),
-            lbl(" finish   "),
+            lbl(" continue   "),
             key("Backspace"),
             lbl(" clear"),
         ]),
+        SetupStep::Github => Line::from(vec![
+            Span::raw(" "),
+            key("Space"),
+            lbl(" GitHub   "),
+            key("p"),
+            lbl(" pages   "),
+            key("o"),
+            lbl(" ollama   "),
+            key("Enter"),
+            lbl(" continue"),
+        ]),
+        SetupStep::Updates => Line::from(vec![
+            Span::raw(" "),
+            key("←/→"),
+            lbl(" toggle   "),
+            key("Enter"),
+            lbl(" finish"),
+        ]),
     }
+}
+
+fn choice_line(t: &crate::ui::theme::Theme, label: &str, enabled: bool) -> Line<'static> {
+    let value = if enabled { "yes" } else { "no" };
+    let color = if enabled { t.success } else { t.dim };
+    Line::from(vec![
+        Span::styled(format!("  {label:<18}"), Style::default().fg(t.dim)),
+        Span::styled(
+            value.to_string(),
+            Style::default().fg(color).add_modifier(Modifier::BOLD),
+        ),
+    ])
 }
 
 fn centered_rect(percent_x: u16, percent_y: u16, r: Rect) -> Rect {

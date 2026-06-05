@@ -42,7 +42,11 @@ Open the **CPOS** view in the activity bar:
 - **Test cases** — edit, add, or remove samples; Codeforces multi-case inputs can show linked input/output blocks
 - **Themes** — CPOS, Midnight, Amber, Paper, or Native (matches your VS Code theme; Run All uses VS Code button styling)
 
-Keep the **terminal app** running for browsing, recommendations, and analytics. Captures and submissions work with either app.
+### GitHub publishing
+
+Configure in the **CPOS terminal app** (Config tab or setup wizard): toggle GitHub Publishing, press **G** to connect GitHub, **O** for Ollama setup. With publishing on, new ACs archive **automatically** when the browser companion detects Accepted.
+
+Keep the **terminal app** running for browsing, recommendations, analytics, and publishing setup. Captures and submissions work with either app.
 
 ## Settings
 

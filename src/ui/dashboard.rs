@@ -49,7 +49,12 @@ fn draw_banner(frame: &mut Frame, app: &App, area: Rect) {
 
     lines.push(Line::from(""));
 
-    let cf_handle = app.config.handles.get("codeforces").cloned().unwrap_or_default();
+    let cf_handle = app
+        .config
+        .handles
+        .get("codeforces")
+        .cloned()
+        .unwrap_or_default();
     let (cf_label, cf_color) = if cf_handle.is_empty() {
         ("not set".to_string(), t.dim)
     } else {
@@ -57,12 +62,14 @@ fn draw_banner(frame: &mut Frame, app: &App, area: Rect) {
     };
     let (cses_label, cses_color) = match app.cses_solved.len() {
         n if n > 0 => (format!("connected ✓  ({n} solved)"), t.success),
-        _ if !app.cses_attempted.is_empty() => {
-            (format!("connected ({}) attempted", app.cses_attempted.len()), t.warning)
-        }
-        _ if app.config.cses_session.is_some() => {
-            ("cookie set — visit problemset list in browser".to_string(), t.warning)
-        }
+        _ if !app.cses_attempted.is_empty() => (
+            format!("connected ({}) attempted", app.cses_attempted.len()),
+            t.warning,
+        ),
+        _ if app.config.cses_session.is_some() => (
+            "cookie set — visit problemset list in browser".to_string(),
+            t.warning,
+        ),
         _ => (
             "log in on cses.fi + visit problemset list".to_string(),
             t.dim,
@@ -71,9 +78,15 @@ fn draw_banner(frame: &mut Frame, app: &App, area: Rect) {
     lines.push(
         Line::from(vec![
             Span::styled("Codeforces ", Style::default().fg(t.dim)),
-            Span::styled(cf_label, Style::default().fg(cf_color).add_modifier(Modifier::BOLD)),
+            Span::styled(
+                cf_label,
+                Style::default().fg(cf_color).add_modifier(Modifier::BOLD),
+            ),
             Span::styled("     CSES ", Style::default().fg(t.dim)),
-            Span::styled(cses_label, Style::default().fg(cses_color).add_modifier(Modifier::BOLD)),
+            Span::styled(
+                cses_label,
+                Style::default().fg(cses_color).add_modifier(Modifier::BOLD),
+            ),
         ])
         .alignment(Alignment::Center),
     );
@@ -97,7 +110,9 @@ fn draw_banner(frame: &mut Frame, app: &App, area: Rect) {
                 Span::styled("  — install from ", Style::default().fg(t.dim)),
                 Span::styled(
                     "Chrome Web Store",
-                    Style::default().fg(t.accent_dim).add_modifier(Modifier::BOLD),
+                    Style::default()
+                        .fg(t.accent_dim)
+                        .add_modifier(Modifier::BOLD),
                 ),
             ])
             .alignment(Alignment::Center),
@@ -107,10 +122,15 @@ fn draw_banner(frame: &mut Frame, app: &App, area: Rect) {
     let root = crate::engine::workspace::root(&app.config);
     lines.push(
         Line::from(vec![
-            Span::styled("VS Code saves to your open folder  ·  terminal: ", Style::default().fg(t.dim)),
+            Span::styled(
+                "VS Code saves to your open folder  ·  terminal: ",
+                Style::default().fg(t.dim),
+            ),
             Span::styled(
                 root.display().to_string(),
-                Style::default().fg(t.accent_dim).add_modifier(Modifier::BOLD),
+                Style::default()
+                    .fg(t.accent_dim)
+                    .add_modifier(Modifier::BOLD),
             ),
         ])
         .alignment(Alignment::Center),
@@ -137,7 +157,14 @@ fn draw_stat_cards(frame: &mut Frame, app: &App, area: Rect) {
         .unwrap_or_else(|| "—".to_string());
     let rating_color = app.theme.rating_color(app.current_rating());
 
-    stat_card(frame, app, cols[0], "PROBLEMS", &app.problems.len().to_string(), app.theme.accent);
+    stat_card(
+        frame,
+        app,
+        cols[0],
+        "PROBLEMS",
+        &app.problems.len().to_string(),
+        app.theme.accent,
+    );
     stat_card(
         frame,
         app,
@@ -249,17 +276,12 @@ fn draw_weak_tags(frame: &mut Frame, app: &App, area: Rect) {
         let color = progress::rate_color(t, rate_pct);
 
         frame.render_widget(
-            Paragraph::new(format!(" {}", truncate(&s.tag, 16)))
-                .style(Style::default().fg(t.fg)),
+            Paragraph::new(format!(" {}", truncate(&s.tag, 16))).style(Style::default().fg(t.fg)),
             cols[0],
         );
 
         frame.render_widget(
-            Paragraph::new(progress::bar_line(
-                progress::BAR_WIDTH,
-                rate,
-                color,
-            )),
+            Paragraph::new(progress::bar_line(progress::BAR_WIDTH, rate, color)),
             cols[1],
         );
 

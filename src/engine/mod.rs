@@ -1,4 +1,6 @@
 pub mod capture;
+pub mod ollama;
+pub mod publish;
 pub mod recommender;
 pub mod runner;
 pub mod stress;

@@ -25,7 +25,10 @@ pub fn compute_tag_stats(submissions: &[Submission], problems: &[Problem]) -> Ve
             let tag_lower = tag.to_lowercase();
             if is_solved {
                 if let Some(rating) = sub.rating {
-                    tag_solved.entry(tag_lower.clone()).or_default().push(rating);
+                    tag_solved
+                        .entry(tag_lower.clone())
+                        .or_default()
+                        .push(rating);
                 } else {
                     tag_solved.entry(tag_lower.clone()).or_default();
                 }

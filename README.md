@@ -69,6 +69,18 @@ Install from the [Marketplace](https://marketplace.visualstudio.com/items?itemNa
 - **GitHub** — open the CPOS repository
 - **Test cases** — edit samples; multi-case inputs show linked input/output blocks when captured from Codeforces
 - **Theme** — five panel themes (see [Settings](#settings))
+- **GitHub Publishing** — toggle auto/pages/ollama in the TUI Config tab; connect GitHub with **G**, set up Ollama with **O**
+
+---
+
+## GitHub publishing
+
+Archive every accepted solution to a **separate repo** (`~/cpos-solutions` by default) with READMEs and an optional GitHub Pages site. Optional [Ollama](https://ollama.com/) writes approach/complexity notes — CPOS runs full Ollama setup when you enable it in the wizard or Config.
+
+1. Turn publishing on in **Config** (TUI setup wizard or Config tab).
+2. Connect GitHub — press **G** in Config (needs [`gh`](https://cli.github.com/)).
+3. Optional Ollama — enable in setup/Config (auto install/pull) or press **O** in Config anytime.
+4. Sync (`r`) — new ACs publish automatically when auto-publish is on.
 
 ---
 

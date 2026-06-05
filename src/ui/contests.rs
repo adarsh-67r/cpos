@@ -59,12 +59,8 @@ pub fn draw(frame: &mut Frame, app: &App, area: Rect) {
 
             let (when_text, when_color) = match c.phase {
                 ContestPhase::Running => ("● LIVE".to_string(), t.danger),
-                ContestPhase::Before => {
-                    (format!("in {}", humanize(c.start_time - now)), t.success)
-                }
-                ContestPhase::Finished => {
-                    (format!("{} ago", humanize(now - c.start_time)), t.dim)
-                }
+                ContestPhase::Before => (format!("in {}", humanize(c.start_time - now)), t.success),
+                ContestPhase::Finished => (format!("{} ago", humanize(now - c.start_time)), t.dim),
             };
 
             let base = if selected {
@@ -110,7 +106,10 @@ pub fn draw(frame: &mut Frame, app: &App, area: Rect) {
             Style::default().fg(t.accent).add_modifier(Modifier::BOLD),
         ),
         Span::styled("solve its problems   ", Style::default().fg(t.dim)),
-        Span::styled("b ", Style::default().fg(t.accent).add_modifier(Modifier::BOLD)),
+        Span::styled(
+            "b ",
+            Style::default().fg(t.accent).add_modifier(Modifier::BOLD),
+        ),
         Span::styled("open in browser", Style::default().fg(t.dim)),
     ]));
     frame.render_widget(help, help_area);

@@ -4,15 +4,14 @@ use reqwest::Client;
 use scraper::{Html, Selector};
 use serde::Deserialize;
 
-use super::{pre_text, PlatformClient};
+use super::{PlatformClient, pre_text};
 use crate::data::models::*;
 
 const CF_API: &str = "https://codeforces.com/api";
 
 /// A browser-like user agent improves the odds of getting past the basic
 /// anti-bot checks when scraping the HTML problem page for samples.
-const BROWSER_UA: &str =
-    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36";
+const BROWSER_UA: &str = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36";
 
 pub struct CodeforcesClient {
     client: Client,
@@ -169,10 +168,7 @@ impl PlatformClient for CodeforcesClient {
         let resp: CfResponse<CfProblemsResult> = self.client.get(&url).send().await?.json().await?;
 
         if resp.status != "OK" {
-            bail!(
-                "Codeforces API error: {}",
-                resp.comment.unwrap_or_default()
-            );
+            bail!("Codeforces API error: {}", resp.comment.unwrap_or_default());
         }
 
         let result = resp.result.unwrap();
@@ -189,7 +185,10 @@ impl PlatformClient for CodeforcesClient {
             .filter_map(|p| {
                 let cid = p.contest_id?;
                 let id = format!("{}{}", cid, p.index);
-                let url = format!("https://codeforces.com/problemset/problem/{}/{}", cid, p.index);
+                let url = format!(
+                    "https://codeforces.com/problemset/problem/{}/{}",
+                    cid, p.index
+                );
                 let solved_count = solved_map.get(&id).copied();
                 Some(Problem {
                     platform: Platform::Codeforces,
@@ -210,13 +209,11 @@ impl PlatformClient for CodeforcesClient {
 
     async fn fetch_submissions(&self, handle: &str) -> Result<Vec<Submission>> {
         let url = format!("{CF_API}/user.status?handle={handle}&from=1&count=10000");
-        let resp: CfResponse<Vec<CfSubmission>> = self.client.get(&url).send().await?.json().await?;
+        let resp: CfResponse<Vec<CfSubmission>> =
+            self.client.get(&url).send().await?.json().await?;
 
         if resp.status != "OK" {
-            bail!(
-                "Codeforces API error: {}",
-                resp.comment.unwrap_or_default()
-            );
+            bail!("Codeforces API error: {}", resp.comment.unwrap_or_default());
         }
 
         let subs = resp
@@ -251,10 +248,7 @@ impl PlatformClient for CodeforcesClient {
             self.client.get(&url).send().await?.json().await?;
 
         if resp.status != "OK" {
-            bail!(
-                "Codeforces API error: {}",
-                resp.comment.unwrap_or_default()
-            );
+            bail!("Codeforces API error: {}", resp.comment.unwrap_or_default());
         }
 
         let changes = resp
@@ -277,10 +271,7 @@ impl PlatformClient for CodeforcesClient {
         let resp: CfResponse<Vec<CfContest>> = self.client.get(&url).send().await?.json().await?;
 
         if resp.status != "OK" {
-            bail!(
-                "Codeforces API error: {}",
-                resp.comment.unwrap_or_default()
-            );
+            bail!("Codeforces API error: {}", resp.comment.unwrap_or_default());
         }
 
         let contests = resp

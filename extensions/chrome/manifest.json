@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "CPOS Companion",
-  "version": "0.6.13",
+  "version": "0.6.14",
   "description": "Capture Codeforces and CSES problems for the CPOS VS Code extension. All data stays on your computer (localhost only).",
   "icons": {
     "16": "icons/icon16.png",
@@ -30,9 +30,15 @@
     {
       "matches": [
         "https://codeforces.com/problemset/problem/*",
+        "https://codeforces.com/problemset/status*",
+        "https://codeforces.com/submissions/*",
         "https://codeforces.com/contest/*/problem/*",
+        "https://codeforces.com/contest/*/my",
+        "https://codeforces.com/contest/*/status*",
         "https://codeforces.com/contest/*/submit",
         "https://codeforces.com/gym/*/problem/*",
+        "https://codeforces.com/gym/*/my",
+        "https://codeforces.com/gym/*/status*",
         "https://codeforces.com/gym/*/submit",
         "https://codeforces.com/edu/*/submit",
         "https://codeforces.com/group/*/contest/*/submit",

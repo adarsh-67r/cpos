@@ -236,6 +236,32 @@ Set `cses_session` in config (see README) and use the browser companion on the C
 
 ---
 
+## GitHub publishing
+
+### Nothing publishes / old ACs missing from my repo
+
+1. Turn **GitHub Publishing** on in the TUI Config tab — saves `auto_publish = true` in config.
+2. Press **`G`** in Config or run **`cpos setup-github`** (`gh auth login` first).
+3. Sync submissions: press **`r`** in the TUI (needs your Codeforces handle in Config).
+4. Backfill: **`cpos publish-all`** (or wait for auto-backfill after sync when publishing is on).
+5. Each accepted problem needs a **non-empty solution file** on disk (in `~/cpos`, your VS Code folder, or a path CPOS knows about).
+
+CPOS writes to **`repo_dir`** (default `~/cpos-solutions`), not your solve workspace.
+
+### VS Code says "Only accepted solutions can be published"
+
+The panel checks browser AC events **and** `accepted-index.json` (written when the TUI syncs). Run **`r`** in the TUI once so synced Codeforces submissions appear, then retry.
+
+### Push failed / no remote
+
+Install GitHub CLI, run `gh auth login`, then **`cpos setup-github`** or press **`G`** in Config.
+
+### Ollama README is generic
+
+Enable **Ollama Docs** in Config (runs install/start/pull automatically), or press **O** to re-run setup. CLI: `cpos setup-ollama`. Publishing still works without it (fallback text).
+
+---
+
 ## Panel UI
 
 ### Native theme — Run All button looks wrong on light VS Code themes

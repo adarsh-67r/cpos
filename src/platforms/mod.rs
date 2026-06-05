@@ -69,9 +69,7 @@ mod tests {
 
 pub trait PlatformClient {
     fn platform(&self) -> Platform;
-    fn fetch_problems(
-        &self,
-    ) -> impl std::future::Future<Output = Result<Vec<Problem>>> + Send;
+    fn fetch_problems(&self) -> impl std::future::Future<Output = Result<Vec<Problem>>> + Send;
     fn fetch_submissions(
         &self,
         handle: &str,
@@ -80,7 +78,5 @@ pub trait PlatformClient {
         &self,
         handle: &str,
     ) -> impl std::future::Future<Output = Result<Vec<RatingChange>>> + Send;
-    fn fetch_contests(
-        &self,
-    ) -> impl std::future::Future<Output = Result<Vec<Contest>>> + Send;
+    fn fetch_contests(&self) -> impl std::future::Future<Output = Result<Vec<Contest>>> + Send;
 }

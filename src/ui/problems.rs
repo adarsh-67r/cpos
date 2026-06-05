@@ -51,10 +51,7 @@ fn draw_filter_bar(frame: &mut Frame, app: &App, area: Rect) {
 
     if let Some(tag) = &app.tag_filter {
         spans.push(Span::styled("   tag ", Style::default().fg(t.dim)));
-        spans.push(Span::styled(
-            tag.clone(),
-            Style::default().fg(t.warning),
-        ));
+        spans.push(Span::styled(tag.clone(), Style::default().fg(t.warning)));
     }
 
     if let Some(cid) = &app.contest_filter {
@@ -172,8 +169,8 @@ fn draw_detail(frame: &mut Frame, app: &App, area: Rect) {
 
     let problem: Option<&Problem> = app.selected_problem();
     let Some(p) = problem else {
-        let hint = Paragraph::new("  Select a problem to see details.")
-            .style(Style::default().fg(t.dim));
+        let hint =
+            Paragraph::new("  Select a problem to see details.").style(Style::default().fg(t.dim));
         frame.render_widget(hint, inner);
         return;
     };
@@ -191,7 +188,10 @@ fn draw_detail(frame: &mut Frame, app: &App, area: Rect) {
                     .fg(app.theme.rating_color(p.rating))
                     .add_modifier(Modifier::BOLD),
             ),
-            Span::styled(p.name.clone(), Style::default().fg(t.fg).add_modifier(Modifier::BOLD)),
+            Span::styled(
+                p.name.clone(),
+                Style::default().fg(t.fg).add_modifier(Modifier::BOLD),
+            ),
         ]),
         Line::from(vec![
             Span::styled(" rating  ", Style::default().fg(t.dim)),
@@ -240,7 +240,12 @@ fn file_line(app: &App, p: &Problem) -> Line<'static> {
 
 fn draw_help_bar(frame: &mut Frame, app: &App, area: Rect) {
     let t = &app.theme;
-    let key = |k: &'static str| Span::styled(k, Style::default().fg(t.accent).add_modifier(Modifier::BOLD));
+    let key = |k: &'static str| {
+        Span::styled(
+            k,
+            Style::default().fg(t.accent).add_modifier(Modifier::BOLD),
+        )
+    };
     let lbl = |l: &'static str| Span::styled(l, Style::default().fg(t.dim));
 
     let help = Paragraph::new(Line::from(vec![
@@ -311,8 +316,14 @@ fn draw_test_popup(frame: &mut Frame, app: &App, area: Rect) {
             ("✗", t.danger, format!("{passed} of {total} samples passed"))
         };
         lines.push(Line::from(vec![
-            Span::styled(format!(" {icon}  "), Style::default().fg(color).add_modifier(Modifier::BOLD)),
-            Span::styled(text, Style::default().fg(color).add_modifier(Modifier::BOLD)),
+            Span::styled(
+                format!(" {icon}  "),
+                Style::default().fg(color).add_modifier(Modifier::BOLD),
+            ),
+            Span::styled(
+                text,
+                Style::default().fg(color).add_modifier(Modifier::BOLD),
+            ),
         ]));
         lines.push(Line::from(""));
 
@@ -360,10 +371,7 @@ fn draw_test_popup(frame: &mut Frame, app: &App, area: Rect) {
         Style::default().fg(t.dim),
     )));
 
-    frame.render_widget(
-        Paragraph::new(lines).wrap(Wrap { trim: false }),
-        inner,
-    );
+    frame.render_widget(Paragraph::new(lines).wrap(Wrap { trim: false }), inner);
 }
 
 /// A one-word verdict pulled from the runner's error text.

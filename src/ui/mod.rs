@@ -105,9 +105,7 @@ fn draw_header(frame: &mut Frame, app: &App, area: Rect) {
         Span::styled("   streak ", Style::default().fg(t.dim)),
         Span::styled(
             format!("{}d ", app.current_streak()),
-            Style::default()
-                .fg(t.warning)
-                .add_modifier(Modifier::BOLD),
+            Style::default().fg(t.warning).add_modifier(Modifier::BOLD),
         ),
     ]))
     .alignment(Alignment::Right);

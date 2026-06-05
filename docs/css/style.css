@@ -892,6 +892,22 @@ code {
   align-items: center;
 }
 
+.split-feature-reverse {
+  grid-template-columns: minmax(300px, 0.75fr) minmax(0, 1.25fr);
+}
+
+.split-feature-reverse .eco-shot {
+  order: 2;
+}
+
+.split-feature-reverse .split-copy {
+  order: 1;
+}
+
+.publish-feature {
+  padding: 72px 0 24px;
+}
+
 .split-copy {
   padding: 6px 0;
 }
@@ -1039,6 +1055,11 @@ code {
   .hero-grid,
   .split-feature {
     grid-template-columns: minmax(0, 1fr);
+  }
+
+  .split-feature-reverse .eco-shot,
+  .split-feature-reverse .split-copy {
+    order: unset;
   }
 
   .hero-shot {

@@ -14,7 +14,22 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Added
+- **GitHub publishing** — archive accepted solutions to a separate repo with per-problem READMEs, optional Ollama explanations, and a generated GitHub Pages site.
+- **`cpos publish-all`** — backfill every accepted solution not yet published.
+- **`cpos setup-github`** — connect or create the publish repo via GitHub CLI.
+- Expanded **6-step setup wizard** — GitHub publishing, Ollama docs, and update prompts.
+- **VS Code publish panel** — toggles for auto/pages/ollama, repo path, remote, connect GitHub, publish all accepted.
+- Browser **Accepted** detection on Codeforces/CSES status pages → auto-publish when enabled.
 - Firefox browser companion source build in `extensions/firefox`, with temporary add-on install instructions and XPI packaging for self-signing or future AMO distribution.
+
+### Changed
+- Setup no longer opens your workspace folder in the editor when you finish — it just saves config and syncs.
+- VS Code install count on the website now loads live from the VS Marketplace API.
+- Regenerated TUI mock screenshots (Config tab shows publishing settings).
+
+### Fixed
+- Solution file discovery for publishing when files live outside `~/cpos` (VS Code workspace paths).
+- VS Code **accepted** detection now reads the TUI `accepted-index.json` written on sync.
 
 ---
 

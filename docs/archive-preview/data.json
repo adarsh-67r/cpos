@@ -1,0 +1,134 @@
+[
+  {
+    "platform": "Codeforces",
+    "id": "1982C",
+    "name": "Boring Day",
+    "url": "https://codeforces.com/contest/1982/problem/C",
+    "rating": 1500,
+    "tags": [
+      "greedy",
+      "math"
+    ],
+    "language": "cpp",
+    "solution_file": "solutions/codeforces/1982c-boring-day/solution.cpp",
+    "readme_file": "solutions/codeforces/1982c-boring-day/README.md",
+    "slug": "1982c-boring-day",
+    "approach": "Binary search the minimum boredom threshold. For each candidate, check whether the day can be split into at most k segments whose boredom values stay below the threshold.",
+    "time_complexity": "O(n log n)",
+    "space_complexity": "O(n)",
+    "notes": "Mock preview entry \u2014 generated for the CPOS archive site demo.",
+    "code_hash": "demo0001",
+    "accepted_at": "2026-05-12T18:40:00Z",
+    "published_at": "2026-05-12T19:05:00Z"
+  },
+  {
+    "platform": "Codeforces",
+    "id": "1971D",
+    "name": "Binary String Sorting",
+    "url": "https://codeforces.com/contest/1971/problem/D",
+    "rating": 1700,
+    "tags": [
+      "dp",
+      "greedy"
+    ],
+    "language": "cpp",
+    "solution_file": "solutions/codeforces/1971d-binary-string-sorting/solution.cpp",
+    "readme_file": "solutions/codeforces/1971d-binary-string-sorting/README.md",
+    "slug": "1971d-binary-string-sorting",
+    "approach": "Track the minimum cost to sort each prefix while allowing one swap operation. Transition between states that end with sorted prefixes and reuse earlier decisions.",
+    "time_complexity": "O(n)",
+    "space_complexity": "O(n)",
+    "notes": "",
+    "code_hash": "demo0002",
+    "accepted_at": "2026-04-28T14:22:00Z",
+    "published_at": "2026-04-28T14:30:00Z"
+  },
+  {
+    "platform": "Codeforces",
+    "id": "1095F",
+    "name": "Make It Connected",
+    "url": "https://codeforces.com/contest/1095/problem/F",
+    "rating": 2200,
+    "tags": [
+      "dsu",
+      "graphs",
+      "greedy"
+    ],
+    "language": "cpp",
+    "solution_file": "solutions/codeforces/1095f-make-it-connected/solution.cpp",
+    "readme_file": "solutions/codeforces/1095f-make-it-connected/README.md",
+    "slug": "1095f-make-it-connected",
+    "approach": "Use DSU to compress connected components, then connect leftover components with the cheapest unused edges while respecting the budget.",
+    "time_complexity": "O(n log n + m \u03b1(n))",
+    "space_complexity": "O(n + m)",
+    "notes": "Ollama can fill these fields when enabled.",
+    "code_hash": "demo0003",
+    "accepted_at": "2026-03-10T09:12:00Z",
+    "published_at": "2026-03-10T09:20:00Z"
+  },
+  {
+    "platform": "Cses",
+    "id": "1068",
+    "name": "Weird Algorithm",
+    "url": "https://cses.fi/problemset/task/1068/",
+    "rating": null,
+    "tags": [
+      "introductory"
+    ],
+    "language": "cpp",
+    "solution_file": "solutions/cses/1068-weird-algorithm/solution.cpp",
+    "readme_file": "solutions/cses/1068-weird-algorithm/README.md",
+    "slug": "1068-weird-algorithm",
+    "approach": "Simulate the Collatz sequence until reaching 1. Each step is either divide by two or multiply by three and add one.",
+    "time_complexity": "O(log n)",
+    "space_complexity": "O(1)",
+    "notes": "",
+    "code_hash": "demo0004",
+    "accepted_at": "2026-02-01T11:00:00Z",
+    "published_at": "2026-02-01T11:04:00Z"
+  },
+  {
+    "platform": "Cses",
+    "id": "1622",
+    "name": "Creating Strings",
+    "url": "https://cses.fi/problemset/task/1622/",
+    "rating": null,
+    "tags": [
+      "combinatorics",
+      "backtracking"
+    ],
+    "language": "cpp",
+    "solution_file": "solutions/cses/1622-creating-strings/solution.cpp",
+    "readme_file": "solutions/cses/1622-creating-strings/README.md",
+    "slug": "1622-creating-strings",
+    "approach": "Generate permutations in lexicographic order with backtracking, skipping duplicate branches when the same character appears multiple times.",
+    "time_complexity": "O(n! \u00b7 n)",
+    "space_complexity": "O(n)",
+    "notes": "",
+    "code_hash": "demo0005",
+    "accepted_at": "2026-01-19T16:45:00Z",
+    "published_at": "2026-01-19T16:50:00Z"
+  },
+  {
+    "platform": "Codeforces",
+    "id": "2232F",
+    "name": "Magical Tiered Cake",
+    "url": "https://codeforces.com/contest/2232/problem/F",
+    "rating": 1900,
+    "tags": [
+      "data structures",
+      "implementation"
+    ],
+    "language": "cpp",
+    "solution_file": "solutions/codeforces/2232f-magical-tiered-cake/solution.cpp",
+    "readme_file": "solutions/codeforces/2232f-magical-tiered-cake/README.md",
+    "slug": "2232f-magical-tiered-cake",
+    "approach": "Maintain tier counts with a frequency map and answer range queries by scanning only active tiers instead of rebuilding the full structure each time.",
+    "time_complexity": "O(n + q \u00b7 k)",
+    "space_complexity": "O(n)",
+    "notes": "",
+    "code_hash": "demo0006",
+    "accepted_at": "2026-05-30T21:10:00Z",
+    "published_at": "2026-05-30T21:18:00Z"
+  }
+]

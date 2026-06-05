@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Solutions</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main class="shell">
+    <header>
+      <h1>Solutions</h1>
+      <p class="count"><strong id="count">0</strong> accepted</p>
+    </header>
+    <section class="toolbar">
+      <input id="search" type="search" placeholder="Search problems, tags, languages…" autocomplete="off">
+      <div id="platforms" class="filters"></div>
+    </section>
+    <section id="list" class="list"></section>
+  </main>
+  <script>
+    const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+    let all = [];
+    let meta = { github: "", branch: "main" };
+    let platform = "all";
+
+    Promise.all([
+      fetch("data.json").then((r) => r.json()),
+      fetch("meta.json").then((r) => r.json()).catch(() => ({}))
+    ]).then(([data, m]) => {
+      all = data;
+      meta = { github: m.github || "", branch: m.branch || "main" };
+      document.getElementById("count").textContent = all.length;
+      renderPlatforms();
+      render();
+    });
+
+    document.getElementById("search").addEventListener("input", render);
+
+    function baseName(path) {
+      const parts = String(path || "").split("/");
+      return parts[parts.length - 1] || path;
+    }
+
+    function githubBlob(path) {
+      if (!meta.github) return "";
+      return "https://github.com/" + meta.github + "/blob/" + meta.branch + "/" + path;
+    }
+
+    function fileLink(path, label) {
+      const url = githubBlob(path);
+      if (url) {
+        return '<a class="link" href="' + esc(url) + '" target="_blank" rel="noreferrer">' + esc(label) + "</a>";
+      }
+      return '<span class="link-muted" title="Available in your GitHub repo after publish">' + esc(label) + "</span>";
+    }
+
+    function renderPlatforms() {
+      const values = ["all", ...new Set(all.map((r) => r.platform))];
+      document.getElementById("platforms").innerHTML = values.map((p) =>
+        '<button type="button" class="' + (p === platform ? "active" : "") + '" data-p="' + esc(p) + '">' + esc(p === "all" ? "All" : p) + "</button>"
+      ).join("");
+      document.querySelectorAll("[data-p]").forEach((b) => {
+        b.onclick = () => {
+          platform = b.dataset.p;
+          renderPlatforms();
+          render();
+        };
+      });
+    }
+
+    function matches(r, q) {
+      if (platform !== "all" && r.platform !== platform) return false;
+      if (!q) return true;
+      const hay = [r.platform, r.id, r.name, r.rating, r.language, ...(r.tags || [])].join(" ").toLowerCase();
+      return hay.includes(q);
+    }
+
+    function render() {
+      const q = document.getElementById("search").value.trim().toLowerCase();
+      const rows = all.filter((r) => matches(r, q));
+      document.getElementById("list").innerHTML = rows.length
+        ? rows.map(card).join("")
+        : '<p class="empty">No matches.</p>';
+    }
+
+    function card(r) {
+      const codeName = baseName(r.solution_file);
+      const readmeName = baseName(r.readme_file);
+      const tags = (r.tags || []).length ? (r.tags || []).join(", ") : "—";
+      const rating = r.rating ? " · " + esc(r.rating) : "";
+      const lang = r.language ? esc(r.language) : "—";
+      const notes = r.notes && r.notes.trim() ? "<section><h3>Notes</h3><p class=\"muted\">" + esc(r.notes) + "</p></section>" : "";
+
+      return '<article class="row"><details>'
+        + '<summary>'
+        + '<div class="row-title">'
+        + '<div class="row-id">' + esc(r.platform) + " " + esc(r.id) + rating + "</div>"
+        + "<h2>" + esc(r.name) + "</h2>"
+        + '<div class="row-meta">' + lang + "</div>"
+        + "</div>"
+        + '<div class="row-actions">'
+        + '<a class="link-muted" href="' + esc(r.url) + '" target="_blank" rel="noreferrer">Problem</a>'
+        + fileLink(r.readme_file, "Write-up")
+        + fileLink(r.solution_file, codeName)
+        + "</div>"
+        + "</summary>"
+        + '<div class="body">'
+        + '<div class="file-links">'
+        + "<span>Files</span>"
+        + fileLink(r.readme_file, readmeName)
+        + "<span>·</span>"
+        + fileLink(r.solution_file, codeName)
+        + (githubBlob(r.solution_file) ? ('<span>·</span><a href="' + esc(githubBlob(r.solution_file).replace("/blob/", "/raw/")) + '" target="_blank" rel="noreferrer">Raw</a>') : "")
+        + "</div>"
+        + "<section><h3>Approach</h3><p>" + esc(r.approach) + "</p></section>"
+        + "<section><h3>Complexity</h3><p>Time " + esc(r.time_complexity) + " · Space " + esc(r.space_complexity) + "</p></section>"
+        + "<section><h3>Tags</h3><p class=\"tags-line\">" + esc(tags) + "</p></section>"
+        + notes
+        + "</div></details></article>";
+    }
+  </script>
+</body>
+</html>

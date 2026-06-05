@@ -2,13 +2,13 @@
 //! submissions from the browser companion extension. Runs on `127.0.0.1` in a
 //! background thread so the TUI event loop stays responsive.
 
-use std::sync::{Arc, Mutex};
 use std::sync::mpsc::Sender;
+use std::sync::{Arc, Mutex};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use tiny_http::{Header, Method, Response, Server};
 
-use crate::data::models::{CapturedCsesProgress, CapturedProblem, PendingSubmit};
+use crate::data::models::{CapturedAccepted, CapturedCsesProgress, CapturedProblem, PendingSubmit};
 
 pub const DEFAULT_PORT: u16 = 27121;
 
@@ -17,6 +17,7 @@ pub const DEFAULT_PORT: u16 = 27121;
 pub enum CaptureMsg {
     Problem(CapturedProblem),
     CsesProgress(CapturedCsesProgress),
+    Accepted(CapturedAccepted),
 }
 
 /// Handle to the running capture server. Used to queue browser auto-submits.
@@ -81,9 +82,11 @@ mod tests {
     #[test]
     fn capture_server_starts_and_responds_to_health() {
         let (tx, _rx) = std::sync::mpsc::channel();
-        let server = start(tx);
-        assert!(server.is_some(), "server should start on default port");
-        let port = server.unwrap().port;
+        let port = free_port();
+        let addr = format!("127.0.0.1:{port}");
+        let pending = Arc::new(Mutex::new(None));
+        let server = Server::http(&addr).unwrap();
+        std::thread::spawn(move || super::run(server, tx, pending));
 
         let resp = ureq_lite_get(port);
         assert!(resp.contains("\"status\":\"ok\""));
@@ -92,13 +95,14 @@ mod tests {
     #[test]
     fn capture_server_receives_problem() {
         let (tx, rx) = std::sync::mpsc::channel();
-        let addr = "127.0.0.1:27122";
+        let port = free_port();
+        let addr = format!("127.0.0.1:{port}");
         let pending = Arc::new(Mutex::new(None));
-        let server = Server::http(addr).unwrap();
+        let server = Server::http(&addr).unwrap();
         std::thread::spawn(move || super::run(server, tx, pending));
 
         let body = r#"{"platform":"codeforces","id":"4A","name":"Watermelon","url":"https://codeforces.com/problemset/problem/4/A","tests":[{"input":"8","expected_output":"YES"}]}"#;
-        let resp = ureq_lite_post(27122, "/capture/problem", body);
+        let resp = ureq_lite_post(port, "/capture/problem", body);
         assert!(resp.contains("\"ok\":true"));
 
         let msg = rx.recv_timeout(std::time::Duration::from_secs(1)).unwrap();
@@ -113,8 +117,7 @@ mod tests {
 
     fn ureq_lite_get(port: u16) -> String {
         use std::io::Read;
-        let mut stream =
-            std::net::TcpStream::connect(format!("127.0.0.1:{port}")).unwrap();
+        let mut stream = std::net::TcpStream::connect(format!("127.0.0.1:{port}")).unwrap();
         std::io::Write::write_all(
             &mut stream,
             b"GET /health HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n",
@@ -125,10 +128,17 @@ mod tests {
         buf
     }
 
+    fn free_port() -> u16 {
+        std::net::TcpListener::bind("127.0.0.1:0")
+            .unwrap()
+            .local_addr()
+            .unwrap()
+            .port()
+    }
+
     fn ureq_lite_post(port: u16, path: &str, body: &str) -> String {
         use std::io::Read;
-        let mut stream =
-            std::net::TcpStream::connect(format!("127.0.0.1:{port}")).unwrap();
+        let mut stream = std::net::TcpStream::connect(format!("127.0.0.1:{port}")).unwrap();
         let req = format!(
             "POST {path} HTTP/1.1\r\nHost: localhost\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}",
             body.len()
@@ -151,10 +161,7 @@ fn run(server: Server, tx: Sender<CaptureMsg>, pending: Arc<Mutex<Option<Pending
 
         match (request.method(), url.as_str()) {
             (&Method::Get, "/health") => {
-                let _ = request.respond(json_response(
-                    200,
-                    r#"{"status":"ok","app":"cpos"}"#,
-                ));
+                let _ = request.respond(json_response(200, r#"{"status":"ok","app":"cpos"}"#));
             }
 
             (&Method::Get, "/pending-submit") => {
@@ -188,16 +195,12 @@ fn run(server: Server, tx: Sender<CaptureMsg>, pending: Arc<Mutex<Option<Pending
                         let _ = tx.send(CaptureMsg::Problem(cap));
                         let _ = request.respond(json_response(
                             200,
-                            &format!(
-                                r#"{{"ok":true,"name":"{name}","tests":{n_tests}}}"#
-                            ),
+                            &format!(r#"{{"ok":true,"name":"{name}","tests":{n_tests}}}"#),
                         ));
                     }
                     Err(e) => {
-                        let _ = request.respond(json_response(
-                            400,
-                            &format!(r#"{{"error":"{}"}}"#, e),
-                        ));
+                        let _ =
+                            request.respond(json_response(400, &format!(r#"{{"error":"{}"}}"#, e)));
                     }
                 }
             }
@@ -218,10 +221,28 @@ fn run(server: Server, tx: Sender<CaptureMsg>, pending: Arc<Mutex<Option<Pending
                         ));
                     }
                     Err(e) => {
-                        let _ = request.respond(json_response(
-                            400,
-                            &format!(r#"{{"error":"{}"}}"#, e),
-                        ));
+                        let _ =
+                            request.respond(json_response(400, &format!(r#"{{"error":"{}"}}"#, e)));
+                    }
+                }
+            }
+
+            (&Method::Post, "/capture/accepted") => {
+                let mut body = String::new();
+                if request.as_reader().read_to_string(&mut body).is_err() {
+                    let _ = request.respond(json_response(400, r#"{"error":"bad body"}"#));
+                    continue;
+                }
+                match serde_json::from_str::<CapturedAccepted>(&body) {
+                    Ok(accepted) => {
+                        let id = accepted.id.clone();
+                        let _ = tx.send(CaptureMsg::Accepted(accepted));
+                        let _ = request
+                            .respond(json_response(200, &format!(r#"{{"ok":true,"id":"{id}"}}"#)));
+                    }
+                    Err(e) => {
+                        let _ =
+                            request.respond(json_response(400, &format!(r#"{{"error":"{}"}}"#, e)));
                     }
                 }
             }

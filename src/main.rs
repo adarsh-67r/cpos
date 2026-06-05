@@ -9,7 +9,8 @@ use crossterm::event::{
     self, DisableBracketedPaste, EnableBracketedPaste, Event, KeyCode, KeyEventKind, KeyModifiers,
 };
 use crossterm::terminal::{
-    EnterAlternateScreen, LeaveAlternateScreen, disable_raw_mode, enable_raw_mode,
+    Clear, ClearType, EnterAlternateScreen, LeaveAlternateScreen, disable_raw_mode,
+    enable_raw_mode,
 };
 use ratatui::prelude::*;
 
@@ -17,14 +18,21 @@ use cpos::app::{self, App, CsesProgress, RefreshMsg, SetupStep, StartedProblem, 
 use cpos::data::cache::Cache;
 use cpos::data::config::Config;
 use cpos::engine::capture::{self, CaptureMsg};
+use cpos::engine::ollama;
+use cpos::engine::publish;
 use cpos::engine::workspace;
 use cpos::ui;
 
 fn main() -> Result<()> {
-    if let Some(cmd) = std::env::args().nth(1) {
+    let args: Vec<String> = std::env::args().skip(1).collect();
+    if let Some(cmd) = args.first() {
         match cmd.trim().to_ascii_lowercase().as_str() {
             "setup-browser" => return setup_browser_command(),
+            "setup-github" => return setup_github_command(),
+            "setup-ollama" => return setup_ollama_command(args.get(1).map(String::as_str)),
             "update" => return cpos::engine::update::run(),
+            "publish-json" => return publish_json_command(args.get(1).map(String::as_str)),
+            "publish-all" => return publish_all_command(),
             "help" | "--help" | "-h" => {
                 print_help();
                 return Ok(());
@@ -44,16 +52,17 @@ fn main() -> Result<()> {
 }
 
 async fn run_tui() -> Result<()> {
-    if maybe_prompt_for_updates().await? {
+    let config = Config::load()?;
+    if maybe_prompt_for_updates(&config).await? {
         return Ok(());
     }
 
-    let config = Config::load()?;
     let mut app = App::new(config);
 
     let _ = app.load_from_cache().await;
     app.restore_session();
     app.note_cache_loaded();
+    app.maybe_show_publish_intro();
 
     // Start the browser companion capture listener.
     let (cap_tx, cap_rx) = std::sync::mpsc::channel();
@@ -94,8 +103,8 @@ async fn run_tui() -> Result<()> {
     Ok(())
 }
 
-async fn maybe_prompt_for_updates() -> Result<bool> {
-    if !cpos::engine::update::startup_check_enabled() {
+async fn maybe_prompt_for_updates(config: &Config) -> Result<bool> {
+    if !cpos::engine::update::startup_check_enabled(config) {
         return Ok(false);
     }
 
@@ -121,7 +130,10 @@ async fn maybe_prompt_for_updates() -> Result<bool> {
     eprintln!();
 
     if check.terminal_update_available() {
-        if io::stdin().is_terminal() && io::stderr().is_terminal() {
+        if config.updates.prompt_to_install
+            && io::stdin().is_terminal()
+            && io::stderr().is_terminal()
+        {
             eprint!("Update CPOS now? [y/N] ");
             let _ = io::stderr().flush();
             let mut answer = String::new();
@@ -130,7 +142,10 @@ async fn maybe_prompt_for_updates() -> Result<bool> {
                 cpos::engine::update::run()?;
                 return Ok(true);
             }
-        } else {
+        } else if !config.updates.prompt_to_install
+            || !io::stdin().is_terminal()
+            || !io::stderr().is_terminal()
+        {
             eprintln!("Run `cpos update` later to update CPOS.");
         }
     }
@@ -278,11 +293,14 @@ fn handle_setup_input(app: &mut App, key: KeyCode) {
                 let max = lines.saturating_sub(1) as u16;
                 app.setup_template_scroll = (app.setup_template_scroll + 1).min(max);
             }
+            KeyCode::Char(c) => {
+                app.setup_template.push(c);
+            }
             _ => {}
         },
         SetupStep::Cses => match key {
-            // Enter and Esc both finish here (CSES is the last, optional step).
-            KeyCode::Enter | KeyCode::Esc => finish_setup(app),
+            KeyCode::Enter => app.setup_step = SetupStep::Github,
+            KeyCode::Esc => finish_setup(app),
             KeyCode::Char('o') | KeyCode::Char('O') => {
                 open_url("https://cses.fi/login");
             }
@@ -291,18 +309,88 @@ fn handle_setup_input(app: &mut App, key: KeyCode) {
             }
             _ => {}
         },
+        SetupStep::Github => match key {
+            KeyCode::Enter => app.setup_step = SetupStep::Updates,
+            KeyCode::Esc => finish_setup(app),
+            KeyCode::Char(' ')
+            | KeyCode::Left
+            | KeyCode::Right
+            | KeyCode::Char('h')
+            | KeyCode::Char('l') => {
+                app.setup_github_publish = !app.setup_github_publish;
+                if app.setup_github_publish {
+                    app.setup_github_pages = true;
+                }
+            }
+            KeyCode::Char('p') | KeyCode::Char('P') => {
+                app.setup_github_pages = !app.setup_github_pages;
+            }
+            KeyCode::Char('o') | KeyCode::Char('O') => {
+                app.setup_ollama_docs = !app.setup_ollama_docs;
+            }
+            _ => {}
+        },
+        SetupStep::Updates => match key {
+            KeyCode::Enter | KeyCode::Esc => finish_setup(app),
+            KeyCode::Left
+            | KeyCode::Right
+            | KeyCode::Char('h')
+            | KeyCode::Char('l')
+            | KeyCode::Char(' ') => {
+                app.setup_update_prompts = !app.setup_update_prompts;
+            }
+            _ => {}
+        },
     }
 }
 
-/// Persist setup, open the workspace folder in the editor, and start a sync.
+/// Persist setup and start a sync. GitHub connect is separate (press G in Config).
 fn finish_setup(app: &mut App) {
     let folder = app.finish_setup();
-    open_in_editor(app.config.editor.as_deref(), &folder);
-    app.status_message = format!(
-        "All set! Your solutions live in {} — opened it in your editor. Syncing…",
-        folder.display()
-    );
+    let mut status = if app.config.publish.auto_publish {
+        format!(
+            "All set! Solutions in {}. Press G in Config to connect GitHub.",
+            folder.display()
+        )
+    } else {
+        format!(
+            "All set! Your solutions live in {}. Syncing…",
+            folder.display()
+        )
+    };
+    if app.config.publish.ollama_enabled {
+        status.push(' ');
+        status.push_str(&ollama_setup_status(&mut app.config.publish));
+        let _ = app.config.save();
+    }
+    app.status_message = status;
     trigger_refresh(app);
+}
+
+/// Run Ollama install/start/pull; updates config. Returns a short status line.
+fn ollama_setup_status(publish: &mut cpos::data::config::PublishConfig) -> String {
+    if !publish.ollama_enabled {
+        return "Ollama docs disabled".to_string();
+    }
+    let model = publish.ollama_model.clone();
+    match run_ollama_setup_interactive(&model) {
+        Ok(resolved) => {
+            if resolved != publish.ollama_model {
+                publish.ollama_model = resolved.clone();
+            }
+            format!("Ollama ready ({resolved})")
+        }
+        Err(e) => {
+            publish.ollama_enabled = false;
+            format!("Ollama setup failed — turned off: {e}")
+        }
+    }
+}
+
+fn apply_ollama_setup(app: &mut App) {
+    let msg = ollama_setup_status(&mut app.config.publish);
+    let _ = app.config.save();
+    app.status_message = msg;
 }
 
 /// How old (seconds) a sync can be before we auto-refresh on launch.
@@ -446,6 +534,15 @@ fn drain_captures(app: &mut App) {
                 } else {
                     "CSES synced (no scored tasks yet)".to_string()
                 };
+                queue_auto_publish(app);
+            }
+            CaptureMsg::Accepted(accepted) => {
+                if let Some(problem) = app.mark_browser_accepted(accepted) {
+                    queue_publish_requests(
+                        app,
+                        app.publish_request_for(&problem).into_iter().collect(),
+                    );
+                }
             }
         }
     }
@@ -497,8 +594,67 @@ async fn drain_refresh(app: &mut App) {
                     "Synced {n_problems} problems. Set your Codeforces handle in Config to track solves, rating, and recommendations."
                 )
             };
+            queue_auto_publish(app);
+            let _ = app.write_accepted_index();
         }
     }
+}
+
+fn queue_auto_publish(app: &mut App) {
+    let requests = app.pending_publish_requests();
+    if requests.is_empty() {
+        if !publish::is_configured(&app.config.publish) {
+            return;
+        }
+        let accepted = app.accepted_problems().len();
+        let missing = app.accepted_missing_solution_files();
+        if accepted > 0 {
+            app.status_message = if missing > 0 {
+                format!(
+                    "Backfill: {accepted} accepted, {missing} still need a local solution file before publishing"
+                )
+            } else {
+                "Backfill: all accepted solutions are already published".to_string()
+            };
+        }
+        return;
+    }
+    queue_publish_requests(app, requests);
+}
+
+fn queue_publish_requests(app: &mut App, requests: Vec<publish::PublishRequest>) {
+    if requests.is_empty() {
+        return;
+    }
+    let n = requests.len();
+    let (tx, rx) = std::sync::mpsc::channel();
+    app.aux_rx = Some(rx);
+    app.status_message = format!(
+        "Publishing {n} accepted solution{}…",
+        if n == 1 { "" } else { "s" }
+    );
+    tokio::spawn(async move {
+        for request in requests {
+            let label = format!("{} {}", request.problem.platform, request.problem.id);
+            match publish::publish_solution(request).await {
+                Ok(outcome) => {
+                    let target = if outcome.pushed {
+                        outcome.site_url.as_deref().unwrap_or("GitHub").to_string()
+                    } else {
+                        outcome.repo_dir.display().to_string()
+                    };
+                    let mut msg = format!("Published {label} → {target}");
+                    if !outcome.warnings.is_empty() {
+                        msg.push_str(&format!(" ({})", outcome.warnings.join("; ")));
+                    }
+                    let _ = tx.send(msg);
+                }
+                Err(e) => {
+                    let _ = tx.send(format!("Publish failed for {label}: {e}"));
+                }
+            }
+        }
+    });
 }
 
 /// Kick off a background data refresh if one isn't already running.
@@ -846,6 +1002,11 @@ fn print_help() {
 Usage:
   cpos                 Open the terminal app
   cpos update          Update the terminal app
+  cpos setup-github    Connect/create the GitHub publishing repo
+  cpos setup-ollama    Install/start Ollama and pull the docs model
+  cpos setup-ollama M  Pull a specific model (default from config)
+  cpos publish-json F  Publish one accepted solution from a JSON payload
+  cpos publish-all     Publish every accepted solution not yet in the archive
   cpos setup-browser   Generate a local browser helper extension
   cpos help            Show this help
 
@@ -854,6 +1015,131 @@ Set CPOS_NO_UPDATE_CHECK=1 to skip this check.
 VS Code and Chrome update their extensions through their own stores.",
         version = env!("CARGO_PKG_VERSION")
     );
+}
+
+#[derive(serde::Deserialize)]
+struct PublishJsonProblem {
+    platform: String,
+    id: String,
+    name: String,
+    url: String,
+    #[serde(default)]
+    rating: Option<u32>,
+    #[serde(default)]
+    tags: Vec<String>,
+    #[serde(default)]
+    category: Option<String>,
+    solution_path: String,
+    language: String,
+    accepted: bool,
+}
+
+fn publish_json_command(path: Option<&str>) -> Result<()> {
+    let Some(path) = path else {
+        anyhow::bail!("usage: cpos publish-json <payload.json>");
+    };
+    let payload: PublishJsonProblem = serde_json::from_str(&std::fs::read_to_string(path)?)?;
+    if !payload.accepted {
+        anyhow::bail!("refusing to publish because accepted=false");
+    }
+    let platform = match payload.platform.to_lowercase().as_str() {
+        "codeforces" | "cf" => cpos::data::models::Platform::Codeforces,
+        "cses" => cpos::data::models::Platform::Cses,
+        "atcoder" => cpos::data::models::Platform::AtCoder,
+        _ => anyhow::bail!("unsupported platform {}", payload.platform),
+    };
+    let config = Config::load()?;
+    let problem = cpos::data::models::Problem {
+        platform,
+        id: payload.id,
+        name: payload.name,
+        url: payload.url,
+        rating: payload.rating,
+        tags: payload.tags,
+        category: payload.category,
+        solved_count: None,
+        status: cpos::data::models::SolveStatus::Solved,
+    };
+    let request = publish::PublishRequest {
+        config,
+        problem,
+        solution_path: PathBuf::from(payload.solution_path),
+        language: payload.language,
+        submission: None,
+    };
+    let outcome = tokio::runtime::Builder::new_current_thread()
+        .enable_all()
+        .build()?
+        .block_on(publish::publish_solution(request))?;
+    eprintln!("Published to {}", outcome.repo_dir.display());
+    if let Some(site) = outcome.site_url {
+        eprintln!("Site: {site}");
+    }
+    for warning in outcome.warnings {
+        eprintln!("Warning: {warning}");
+    }
+    Ok(())
+}
+
+fn publish_all_command() -> Result<()> {
+    let config = Config::load()?;
+    if !publish::is_configured(&config.publish) {
+        anyhow::bail!("Turn on GitHub publishing in Config or the VS Code panel first");
+    }
+
+    let rt = tokio::runtime::Builder::new_current_thread()
+        .enable_all()
+        .build()?;
+    rt.block_on(async {
+        let mut app = App::new(config);
+        app.load_from_cache().await?;
+        app.restore_session();
+        app.mark_solved_problems();
+        let _ = app.write_accepted_index();
+
+        let accepted = app.accepted_problems().len();
+        let missing = app.accepted_missing_solution_files();
+        let requests = app.pending_publish_requests();
+        if requests.is_empty() {
+            if accepted == 0 {
+                eprintln!("No accepted solutions found — sync first with `cpos` then press r.");
+            } else if missing > 0 {
+                eprintln!(
+                    "Backfill: {accepted} accepted, but {missing} have no local solution file yet. \
+                     Open or recreate those files, then run `cpos publish-all` again."
+                );
+            } else {
+                eprintln!("Backfill complete — all {accepted} accepted solutions are already published.");
+            }
+            return Ok(());
+        }
+
+        eprintln!(
+            "Backfill: publishing {} of {accepted} accepted solution(s)…",
+            requests.len()
+        );
+        if missing > 0 {
+            eprintln!("Skipping {missing} accepted solution(s) with no local file.");
+        }
+        let mut pushed = 0usize;
+        for request in requests {
+            let label = format!("{} {}", request.problem.platform, request.problem.id);
+            match publish::publish_solution(request).await {
+                Ok(outcome) => {
+                    eprintln!("Published {label} → {}", outcome.repo_dir.display());
+                    if outcome.pushed {
+                        pushed += 1;
+                    }
+                    for warning in outcome.warnings {
+                        eprintln!("Warning ({label}): {warning}");
+                    }
+                }
+                Err(e) => eprintln!("Failed {label}: {e:#}"),
+            }
+        }
+        eprintln!("Done — {pushed} pushed to GitHub.");
+        Ok(())
+    })
 }
 
 /// Generate browser setup helpers and point users at the checked-in/publishable
@@ -881,8 +1167,14 @@ fn setup_browser_command() -> Result<()> {
         "content_scripts": [{
             "matches": [
                 "https://codeforces.com/problemset/problem/*",
+                "https://codeforces.com/problemset/status*",
+                "https://codeforces.com/submissions/*",
                 "https://codeforces.com/contest/*/problem/*",
+                "https://codeforces.com/contest/*/my",
+                "https://codeforces.com/contest/*/status*",
                 "https://codeforces.com/gym/*/problem/*",
+                "https://codeforces.com/gym/*/my",
+                "https://codeforces.com/gym/*/status*",
                 "https://cses.fi/problemset/task/*",
                 "https://cses.fi/problemset/list*",
                 "https://cses.fi/problemset/list/*"
@@ -1156,6 +1448,85 @@ fn generate_setup_html(port: u16, ext_dir: &std::path::Path, bookmarklet: &str) 
     )
 }
 
+fn run_github_setup_interactive(
+    config: &cpos::data::config::PublishConfig,
+) -> Result<publish::PublishOutcome> {
+    io::stdout().execute(DisableBracketedPaste)?;
+    disable_raw_mode()?;
+    io::stdout().execute(LeaveAlternateScreen)?;
+
+    eprintln!("CPOS GitHub publishing setup");
+    eprintln!("This may open GitHub in your browser via GitHub CLI.");
+    eprintln!();
+    let result = publish::setup_repository_interactive(config);
+    eprintln!();
+    eprint!("Press Enter to return to CPOS...");
+    let _ = io::stderr().flush();
+    let mut wait = String::new();
+    let _ = io::stdin().read_line(&mut wait);
+
+    enable_raw_mode()?;
+    io::stdout().execute(EnterAlternateScreen)?;
+    io::stdout().execute(EnableBracketedPaste)?;
+    io::stdout().execute(Clear(ClearType::All))?;
+    result
+}
+
+fn run_ollama_setup_interactive(model: &str) -> Result<String> {
+    io::stdout().execute(DisableBracketedPaste)?;
+    disable_raw_mode()?;
+    io::stdout().execute(LeaveAlternateScreen)?;
+
+    eprintln!("CPOS Ollama setup");
+    eprintln!("CPOS will start Ollama if needed and pull the model for README write-ups.");
+    eprintln!();
+    let result = ollama::setup_interactive(model);
+    eprintln!();
+    eprint!("Press Enter to return to CPOS...");
+    let _ = io::stderr().flush();
+    let mut wait = String::new();
+    let _ = io::stdin().read_line(&mut wait);
+
+    enable_raw_mode()?;
+    io::stdout().execute(EnterAlternateScreen)?;
+    io::stdout().execute(EnableBracketedPaste)?;
+    io::stdout().execute(Clear(ClearType::All))?;
+    result
+}
+
+fn setup_ollama_command(model: Option<&str>) -> Result<()> {
+    let config = Config::load()?;
+    let model = model
+        .map(str::trim)
+        .filter(|s| !s.is_empty())
+        .unwrap_or(config.publish.ollama_model.as_str());
+    eprintln!("CPOS Ollama setup");
+    let resolved = ollama::setup_interactive(model)?;
+    eprintln!("Ready — using {resolved}");
+    Ok(())
+}
+
+fn setup_github_command() -> Result<()> {
+    let mut config = Config::load()?;
+    config.publish.auto_publish = true;
+    config.publish.github_pages = true;
+    config.save()?;
+
+    eprintln!("CPOS GitHub publishing setup");
+    let outcome = publish::setup_repository_interactive(&config.publish)?;
+    eprintln!("Local folder: {}", outcome.repo_dir.display());
+    if let Some(url) = outcome.site_url {
+        eprintln!("GitHub Pages: {url}");
+    }
+    for warning in outcome.warnings {
+        eprintln!("Warning: {warning}");
+    }
+
+    eprintln!();
+    eprintln!("Backfilling all accepted solutions with local files…");
+    publish_all_command()
+}
+
 fn handle_config_input(app: &mut App, key: KeyCode) {
     match key {
         KeyCode::Char('j') | KeyCode::Down => {
@@ -1167,11 +1538,51 @@ fn handle_config_input(app: &mut App, key: KeyCode) {
         }
         KeyCode::Enter | KeyCode::Right => {
             if app.config_field_is_cycle() {
+                let selected = app.config_selected;
                 app.cycle_config();
+                if selected == 6 && app.config.publish.auto_publish {
+                    queue_auto_publish(app);
+                }
+                if selected == 11 && app.config.publish.ollama_enabled {
+                    apply_ollama_setup(app);
+                }
+            } else if app.config_selected == 9 {
+                if let Some(url) = publish::archive_site_url(&app.config.publish) {
+                    open_url(&url);
+                    app.status_message = format!("Opened archive site {url}");
+                } else {
+                    app.status_message =
+                        "Press G to connect GitHub and create the publishing repo".to_string();
+                }
             } else {
                 app.start_config_edit();
             }
         }
+        KeyCode::Char('G') => match run_github_setup_interactive(&app.config.publish) {
+            Ok(outcome) => {
+                let mut status =
+                    format!("GitHub publishing ready at {}", outcome.repo_dir.display());
+                if let Some(url) = outcome.site_url.as_deref() {
+                    status.push_str(&format!(" · site {url}"));
+                }
+                if !outcome.warnings.is_empty() {
+                    status.push_str(&format!(" · {}", outcome.warnings.join("; ")));
+                }
+                app.status_message = status;
+                if app.config.publish.auto_publish {
+                    queue_auto_publish(app);
+                }
+            }
+            Err(e) => {
+                app.status_message = format!("Could not connect GitHub publishing: {e}");
+            }
+        },
+        KeyCode::Char('O') => {
+            if !app.config.publish.ollama_enabled {
+                app.config.publish.ollama_enabled = true;
+            }
+            apply_ollama_setup(app);
+        },
         KeyCode::Char('S') => app.begin_setup(),
         // Open CSES login so you can grab your session cookie to connect.
         KeyCode::Char('L') => {

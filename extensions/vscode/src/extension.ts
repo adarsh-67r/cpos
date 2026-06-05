@@ -2,7 +2,7 @@ import * as http from "node:http";
 import * as os from "node:os";
 import * as path from "node:path";
 import { promises as fs, existsSync, readFileSync, statSync } from "node:fs";
-import { spawn } from "node:child_process";
+import { spawn, execSync } from "node:child_process";
 import * as vscode from "vscode";
 
 type CapturedProblem = {
@@ -40,6 +40,14 @@ type ProblemMeta = Omit<CapturedProblem, "tests"> & {
   capturedAt: string;
 };
 
+type CapturedAccepted = {
+  platform: string;
+  id: string;
+  name?: string;
+  url?: string;
+  language?: string;
+};
+
 type Verdict = "AC" | "WA" | "TLE" | "RE" | "CE";
 
 type RunResult = {
@@ -74,6 +82,17 @@ type PendingSubmit = {
   fileName: string;
   submitUrl: string;
   expiresAt: number;
+};
+
+type PublishConfig = {
+  autoPublish: boolean;
+  repoDir: string;
+  remoteUrl?: string;
+  remote: string;
+  branch: string;
+  githubPages: boolean;
+  ollamaEnabled: boolean;
+  ollamaModel: string;
 };
 
 let pendingSubmit: PendingSubmit | undefined;
@@ -130,6 +149,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       await runTests();
     }),
     vscode.commands.registerCommand("cpos.submitActiveFile", submitActiveFile),
+    vscode.commands.registerCommand("cpos.publishActiveFile", publishActiveFile),
     vscode.commands.registerCommand("cpos.openProblem", openProblem),
     vscode.commands.registerCommand("cpos.focusPanel", () => {
       void vscode.commands.executeCommand("cpos.actions.focus");
@@ -253,6 +273,23 @@ async function handleRequest(req: http.IncomingMessage, res: http.ServerResponse
       const body = await readJson<CsesProgress>(req);
       await saveCsesProgress(body);
       sendJson(res, 200, { ok: true, solved: body.solved.length });
+    } catch (error) {
+      sendJson(res, 400, { ok: false, error: error instanceof Error ? error.message : String(error) });
+    }
+    return;
+  }
+
+  if (req.method === "POST" && req.url === "/capture/accepted") {
+    try {
+      const body = await readJson<CapturedAccepted>(req);
+      await saveAccepted(body);
+      const meta = await findMetaForAccepted(body);
+      if (meta && tuiConfig().publish.autoPublish) {
+        await publishMeta(meta, body.language);
+        vscode.window.showInformationMessage(`CPOS · publishing ${body.id} to GitHub…`);
+      }
+      refreshActions();
+      sendJson(res, 200, { ok: true, id: body.id });
     } catch (error) {
       sendJson(res, 400, { ok: false, error: error instanceof Error ? error.message : String(error) });
     }
@@ -455,6 +492,7 @@ type TuiConfig = {
   defaultLanguage?: string;
   templateFile?: string;
   compileCommands: Record<string, Partial<CompileConfig>>;
+  publish: PublishConfig;
 };
 
 let tuiConfigCache: TuiConfig | undefined;
@@ -481,7 +519,7 @@ function tuiConfig(): TuiConfig {
     tuiConfigMtime = mtime;
     return tuiConfigCache;
   } catch {
-    tuiConfigCache = { compileCommands: {} };
+    tuiConfigCache = { compileCommands: {}, publish: defaultPublishConfig() };
     return tuiConfigCache;
   }
 }
@@ -489,7 +527,7 @@ function tuiConfig(): TuiConfig {
 // Minimal TOML reader for just the keys we share with the TUI: top-level
 // default_language / template_file and [compile_commands.<lang>] tables.
 function parseTuiConfig(text: string): TuiConfig {
-  const cfg: TuiConfig = { compileCommands: {} };
+  const cfg: TuiConfig = { compileCommands: {}, publish: defaultPublishConfig() };
   let section = "";
   for (const raw of text.split(/\r?\n/)) {
     const line = raw.trim();
@@ -501,21 +539,49 @@ function parseTuiConfig(text: string): TuiConfig {
     }
     const kv = line.match(/^([A-Za-z0-9_.-]+)\s*=\s*(.+)$/);
     if (!kv) continue;
-    const value = parseTomlString(kv[2]);
+    const value = parseTomlValue(kv[2]);
     if (value === undefined) continue;
     const key = kv[1];
     if (section === "") {
-      if (key === "default_language") cfg.defaultLanguage = value;
-      else if (key === "template_file") cfg.templateFile = value;
+      if (key === "default_language" && typeof value === "string") cfg.defaultLanguage = value;
+      else if (key === "template_file" && typeof value === "string") cfg.templateFile = value;
     } else if (section.startsWith("compile_commands.")) {
       const lang = section.slice("compile_commands.".length);
       const entry = cfg.compileCommands[lang] ?? (cfg.compileCommands[lang] = {});
-      if (key === "compile") entry.compile = value;
-      else if (key === "run") entry.run = value;
-      else if (key === "extension") entry.extension = value;
+      if (key === "compile" && typeof value === "string") entry.compile = value;
+      else if (key === "run" && typeof value === "string") entry.run = value;
+      else if (key === "extension" && typeof value === "string") entry.extension = value;
+    } else if (section === "publish") {
+      if (key === "auto_publish" && typeof value === "boolean") cfg.publish.autoPublish = value;
+      else if (key === "repo_dir" && typeof value === "string") cfg.publish.repoDir = value;
+      else if (key === "remote_url") cfg.publish.remoteUrl = typeof value === "string" && value ? value : undefined;
+      else if (key === "remote" && typeof value === "string") cfg.publish.remote = value;
+      else if (key === "branch" && typeof value === "string") cfg.publish.branch = value;
+      else if (key === "github_pages" && typeof value === "boolean") cfg.publish.githubPages = value;
+      else if (key === "ollama_enabled" && typeof value === "boolean") cfg.publish.ollamaEnabled = value;
+      else if (key === "ollama_model" && typeof value === "string") cfg.publish.ollamaModel = value;
     }
   }
   return cfg;
+}
+
+function defaultPublishConfig(): PublishConfig {
+  return {
+    autoPublish: false,
+    repoDir: "~/cpos-solutions",
+    remote: "origin",
+    branch: "main",
+    githubPages: true,
+    ollamaEnabled: false,
+    ollamaModel: "llama3.1"
+  };
+}
+
+function parseTomlValue(raw: string): string | boolean | undefined {
+  const s = raw.trim();
+  if (s === "true") return true;
+  if (s === "false") return false;
+  return parseTomlString(raw);
 }
 
 function parseTomlString(raw: string): string | undefined {
@@ -818,6 +884,169 @@ async function loadProblemMetaForFile(source: string): Promise<ProblemMeta | und
     const inferred = inferProblemMetaFromPath(source);
     if (inferred) return inferred;
     return loadCsesMetaBySlug(path.parse(source).name, source);
+  }
+}
+
+function acceptedKey(platform: string, id: string): string {
+  return `${platform.toLowerCase()}:${id}`;
+}
+
+async function loadAccepted(): Promise<Record<string, CapturedAccepted>> {
+  try {
+    return JSON.parse(await fs.readFile(path.join(dataDir(), "accepted.json"), "utf8")) as Record<string, CapturedAccepted>;
+  } catch {
+    return {};
+  }
+}
+
+async function saveAccepted(accepted: CapturedAccepted): Promise<void> {
+  const all = await loadAccepted();
+  all[acceptedKey(accepted.platform, accepted.id)] = accepted;
+  await fs.mkdir(dataDir(), { recursive: true });
+  await fs.writeFile(path.join(dataDir(), "accepted.json"), JSON.stringify(all, null, 2), "utf8");
+}
+
+async function loadAcceptedIndex(): Promise<Array<{ platform: string; id: string; solution_path?: string }>> {
+  try {
+    const raw = await fs.readFile(path.join(dataDir(), "accepted-index.json"), "utf8");
+    return JSON.parse(raw);
+  } catch {
+    return [];
+  }
+}
+
+async function isAccepted(meta?: ProblemMeta): Promise<boolean> {
+  if (!meta) return false;
+  const all = await loadAccepted();
+  if (all[acceptedKey(meta.platform, meta.id)]) return true;
+  const index = await loadAcceptedIndex();
+  return index.some(
+    (entry) =>
+      entry.platform.toLowerCase() === meta.platform.toLowerCase() &&
+      entry.id === meta.id
+  );
+}
+
+async function findMetaForAccepted(accepted: CapturedAccepted): Promise<ProblemMeta | undefined> {
+  const current = await loadProblemMeta();
+  if (current && current.platform.toLowerCase() === accepted.platform.toLowerCase() && current.id === accepted.id) {
+    return current;
+  }
+  const dir = path.join(dataDir(), "problems");
+  try {
+    for (const file of await fs.readdir(dir)) {
+      if (!file.endsWith(".json")) continue;
+      const meta = JSON.parse(await fs.readFile(path.join(dir, file), "utf8")) as ProblemMeta;
+      if (meta.platform.toLowerCase() === accepted.platform.toLowerCase() && meta.id === accepted.id) {
+        return meta;
+      }
+    }
+  } catch {
+    /* no stored problems yet */
+  }
+  return undefined;
+}
+
+async function publishActiveFile(): Promise<void> {
+  const source = await activeSolutionPath();
+  const meta = source ? await loadProblemMetaForFile(source) : await loadProblemMeta();
+  if (!meta) {
+    vscode.window.showWarningMessage("Capture a problem first.");
+    return;
+  }
+  if (!(await isAccepted(meta))) {
+    vscode.window.showWarningMessage("Only accepted solutions can be published.");
+    return;
+  }
+  await publishMeta(meta);
+}
+
+let cposCliCache: string | undefined;
+
+function cposCandidates(): string[] {
+  const out: string[] = [];
+  const configured = config().get<string>("cliPath")?.trim();
+  if (configured) out.push(configured);
+  out.push(path.join(os.homedir(), ".cargo", "bin", "cpos"));
+  if (process.platform === "win32") {
+    out.push("cpos");
+  } else {
+    try {
+      const which = execSync("which -a cpos 2>/dev/null || true", { encoding: "utf8" });
+      for (const line of which.split(/\r?\n/)) {
+        const p = line.trim();
+        if (p) out.push(p);
+      }
+    } catch {
+      out.push("cpos");
+    }
+  }
+  return [...new Set(out)];
+}
+
+async function resolveCposCli(): Promise<string | undefined> {
+  if (cposCliCache) return cposCliCache;
+  for (const bin of cposCandidates()) {
+    try {
+      const result = await runProcess(bin, ["help"], process.cwd(), 5_000);
+      const help = `${result.stdout}\n${result.stderr}`;
+      if (/publish-json/i.test(help)) {
+        cposCliCache = bin;
+        OUTPUT.appendLine(`CPOS CLI: ${bin}`);
+        return bin;
+      }
+    } catch {
+      /* try next candidate */
+    }
+  }
+  return undefined;
+}
+
+async function publishMeta(meta: ProblemMeta, languageOverride?: string): Promise<void> {
+  const publish = tuiConfig().publish;
+  if (!publish.autoPublish) {
+    vscode.window.showWarningMessage("Enable GitHub publishing in the CPOS app (Config tab).");
+    return;
+  }
+  const payload = {
+    platform: meta.platform,
+    id: meta.id,
+    name: meta.name,
+    url: meta.url,
+    rating: meta.rating,
+    tags: meta.tags ?? [],
+    category: meta.category,
+    solution_path: meta.solutionPath,
+    language: languageOverride || languageForFile(meta.solutionPath),
+    accepted: true
+  };
+  const file = path.join(dataDir(), "publish-request.json");
+  await fs.mkdir(dataDir(), { recursive: true });
+  await fs.writeFile(file, JSON.stringify(payload, null, 2), "utf8");
+  try {
+    const cpos = await resolveCposCli();
+    if (!cpos) {
+      vscode.window.showWarningMessage(
+        "CPOS app is outdated. Run: brew unlink cpos && cargo install --path . --force (or update CPOS from releases)."
+      );
+      return;
+    }
+    const result = await runProcess(cpos, ["publish-json", file], solutionBaseDir(), 30_000);
+    if (result.code === 0) {
+      vscode.window.showInformationMessage(`CPOS: published ${meta.id}.`);
+    } else {
+      OUTPUT.appendLine(result.stderr || result.stdout);
+      const out = `${result.stdout}\n${result.stderr}`;
+      if (/unknown command/i.test(out)) {
+        vscode.window.showWarningMessage(
+          "CPOS on PATH is outdated (missing publish-json). Run: cargo install --path . --force"
+        );
+      } else {
+        vscode.window.showWarningMessage("CPOS publish failed. See the CPOS output panel.");
+      }
+    }
+  } catch (error) {
+    vscode.window.showWarningMessage(`Could not run cpos publish-json: ${error instanceof Error ? error.message : String(error)}`);
   }
 }
 
@@ -1141,6 +1370,38 @@ function runShell(
   });
 }
 
+function runProcess(
+  command: string,
+  args: string[],
+  cwd: string,
+  timeoutMs: number
+): Promise<{ code: number; stdout: string; stderr: string; timedOut: boolean }> {
+  return new Promise((resolve, reject) => {
+    const child = spawn(command, args, {
+      cwd,
+      env: processEnvForRun(),
+      windowsHide: true
+    });
+    let stdout = "";
+    let stderr = "";
+    let timedOut = false;
+    const timeout = setTimeout(() => {
+      timedOut = true;
+      child.kill();
+    }, timeoutMs);
+    child.stdout.on("data", (chunk) => (stdout += chunk.toString()));
+    child.stderr.on("data", (chunk) => (stderr += chunk.toString()));
+    child.on("error", (error) => {
+      clearTimeout(timeout);
+      reject(error);
+    });
+    child.on("close", (code) => {
+      clearTimeout(timeout);
+      resolve({ code: code ?? 1, stdout, stderr, timedOut });
+    });
+  });
+}
+
 async function openProblem(): Promise<void> {
   const source = await activeSolutionPath();
   const meta = source ? await loadProblemMetaForFile(source) : await loadProblemMeta();
@@ -1178,6 +1439,7 @@ type PanelState = {
   source?: string;
   fileName: string;
   meta?: ProblemMeta;
+  accepted: boolean;
   tests: TestCase[];
   results: RunResult[];
   serverRunning: boolean;
@@ -1195,6 +1457,7 @@ async function currentState(): Promise<PanelState> {
     source,
     fileName: source ? path.basename(source) : "No active file",
     meta,
+    accepted: await isAccepted(meta),
     tests,
     results,
     serverRunning: server !== undefined,

@@ -226,6 +226,19 @@ pub struct CapturedCsesProgress {
     pub attempted: Vec<String>,
 }
 
+/// Payload sent by the browser companion after it observes an accepted verdict.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CapturedAccepted {
+    pub platform: String,
+    pub id: String,
+    #[serde(default)]
+    pub name: Option<String>,
+    #[serde(default)]
+    pub url: Option<String>,
+    #[serde(default)]
+    pub language: Option<String>,
+}
+
 /// Queued submission for the browser companion to auto-fill on a platform submit page.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]

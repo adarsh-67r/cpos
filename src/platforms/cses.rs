@@ -2,7 +2,7 @@ use anyhow::Result;
 use reqwest::Client;
 use scraper::{Html, Selector};
 
-use super::{pre_text, PlatformClient};
+use super::{PlatformClient, pre_text};
 use crate::data::models::*;
 
 const CSES_BASE: &str = "https://cses.fi";
@@ -71,7 +71,9 @@ impl CsesClient {
 
         if solved.is_empty() && attempted.is_empty() {
             if body.contains("/login") || body.contains(">Login<") || body.contains(">Log in<") {
-                anyhow::bail!("PHPSESSID cookie expired — log in at cses.fi and paste a fresh cookie, or visit the problemset list with the CPOS browser companion");
+                anyhow::bail!(
+                    "PHPSESSID cookie expired — log in at cses.fi and paste a fresh cookie, or visit the problemset list with the CPOS browser companion"
+                );
             }
             // Logged in but no scored tasks yet — still a valid sync.
             return Ok((solved, attempted));
@@ -113,11 +115,7 @@ impl CsesClient {
                     Some(a) => {
                         let name = a.text().collect::<String>().trim().to_string();
                         let href = a.value().attr("href").unwrap_or("");
-                        let task_id = href
-                            .rsplit('/')
-                            .next()
-                            .unwrap_or("")
-                            .to_string();
+                        let task_id = href.rsplit('/').next().unwrap_or("").to_string();
                         let url = format!("{CSES_BASE}{href}");
                         (name, task_id, url)
                     }

@@ -4,6 +4,7 @@ use std::sync::mpsc::Sender;
 use crate::data::cache::Cache;
 use crate::data::config::Config;
 use crate::data::models::*;
+use crate::engine::publish::{self, PublishRequest};
 use crate::engine::recommender::{self, Recommendation};
 use crate::engine::weakness;
 use crate::engine::workspace;
@@ -372,6 +373,10 @@ pub struct App {
     pub setup_template: String,
     pub setup_template_scroll: u16,
     pub setup_cses: String,
+    pub setup_github_publish: bool,
+    pub setup_github_pages: bool,
+    pub setup_ollama_docs: bool,
+    pub setup_update_prompts: bool,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -380,6 +385,8 @@ pub enum SetupStep {
     Language,
     Template,
     Cses,
+    Github,
+    Updates,
 }
 
 impl App {
@@ -437,6 +444,10 @@ impl App {
             setup_template: String::new(),
             setup_template_scroll: 0,
             setup_cses: String::new(),
+            setup_github_publish: false,
+            setup_github_pages: true,
+            setup_ollama_docs: false,
+            setup_update_prompts: true,
         }
     }
 
@@ -450,11 +461,17 @@ impl App {
     pub fn begin_setup(&mut self) {
         self.setup_active = true;
         self.setup_step = SetupStep::Handle;
+        self.config_editing = false;
+        self.config_edit_buf.clear();
         self.setup_handle = self.config.cf_handle().unwrap_or("").to_string();
         self.setup_lang = self.config.default_language.clone();
         self.setup_template.clear();
         self.setup_template_scroll = 0;
         self.setup_cses = self.config.cses_session.clone().unwrap_or_default();
+        self.setup_github_publish = self.config.publish.auto_publish;
+        self.setup_github_pages = self.config.publish.github_pages;
+        self.setup_ollama_docs = self.config.publish.ollama_enabled;
+        self.setup_update_prompts = self.config.updates.check_on_startup;
     }
 
     /// Cycle the setup language selection through the supported list.
@@ -495,10 +512,21 @@ impl App {
 
         let cses = self.setup_cses.trim().to_string();
         self.config.cses_session = if cses.is_empty() { None } else { Some(cses) };
+        self.config.publish.auto_publish = self.setup_github_publish;
+        self.config.publish.github_pages = self.setup_github_pages;
+        self.config.publish.ollama_enabled = self.setup_ollama_docs;
+        if self.config.publish.repo_dir.trim().is_empty() {
+            self.config.publish.repo_dir = "~/cpos-solutions".to_string();
+        }
+        self.config.updates.check_on_startup = self.setup_update_prompts;
+        self.config.updates.prompt_to_install = self.setup_update_prompts;
 
         let _ = self.config.save();
         self.theme = Theme::from_name(&self.config.theme);
         self.setup_active = false;
+        self.config_editing = false;
+        self.config_selected = 0;
+        self.config_edit_buf.clear();
         root
     }
 
@@ -647,6 +675,7 @@ impl App {
 
         let contests = cache.get_contests(Platform::Codeforces)?;
         self.set_contests(contests);
+        let _ = self.write_accepted_index();
         Ok(())
     }
 
@@ -690,6 +719,264 @@ impl App {
         self.status_message = format!(
             "Ready — {n_problems} problems, {n_subs} submissions, {n_contests} contests (cached)"
         );
+    }
+
+    pub fn maybe_show_publish_intro(&mut self) {
+        if !self.config.updates.show_announcements || self.config.updates.seen_publish_intro {
+            return;
+        }
+        self.config.updates.seen_publish_intro = true;
+        let _ = self.config.save();
+        self.status_message =
+            "New: auto-publish accepted solutions to GitHub with READMEs and a sleek Pages site. Configure it in Config.".to_string();
+    }
+
+    pub fn accepted_submission_for(&self, problem: &Problem) -> Option<Submission> {
+        self.submissions
+            .iter()
+            .find(|s| {
+                s.platform == problem.platform
+                    && s.problem_id == problem.id
+                    && s.verdict == Verdict::Accepted
+            })
+            .cloned()
+    }
+
+    pub fn is_accepted(&self, problem: &Problem) -> bool {
+        if problem.status == SolveStatus::Solved {
+            return true;
+        }
+        if problem.platform == Platform::Cses && self.cses_solved.contains(&problem.id) {
+            return true;
+        }
+        self.accepted_submission_for(problem).is_some()
+    }
+
+    pub fn publish_request_for(&self, problem: &Problem) -> Option<PublishRequest> {
+        if !self.is_accepted(problem) {
+            return None;
+        }
+        let solution_path = self.solution_file(problem);
+        if !publish::needs_publish(&self.config, problem, &solution_path) {
+            return None;
+        }
+        Some(PublishRequest {
+            config: self.config.clone(),
+            problem: problem.clone(),
+            solution_path,
+            language: self.config.default_language.clone(),
+            submission: self.accepted_submission_for(problem),
+        })
+    }
+
+    pub fn pending_publish_requests(&self) -> Vec<PublishRequest> {
+        if !publish::is_configured(&self.config.publish) {
+            return Vec::new();
+        }
+
+        let mut seen = std::collections::HashSet::new();
+        let mut requests = Vec::new();
+
+        let mut consider = |problem: &Problem| {
+            let key = format!("{:?}:{}", problem.platform, problem.id);
+            if !seen.insert(key) {
+                return;
+            }
+            if !self.is_accepted(problem) {
+                return;
+            }
+            if let Some(req) = self.publish_request_for(problem) {
+                requests.push(req);
+            }
+        };
+
+        for problem in &self.problems {
+            consider(problem);
+        }
+
+        for sub in &self.submissions {
+            if sub.verdict != Verdict::Accepted {
+                continue;
+            }
+            consider(&self.problem_from_submission(sub));
+        }
+
+        for id in &self.cses_solved {
+            if let Some(problem) = self
+                .problems
+                .iter()
+                .find(|p| p.platform == Platform::Cses && p.id == *id)
+            {
+                consider(problem);
+            } else {
+                consider(&Problem {
+                    platform: Platform::Cses,
+                    id: id.clone(),
+                    name: id.clone(),
+                    url: format!("https://cses.fi/problemset/task/{id}/"),
+                    rating: None,
+                    tags: Vec::new(),
+                    category: None,
+                    solved_count: None,
+                    status: SolveStatus::Solved,
+                });
+            }
+        }
+
+        requests
+    }
+
+    /// Accepted problems that still need a local solution file before they can publish.
+    pub fn accepted_missing_solution_files(&self) -> usize {
+        self.accepted_problems()
+            .into_iter()
+            .filter(|p| {
+                let path = self.solution_file(p);
+                !path.exists()
+                    || std::fs::read_to_string(&path)
+                        .map(|s| s.trim().is_empty())
+                        .unwrap_or(true)
+            })
+            .count()
+    }
+
+    pub fn accepted_problems(&self) -> Vec<Problem> {
+        let mut seen = std::collections::HashSet::new();
+        let mut out = Vec::new();
+
+        let mut push = |problem: Problem| {
+            let key = format!("{:?}:{}", problem.platform, problem.id);
+            if !seen.insert(key) || !self.is_accepted(&problem) {
+                return;
+            }
+            out.push(problem);
+        };
+
+        for p in &self.problems {
+            if self.is_accepted(p) {
+                push(p.clone());
+            }
+        }
+        for sub in &self.submissions {
+            if sub.verdict == Verdict::Accepted {
+                push(self.problem_from_submission(sub));
+            }
+        }
+        for id in &self.cses_solved {
+            push(
+                self.problems
+                    .iter()
+                    .find(|p| p.platform == Platform::Cses && p.id == *id)
+                    .cloned()
+                    .unwrap_or_else(|| Problem {
+                        platform: Platform::Cses,
+                        id: id.clone(),
+                        name: id.clone(),
+                        url: format!("https://cses.fi/problemset/task/{id}/"),
+                        rating: None,
+                        tags: Vec::new(),
+                        category: None,
+                        solved_count: None,
+                        status: SolveStatus::Solved,
+                    }),
+            );
+        }
+        out
+    }
+
+    fn problem_from_submission(&self, sub: &Submission) -> Problem {
+        self.problems
+            .iter()
+            .find(|p| p.platform == sub.platform && p.id == sub.problem_id)
+            .cloned()
+            .unwrap_or_else(|| Problem {
+                platform: sub.platform,
+                id: sub.problem_id.clone(),
+                name: if sub.problem_name.trim().is_empty() {
+                    sub.problem_id.clone()
+                } else {
+                    sub.problem_name.clone()
+                },
+                url: default_problem_url(sub.platform, &sub.problem_id),
+                rating: sub.rating,
+                tags: sub.tags.clone(),
+                category: None,
+                solved_count: None,
+                status: SolveStatus::Solved,
+            })
+    }
+
+    pub fn selected_publish_request(&self) -> Option<PublishRequest> {
+        let problem = self.selected_problem()?;
+        self.publish_request_for(problem)
+    }
+
+    pub fn mark_browser_accepted(
+        &mut self,
+        accepted: crate::data::models::CapturedAccepted,
+    ) -> Option<Problem> {
+        let platform = match accepted.platform.to_lowercase().as_str() {
+            "codeforces" | "cf" => Platform::Codeforces,
+            "cses" => Platform::Cses,
+            "atcoder" => Platform::AtCoder,
+            _ => Platform::Codeforces,
+        };
+        let problem = self
+            .problems
+            .iter()
+            .find(|p| p.platform == platform && p.id == accepted.id)
+            .cloned()
+            .unwrap_or_else(|| Problem {
+                platform,
+                id: accepted.id.clone(),
+                name: accepted.name.clone().unwrap_or_else(|| accepted.id.clone()),
+                url: accepted.url.clone().unwrap_or_default(),
+                rating: None,
+                tags: Vec::new(),
+                category: None,
+                solved_count: None,
+                status: SolveStatus::Solved,
+            });
+        let submitted_at = chrono::Utc::now();
+        let submission = Submission {
+            platform,
+            id: format!(
+                "browser-{}-{}-{}",
+                match platform {
+                    Platform::Codeforces => "cf",
+                    Platform::Cses => "cses",
+                    Platform::AtCoder => "atcoder",
+                },
+                accepted.id,
+                submitted_at.timestamp()
+            ),
+            problem_id: accepted.id,
+            problem_name: problem.name.clone(),
+            verdict: Verdict::Accepted,
+            language: accepted
+                .language
+                .unwrap_or_else(|| self.config.default_language.clone()),
+            time_ms: None,
+            memory_kb: None,
+            submitted_at,
+            tags: problem.tags.clone(),
+            rating: problem.rating,
+        };
+        if let Ok(cache) = Cache::open() {
+            let _ = cache.upsert_submissions(std::slice::from_ref(&submission));
+        }
+        if platform == Platform::Cses {
+            self.cses_solved.insert(submission.problem_id.clone());
+        }
+        self.submissions.insert(0, submission);
+        self.focus_problem(&problem);
+        self.mark_solved_problems();
+        self.apply_filters();
+        self.status_message = format!(
+            "Accepted detected for {} — publishing if configured",
+            problem.id
+        );
+        Some(problem)
     }
 
     /// Number of consecutive CPOS activity days (ending today or yesterday).
@@ -792,7 +1079,83 @@ impl App {
                 return path.clone();
             }
         }
-        workspace::solution_path(&self.config, problem, &self.solution_ext())
+
+        let ext = self.solution_ext();
+        let default = workspace::solution_path(&self.config, problem, &ext);
+        if default.exists() {
+            return default;
+        }
+
+        if let Some(path) = workspace::discover_solution_path(
+            &self.config,
+            problem.platform,
+            &problem.id,
+            &ext,
+            &self.solution_paths,
+        ) {
+            return path;
+        }
+
+        for cmd in self.config.compile_commands.values() {
+            if let Some(path) = workspace::discover_solution_path(
+                &self.config,
+                problem.platform,
+                &problem.id,
+                &cmd.extension,
+                &self.solution_paths,
+            ) {
+                return path;
+            }
+        }
+
+        default
+    }
+
+    /// Write accepted problems + solution paths for the VS Code extension.
+    pub fn write_accepted_index(&self) -> anyhow::Result<()> {
+        use serde::Serialize;
+
+        #[derive(Serialize)]
+        struct Entry {
+            platform: String,
+            id: String,
+            name: String,
+            url: String,
+            solution_path: String,
+            language: String,
+        }
+
+        let entries: Vec<Entry> = self
+            .problems
+            .iter()
+            .filter(|p| self.is_accepted(p))
+            .filter_map(|p| {
+                let path = self.solution_file(p);
+                if !path.exists() {
+                    return None;
+                }
+                Some(Entry {
+                    platform: match p.platform {
+                        Platform::Codeforces => "codeforces".to_string(),
+                        Platform::Cses => "cses".to_string(),
+                        Platform::AtCoder => "atcoder".to_string(),
+                    },
+                    id: p.id.clone(),
+                    name: p.name.clone(),
+                    url: p.url.clone(),
+                    solution_path: path.to_string_lossy().into_owned(),
+                    language: self.config.default_language.clone(),
+                })
+            })
+            .collect();
+
+        let dir = Config::data_dir();
+        std::fs::create_dir_all(&dir)?;
+        std::fs::write(
+            dir.join("accepted-index.json"),
+            serde_json::to_string_pretty(&entries)?,
+        )?;
+        Ok(())
     }
 
     pub fn set_solution_path(&mut self, problem: &Problem, path: PathBuf) {
@@ -1245,14 +1608,64 @@ impl App {
                     String::new()
                 },
             ),
+            (
+                "GitHub Publishing",
+                if self.config.publish.auto_publish {
+                    "on".to_string()
+                } else {
+                    "off".to_string()
+                },
+            ),
+            (
+                "Publish Repo",
+                publish::repo_dir(&self.config.publish).display().to_string(),
+            ),
+            ("GitHub Repo", publish::repo_slug_label(&self.config.publish)),
+            (
+                "Archive Site",
+                publish::archive_site_label(&self.config.publish),
+            ),
+            (
+                "GitHub Pages",
+                if self.config.publish.github_pages {
+                    "on".to_string()
+                } else {
+                    "off".to_string()
+                },
+            ),
+            (
+                "Ollama Docs",
+                if self.config.publish.ollama_enabled {
+                    "on".to_string()
+                } else {
+                    "off".to_string()
+                },
+            ),
+            ("Ollama Model", self.config.publish.ollama_model.clone()),
+            (
+                "Update Checks",
+                if self.config.updates.check_on_startup {
+                    "on".to_string()
+                } else {
+                    "off".to_string()
+                },
+            ),
+            (
+                "Update Prompts",
+                if self.config.updates.prompt_to_install {
+                    "on".to_string()
+                } else {
+                    "off".to_string()
+                },
+            ),
         ]
     }
 
     /// True if the currently-selected config field is a "pick" field that
     /// cycles on Enter rather than being free-text edited.
     pub fn config_field_is_cycle(&self) -> bool {
-        // Default Language (1) and Theme (2) cycle through preset options.
-        self.config_selected == 1 || self.config_selected == 2
+        // Pick fields cycle through preset options; everything else is free-text.
+        matches!(self.config_selected, 1 | 2 | 6 | 10 | 11 | 13 | 14)
     }
 
     /// Advance the selected cycle field to its next preset value.
@@ -1267,11 +1680,40 @@ impl App {
                 let _ = self.config.save();
             }
             2 => self.cycle_theme(),
+            6 => {
+                self.config.publish.auto_publish = !self.config.publish.auto_publish;
+                let _ = self.config.save();
+                self.status_message = if self.config.publish.auto_publish {
+                    "GitHub publishing enabled — press G to connect/create the GitHub repo"
+                        .to_string()
+                } else {
+                    "GitHub publishing disabled".to_string()
+                };
+            }
+            10 => {
+                self.config.publish.github_pages = !self.config.publish.github_pages;
+                let _ = self.config.save();
+            }
+            11 => {
+                self.config.publish.ollama_enabled = !self.config.publish.ollama_enabled;
+                let _ = self.config.save();
+            }
+            13 => {
+                self.config.updates.check_on_startup = !self.config.updates.check_on_startup;
+                let _ = self.config.save();
+            }
+            14 => {
+                self.config.updates.prompt_to_install = !self.config.updates.prompt_to_install;
+                let _ = self.config.save();
+            }
             _ => {}
         }
     }
 
     pub fn start_config_edit(&mut self) {
+        if self.config_selected == 9 {
+            return;
+        }
         let fields = self.config_fields();
         if let Some((_, val)) = fields.get(self.config_selected) {
             self.config_edit_buf = val.clone();
@@ -1314,6 +1756,28 @@ impl App {
                 } else {
                     Some(v.to_string())
                 };
+            }
+            7 => {
+                let v = self.config_edit_buf.trim();
+                self.config.publish.repo_dir = if v.is_empty() {
+                    "~/cpos-solutions".to_string()
+                } else {
+                    v.to_string()
+                };
+            }
+            8 => {
+                let v = self.config_edit_buf.trim();
+                self.config.publish.remote_url = if v.is_empty() {
+                    None
+                } else {
+                    Some(v.to_string())
+                };
+            }
+            12 => {
+                let v = self.config_edit_buf.trim();
+                if !v.is_empty() {
+                    self.config.publish.ollama_model = v.to_string();
+                }
             }
             _ => {}
         }
@@ -1463,6 +1927,26 @@ pub async fn fetch_and_cache(
     }
 
     let _ = tx.send(RefreshMsg::Done);
+}
+
+fn default_problem_url(platform: Platform, id: &str) -> String {
+    match platform {
+        Platform::Codeforces => {
+            let split = id
+                .char_indices()
+                .find(|(_, c)| !c.is_ascii_digit())
+                .map(|(i, _)| i)
+                .unwrap_or(id.len());
+            if split == 0 {
+                format!("https://codeforces.com/problemset/problem/{id}")
+            } else {
+                let (contest, index) = id.split_at(split);
+                format!("https://codeforces.com/problemset/problem/{contest}/{index}")
+            }
+        }
+        Platform::Cses => format!("https://cses.fi/problemset/task/{id}/"),
+        Platform::AtCoder => format!("https://atcoder.jp/contests/practice/tasks/{id}"),
+    }
 }
 
 /// Parse a Codeforces or CSES problem URL into a (possibly minimal) Problem.

@@ -41,7 +41,10 @@ pub fn draw(frame: &mut Frame, app: &App, area: Rect) {
                 0
             };
             spans.push(Span::styled(s.tag.clone(), Style::default().fg(t.warning)));
-            spans.push(Span::styled(format!(" {rate}%"), Style::default().fg(t.dim)));
+            spans.push(Span::styled(
+                format!(" {rate}%"),
+                Style::default().fg(t.dim),
+            ));
         }
         frame.render_widget(Paragraph::new(Line::from(spans)), weak_inner);
     }
@@ -50,9 +53,10 @@ pub fn draw(frame: &mut Frame, app: &App, area: Rect) {
     let block = t.panel("Recommended Problems");
 
     if app.recommendations.is_empty() {
-        let msg = Paragraph::new("  Nothing yet — set your Codeforces handle in Config and press 'r'.")
-            .style(Style::default().fg(t.dim))
-            .block(block);
+        let msg =
+            Paragraph::new("  Nothing yet — set your Codeforces handle in Config and press 'r'.")
+                .style(Style::default().fg(t.dim))
+                .block(block);
         frame.render_widget(msg, chunks[1]);
         return;
     }
@@ -124,12 +128,22 @@ pub fn draw(frame: &mut Frame, app: &App, area: Rect) {
 
     let help = Paragraph::new(Line::from(vec![
         Span::styled(
-            format!("  {}/{}  ", app.recommend_selected + 1, app.recommendations.len()),
+            format!(
+                "  {}/{}  ",
+                app.recommend_selected + 1,
+                app.recommendations.len()
+            ),
             Style::default().fg(t.dim),
         ),
-        Span::styled("j/k ", Style::default().fg(t.accent).add_modifier(Modifier::BOLD)),
+        Span::styled(
+            "j/k ",
+            Style::default().fg(t.accent).add_modifier(Modifier::BOLD),
+        ),
         Span::styled("move   ", Style::default().fg(t.dim)),
-        Span::styled("enter/o ", Style::default().fg(t.accent).add_modifier(Modifier::BOLD)),
+        Span::styled(
+            "enter/o ",
+            Style::default().fg(t.accent).add_modifier(Modifier::BOLD),
+        ),
         Span::styled("open & solve", Style::default().fg(t.dim)),
     ]));
     frame.render_widget(help, help_area);

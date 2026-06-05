@@ -6,6 +6,8 @@ use std::time::Duration;
 use anyhow::{Context, Result, bail};
 use reqwest::Client;
 
+use crate::data::config::Config;
+
 const REPO: &str = "https://github.com/Soham109/cpos";
 const INSTALL_SH: &str = "https://raw.githubusercontent.com/Soham109/cpos/main/install.sh";
 const RAW_CARGO_TOML: &str = "https://raw.githubusercontent.com/Soham109/cpos/main/Cargo.toml";
@@ -34,14 +36,14 @@ pub struct ComponentUpdate {
     pub can_update_from_cli: bool,
 }
 
-pub fn startup_check_enabled() -> bool {
+pub fn startup_check_enabled(config: &Config) -> bool {
     if env_flag("CPOS_NO_UPDATE_CHECK") {
         return false;
     }
     if env_flag("CPOS_UPDATE_CHECK") {
         return true;
     }
-    dev_tree_from_exe().is_none()
+    config.updates.check_on_startup && dev_tree_from_exe().is_none()
 }
 
 pub async fn check_latest() -> Result<UpdateCheck> {

@@ -289,6 +289,51 @@
     return { platform, id, name, url, tests };
   }
 
+  function acceptedFromPage() {
+    if (location.hostname === "codeforces.com") {
+      const path = location.pathname;
+      if (!/submissions|status|my/.test(path)) return null;
+      const rows = document.querySelectorAll("tr");
+      for (const row of rows) {
+        const verdict = row.querySelector(".verdict-accepted, [class*='verdict']");
+        const verdictText = (verdict?.textContent || row.textContent || "").replace(/\s+/g, " ").trim();
+        if (!/\bAccepted\b/i.test(verdictText)) continue;
+        const link = row.querySelector("a[href*='/problem/'], a[href*='/problemset/problem/']");
+        if (!link) continue;
+        const href = link.href || link.getAttribute("href") || "";
+        const m = href.match(/(?:problemset\/problem|(?:contest|gym)\/(\d+)\/problem)\/?(\d+)?\/?([A-Za-z0-9]+)/);
+        const contest = m && (m[1] || m[2]);
+        const index = m && m[3];
+        if (!contest || !index) continue;
+        const id = `${contest}${index.toUpperCase()}`;
+        const rawName = (link.textContent || id).replace(/^[A-Z]\d*\.\s*/, "").trim();
+        return {
+          platform: "codeforces",
+          id,
+          name: rawName || id,
+          url: `https://codeforces.com/problemset/problem/${contest}/${index.toUpperCase()}`
+        };
+      }
+    }
+
+    if (location.hostname === "cses.fi") {
+      const id = taskIdFromAnyUrl(location.href);
+      if (!id) return null;
+      const body = document.body?.innerText || "";
+      const fullScore = document.querySelector(".task-score.full");
+      if (!fullScore && !/\bAccepted\b|\bACCEPTED\b/.test(body)) return null;
+      const h1 = document.querySelector(".title-block h1, .content h1, h1");
+      return {
+        platform: "cses",
+        id,
+        name: h1 ? h1.textContent.trim() : id,
+        url: `https://cses.fi/problemset/task/${id}/`
+      };
+    }
+
+    return null;
+  }
+
   const CF_LANGUAGE_IDS = {
     // Legacy fallbacks only — Codeforces reuses/changes ids; label matching is preferred.
     cpp: 54,
@@ -1152,6 +1197,14 @@
         await captureCsesProgress();
         window.addEventListener("pageshow", () => captureCsesProgress());
         return;
+      }
+
+      const accepted = acceptedFromPage();
+      if (accepted) {
+        const { synced } = await postAll("/capture/accepted", accepted);
+        if (synced.length > 0) {
+          toast(`CPOS · accepted ${accepted.id} → ${synced.join(", ")}`, true);
+        }
       }
 
       // Codeforces problem page or CSES task page: keep a fast submit watcher running.

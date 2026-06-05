@@ -25,10 +25,36 @@ pub struct Config {
     /// devtools (Application → Cookies → cses.fi → PHPSESSID).
     #[serde(default)]
     pub cses_session: Option<String>,
+    /// Accepted-solution publishing settings shared by the TUI and VS Code extension.
+    #[serde(default)]
+    pub publish: PublishConfig,
+    /// Startup update checks and one-time feature announcements.
+    #[serde(default)]
+    pub updates: UpdateConfig,
 }
 
 fn default_theme() -> String {
     "purple".to_string()
+}
+
+fn default_true() -> bool {
+    true
+}
+
+fn default_publish_repo_dir() -> String {
+    "~/cpos-solutions".to_string()
+}
+
+fn default_publish_remote() -> String {
+    "origin".to_string()
+}
+
+fn default_publish_branch() -> String {
+    "main".to_string()
+}
+
+fn default_ollama_model() -> String {
+    "llama3.1".to_string()
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -36,6 +62,46 @@ pub struct CompileConfig {
     pub compile: Option<String>,
     pub run: String,
     pub extension: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PublishConfig {
+    /// Off means "not configured". On means accepted solutions publish automatically.
+    #[serde(default)]
+    pub auto_publish: bool,
+    /// Local repository/archive folder. CPOS writes solutions, READMEs, and docs/ here.
+    #[serde(default = "default_publish_repo_dir")]
+    pub repo_dir: String,
+    /// Optional GitHub remote URL, e.g. git@github.com:user/cp-solutions.git.
+    #[serde(default)]
+    pub remote_url: Option<String>,
+    #[serde(default = "default_publish_remote")]
+    pub remote: String,
+    #[serde(default = "default_publish_branch")]
+    pub branch: String,
+    /// Generate docs/ for GitHub Pages.
+    #[serde(default = "default_true")]
+    pub github_pages: bool,
+    /// Ask local Ollama for approach/complexity prose. Publishing still works without it.
+    #[serde(default)]
+    pub ollama_enabled: bool,
+    #[serde(default = "default_ollama_model")]
+    pub ollama_model: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UpdateConfig {
+    /// Check for terminal app updates when CPOS starts.
+    #[serde(default = "default_true")]
+    pub check_on_startup: bool,
+    /// Prompt before running the update command when an update is found.
+    #[serde(default = "default_true")]
+    pub prompt_to_install: bool,
+    /// Show one-time "what's new" messages in the status bar.
+    #[serde(default = "default_true")]
+    pub show_announcements: bool,
+    #[serde(default)]
+    pub seen_publish_intro: bool,
 }
 
 impl Default for Config {
@@ -59,20 +125,60 @@ impl Default for Config {
         // The broad set of languages competitive-programming judges accept.
         // `{source}` is the absolute path to your file, `{output}` is the
         // compiled binary name, `{dir}` is the build directory.
-        lang("c", Some("gcc -std=c11 -O2 -o {output} {source} -lm"), "./{output}", "c");
-        lang("cpp", Some("g++ -std=c++17 -O2 -o {output} {source}"), "./{output}", "cpp");
+        lang(
+            "c",
+            Some("gcc -std=c11 -O2 -o {output} {source} -lm"),
+            "./{output}",
+            "c",
+        );
+        lang(
+            "cpp",
+            Some("g++ -std=c++17 -O2 -o {output} {source}"),
+            "./{output}",
+            "cpp",
+        );
         lang("python", None, "python3 {source}", "py");
         lang("pypy", None, "pypy3 {source}", "py");
         // Class is `Main` (package-private) so the file can be named e.g. 1A.java.
-        lang("java", Some("javac -d {dir} {source}"), "java -cp {dir} Main", "java");
-        lang("kotlin", Some("kotlinc {source} -include-runtime -d {output}.jar"), "java -jar {output}.jar", "kt");
-        lang("rust", Some("rustc -O -o {output} {source}"), "./{output}", "rs");
+        lang(
+            "java",
+            Some("javac -d {dir} {source}"),
+            "java -cp {dir} Main",
+            "java",
+        );
+        lang(
+            "kotlin",
+            Some("kotlinc {source} -include-runtime -d {output}.jar"),
+            "java -jar {output}.jar",
+            "kt",
+        );
+        lang(
+            "rust",
+            Some("rustc -O -o {output} {source}"),
+            "./{output}",
+            "rs",
+        );
         lang("go", None, "go run {source}", "go");
-        lang("csharp", Some("mcs -out:{output}.exe {source}"), "mono {output}.exe", "cs");
+        lang(
+            "csharp",
+            Some("mcs -out:{output}.exe {source}"),
+            "mono {output}.exe",
+            "cs",
+        );
         lang("javascript", None, "node {source}", "js");
         lang("ruby", None, "ruby {source}", "rb");
-        lang("haskell", Some("ghc -O2 -o {output} {source} -outputdir {dir}"), "./{output}", "hs");
-        lang("pascal", Some("fpc -O2 -o{output} {source}"), "./{output}", "pas");
+        lang(
+            "haskell",
+            Some("ghc -O2 -o {output} {source} -outputdir {dir}"),
+            "./{output}",
+            "hs",
+        );
+        lang(
+            "pascal",
+            Some("fpc -O2 -o{output} {source}"),
+            "./{output}",
+            "pas",
+        );
 
         Config {
             handles,
@@ -83,6 +189,34 @@ impl Default for Config {
             template_file: None,
             editor: None,
             cses_session: None,
+            publish: PublishConfig::default(),
+            updates: UpdateConfig::default(),
+        }
+    }
+}
+
+impl Default for PublishConfig {
+    fn default() -> Self {
+        PublishConfig {
+            auto_publish: false,
+            repo_dir: default_publish_repo_dir(),
+            remote_url: None,
+            remote: default_publish_remote(),
+            branch: default_publish_branch(),
+            github_pages: true,
+            ollama_enabled: false,
+            ollama_model: default_ollama_model(),
+        }
+    }
+}
+
+impl Default for UpdateConfig {
+    fn default() -> Self {
+        UpdateConfig {
+            check_on_startup: true,
+            prompt_to_install: true,
+            show_announcements: true,
+            seen_publish_intro: false,
         }
     }
 }
@@ -114,13 +248,10 @@ impl Config {
             let defaults = Config::default();
             let mut changed = false;
             for (lang, cmd) in defaults.compile_commands {
-                config
-                    .compile_commands
-                    .entry(lang)
-                    .or_insert_with(|| {
-                        changed = true;
-                        cmd
-                    });
+                config.compile_commands.entry(lang).or_insert_with(|| {
+                    changed = true;
+                    cmd
+                });
             }
             if changed {
                 let _ = config.save();

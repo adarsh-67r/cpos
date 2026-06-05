@@ -130,8 +130,17 @@ impl Cache {
 
         let mut problems = Vec::new();
         for row in rows {
-            let (platform_str_row, id, name, url, rating, tags_str, category, solved_count, status_str) =
-                row?;
+            let (
+                platform_str_row,
+                id,
+                name,
+                url,
+                rating,
+                tags_str,
+                category,
+                solved_count,
+                status_str,
+            ) = row?;
             let tags: Vec<String> = serde_json::from_str(&tags_str).unwrap_or_default();
             let status = match status_str.as_str() {
                 "Solved" => SolveStatus::Solved,
@@ -210,7 +219,19 @@ impl Cache {
 
         let mut subs = Vec::new();
         for row in rows {
-            let (plat_str, id, pid, pname, verdict_str, lang, time_ms, mem_kb, at_str, tags_str, rating) = row?;
+            let (
+                plat_str,
+                id,
+                pid,
+                pname,
+                verdict_str,
+                lang,
+                time_ms,
+                mem_kb,
+                at_str,
+                tags_str,
+                rating,
+            ) = row?;
             let platform = match plat_str.as_str() {
                 "Cses" => Platform::Cses,
                 "AtCoder" => Platform::AtCoder,
@@ -255,7 +276,11 @@ impl Cache {
         Ok(all)
     }
 
-    pub fn upsert_rating_history(&self, platform: Platform, changes: &[RatingChange]) -> Result<()> {
+    pub fn upsert_rating_history(
+        &self,
+        platform: Platform,
+        changes: &[RatingChange],
+    ) -> Result<()> {
         let tx = self.conn.unchecked_transaction()?;
         let platform_str = format!("{:?}", platform);
         tx.execute(

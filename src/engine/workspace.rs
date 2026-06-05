@@ -68,7 +68,13 @@ pub fn platform_dir(config: &Config, platform: Platform) -> PathBuf {
 /// but AtCoder and pasted ids can contain slashes/colons).
 fn safe_id(id: &str) -> String {
     id.chars()
-        .map(|c| if c.is_alphanumeric() || c == '-' || c == '_' { c } else { '_' })
+        .map(|c| {
+            if c.is_alphanumeric() || c == '-' || c == '_' {
+                c
+            } else {
+                '_'
+            }
+        })
         .collect()
 }
 
@@ -110,6 +116,96 @@ pub fn solution_path(config: &Config, problem: &Problem, ext: &str) -> PathBuf {
 /// Flat solution file inside a user-chosen directory (matches VS Code workspace layout).
 pub fn solution_path_in_dir(dir: &Path, problem: &Problem, ext: &str) -> PathBuf {
     dir.join(format!("{}.{}", solution_basename(problem), ext))
+}
+
+/// Search workspace locations for an existing solution file for a problem id.
+pub fn discover_solution_path(
+    config: &Config,
+    platform: Platform,
+    problem_id: &str,
+    ext: &str,
+    solution_paths: &HashMap<String, PathBuf>,
+) -> Option<PathBuf> {
+    let stub = Problem {
+        platform,
+        id: problem_id.to_string(),
+        name: problem_id.to_string(),
+        url: String::new(),
+        rating: None,
+        tags: Vec::new(),
+        category: None,
+        solved_count: None,
+        status: SolveStatus::Unsolved,
+    };
+
+    let key = format!("{platform:?}:{problem_id}");
+    if let Some(path) = solution_paths.get(&key) {
+        if path.exists() {
+            return Some(path.clone());
+        }
+    }
+
+    let direct = solution_path(config, &stub, ext);
+    if direct.exists() {
+        return Some(direct);
+    }
+
+    if let Some(dir) = active_user_save_dir(config, solution_paths) {
+        let flat = dir.join(format!("{problem_id}.{ext}"));
+        if flat.exists() {
+            return Some(flat);
+        }
+        let named = solution_path_in_dir(&dir, &stub, ext);
+        if named.exists() {
+            return Some(named);
+        }
+    }
+
+    let id_lower = problem_id.to_ascii_lowercase();
+    for dir in search_dirs(config, solution_paths) {
+        let Ok(entries) = std::fs::read_dir(&dir) else {
+            continue;
+        };
+        for entry in entries.flatten() {
+            let path = entry.path();
+            if !path.is_file() {
+                continue;
+            }
+            let Some(stem) = path.file_stem().and_then(|s| s.to_str()) else {
+                continue;
+            };
+            if stem.eq_ignore_ascii_case(problem_id) || stem.to_ascii_lowercase().starts_with(&id_lower)
+            {
+                if path
+                    .extension()
+                    .and_then(|e| e.to_str())
+                    .is_some_and(|e| e.eq_ignore_ascii_case(ext))
+                {
+                    return Some(path);
+                }
+            }
+        }
+    }
+
+    None
+}
+
+fn search_dirs(config: &Config, solution_paths: &HashMap<String, PathBuf>) -> Vec<PathBuf> {
+    let mut dirs = Vec::new();
+    for platform in [Platform::Codeforces, Platform::Cses, Platform::AtCoder] {
+        dirs.push(platform_dir(config, platform));
+    }
+    if let Some(dir) = active_user_save_dir(config, solution_paths) {
+        dirs.push(dir);
+    }
+    for path in solution_paths.values() {
+        if let Some(parent) = path.parent() {
+            dirs.push(parent.to_path_buf());
+        }
+    }
+    dirs.sort();
+    dirs.dedup();
+    dirs
 }
 
 /// Whether `path` is under CPOS's default `~/cpos` tree (not the user's open project).
@@ -259,7 +355,11 @@ struct StoredSession {
     id: String,
     name: String,
     url: String,
-    #[serde(default, skip_serializing_if = "Option::is_none", alias = "solutionPath")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "solutionPath"
+    )]
     solution_path: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none", alias = "capturedAt")]
     captured_at: Option<String>,
@@ -500,7 +600,10 @@ mod tests {
             solved_count: None,
             status: SolveStatus::Unsolved,
         };
-        assert_eq!(compare_problems(&older, &newer), std::cmp::Ordering::Greater);
+        assert_eq!(
+            compare_problems(&older, &newer),
+            std::cmp::Ordering::Greater
+        );
         assert_eq!(compare_problems(&newer, &older), std::cmp::Ordering::Less);
     }
 
