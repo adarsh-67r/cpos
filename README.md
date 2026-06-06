@@ -14,6 +14,7 @@ Open a problem in your browser. CPOS creates the file, loads the samples, and le
   <a href="extensions/firefox"><img alt="Firefox source install" src="https://img.shields.io/badge/Firefox-source_install-FF7139?logo=firefoxbrowser&logoColor=white"></a>
   <img alt="license" src="https://img.shields.io/badge/license-MIT-blue.svg">
   <img alt="rust" src="https://img.shields.io/badge/built%20with-Rust-orange.svg">
+  <a href="https://github.com/sponsors/Soham109"><img alt="Sponsor" src="https://img.shields.io/badge/Sponsor-%E2%9D%A4-db61a2?logo=githubsponsors&logoColor=white"></a>
 </p>
 
 ## Demo
@@ -252,6 +253,25 @@ Having issues? See **[TROUBLESHOOTING.md](TROUBLESHOOTING.md)** (TUI install, Ru
 - AtCoder & CodeChef support
 - Contest mode with per-problem timers
 - Read submission verdicts back into CPOS
+
+---
+
+## Sponsor
+
+CPOS is built and maintained by one person, in the open, for the competitive programming community. It's free, MIT-licensed, and runs entirely on your own machine — no accounts, no servers, no tracking, no paywalled features.
+
+If CPOS saves you time on every problem, sponsoring keeps it that way and funds what's next:
+
+- **More judges** — AtCoder and CodeChef support
+- **Contest mode** — per-problem timers and a focused contest workflow
+- **Verdicts in CPOS** — read submission results back without leaving the editor
+- **Maintenance** — keeping capture and submit working as Codeforces and CSES change
+
+<p align="center">
+  <a href="https://github.com/sponsors/Soham109"><img alt="Sponsor CPOS on GitHub" src="https://img.shields.io/badge/Sponsor_CPOS-%E2%9D%A4-db61a2?style=for-the-badge&logo=githubsponsors&logoColor=white"></a>
+</p>
+
+Not in a position to sponsor? Starring the repo, filing a clear bug report, or sending a PR helps just as much — see [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ---
 
