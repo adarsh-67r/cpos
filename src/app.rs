@@ -372,6 +372,10 @@ pub struct App {
     pub setup_template: String,
     pub setup_template_scroll: u16,
     pub setup_cses: String,
+    /// Paste vs. Upload sub-mode on the Template step.
+    pub setup_template_mode: TemplateInput,
+    /// File path being typed/pasted in Upload mode.
+    pub setup_template_path: String,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -380,6 +384,15 @@ pub enum SetupStep {
     Language,
     Template,
     Cses,
+}
+
+/// How the user is supplying their template on the Template step.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum TemplateInput {
+    /// Paste the whole template from the clipboard.
+    Paste,
+    /// Load the template from a file on disk.
+    Upload,
 }
 
 impl App {
@@ -437,6 +450,8 @@ impl App {
             setup_template: String::new(),
             setup_template_scroll: 0,
             setup_cses: String::new(),
+            setup_template_mode: TemplateInput::Paste,
+            setup_template_path: String::new(),
         }
     }
 
@@ -455,6 +470,26 @@ impl App {
         self.setup_template.clear();
         self.setup_template_scroll = 0;
         self.setup_cses = self.config.cses_session.clone().unwrap_or_default();
+        self.setup_template_mode = TemplateInput::Paste;
+        self.setup_template_path.clear();
+    }
+
+    /// Load the file at `setup_template_path` into the template buffer (Upload
+    /// mode). Returns an error message suitable for the status line on failure.
+    pub fn load_template_from_path(&mut self) -> Result<usize, String> {
+        let raw = self.setup_template_path.trim().trim_matches('"');
+        if raw.is_empty() {
+            return Err("Type a file path first.".to_string());
+        }
+        let path = PathBuf::from(raw);
+        match std::fs::read_to_string(&path) {
+            Ok(content) => {
+                self.setup_template = normalize_template_text(&content);
+                self.setup_template_scroll = 0;
+                Ok(self.setup_template.lines().count())
+            }
+            Err(e) => Err(format!("Couldn't read {}: {e}", path.display())),
+        }
     }
 
     /// Cycle the setup language selection through the supported list.

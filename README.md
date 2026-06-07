@@ -105,6 +105,20 @@ cpos
 
 Keep the terminal running while you code in VS Code — same captures, same submits, same progress.
 
+### First run
+
+The first time you launch `cpos` (before a Codeforces handle is set) a quick 4-step wizard runs:
+
+1. **Handle** — type your Codeforces handle.
+2. **Language** — pick your default language (`←/→` to browse).
+3. **Template** — choose how to supply your solution template:
+   - **Paste** (default): copy your template, then press **`v`** (or `Ctrl+V` / `⌘V`) to paste the whole thing — multi-line formatting is preserved.
+   - **Upload**: press **`Tab`** to switch modes, type or paste a file path, then **Enter** to load it. A live preview shows the loaded template.
+   - Leave it blank to use the built-in template.
+4. **CSES** *(optional)* — press `o` to open the CSES login, then paste your `PHPSESSID` cookie to sync solved problems. You can skip this and set it later in Config.
+
+Re-run the wizard any time by clearing your handle in `config.toml` (or deleting the config file — see [Config location](TROUBLESHOOTING.md#config-location)).
+
 ---
 
 ## Your folder, your files
@@ -229,7 +243,7 @@ Press **`r`** after solving more problems to refresh recommendations.
 | `Paper` | High-contrast grayscale, minimal color |
 | `Native` | Inherits your active VS Code color theme — Run All matches VS Code button styling |
 
-**Terminal app** — `~/.config/cpos/config.toml` (Linux) or `~/Library/Application Support/cpos/config.toml` (macOS):
+**Terminal app** — `~/.config/cpos/config.toml` (Linux), `~/Library/Application Support/cpos/config.toml` (macOS), or `%APPDATA%\cpos\config.toml` (Windows):
 
 ```toml
 default_language = "cpp"

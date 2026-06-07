@@ -1,7 +1,7 @@
 use ratatui::prelude::*;
 use ratatui::widgets::*;
 
-use crate::app::{language_display, App, SetupStep, LANGUAGES};
+use crate::app::{language_display, App, SetupStep, TemplateInput, LANGUAGES};
 
 pub fn draw(frame: &mut Frame, app: &App) {
     let t = &app.theme;
@@ -155,23 +155,67 @@ fn draw_template_step(frame: &mut Frame, app: &App, area: Rect) {
     let chunks = Layout::default()
         .direction(Direction::Vertical)
         .constraints([
-            Constraint::Length(3),
-            Constraint::Min(4),
+            Constraint::Length(1), // mode toggle
+            Constraint::Length(3), // intro / path field
+            Constraint::Min(4),    // preview
         ])
         .split(area);
 
-    let intro = vec![
-        Line::from(Span::styled(
-            "Paste your solution template (⌘V / Ctrl+V).",
-            Style::default().fg(t.fg),
-        )),
-        Line::from(Span::styled(
-            "Leave blank for the built-in template. Backspace clears.",
-            Style::default().fg(t.dim),
-        )),
-    ];
-    frame.render_widget(Paragraph::new(intro), chunks[0]);
+    // Mode toggle: [ Paste ]  Upload  (Tab to switch).
+    let tab_chip = |label: &str, active: bool| {
+        if active {
+            Span::styled(
+                format!(" {label} "),
+                Style::default().fg(t.bg).bg(t.accent).add_modifier(Modifier::BOLD),
+            )
+        } else {
+            Span::styled(format!(" {label} "), Style::default().fg(t.dim))
+        }
+    };
+    let is_paste = app.setup_template_mode == TemplateInput::Paste;
+    frame.render_widget(
+        Paragraph::new(Line::from(vec![
+            Span::raw(" "),
+            tab_chip("Paste", is_paste),
+            Span::styled("  ⇄  ", Style::default().fg(t.border)),
+            tab_chip("Upload", !is_paste),
+            Span::styled("   (Tab to switch)", Style::default().fg(t.dim)),
+        ])),
+        chunks[0],
+    );
 
+    let intro = match app.setup_template_mode {
+        TemplateInput::Paste => vec![
+            Line::from(Span::styled(
+                "Copy your template, then press v to paste it here.",
+                Style::default().fg(t.fg),
+            )),
+            Line::from(Span::styled(
+                "Leave blank for the built-in template. Backspace clears.",
+                Style::default().fg(t.dim),
+            )),
+        ],
+        TemplateInput::Upload => vec![
+            Line::from(Span::styled(
+                "Type or paste a path to your template file, then press Enter.",
+                Style::default().fg(t.fg),
+            )),
+            Line::from(vec![
+                Span::styled("  file  ", Style::default().fg(t.dim)),
+                Span::styled(
+                    format!("{}_", app.setup_template_path),
+                    Style::default().fg(t.accent).add_modifier(Modifier::BOLD),
+                ),
+            ]),
+        ],
+    };
+    frame.render_widget(Paragraph::new(intro), chunks[1]);
+
+    draw_template_preview(frame, app, chunks[2]);
+}
+
+fn draw_template_preview(frame: &mut Frame, app: &App, area: Rect) {
+    let t = &app.theme;
     let lines: Vec<&str> = app.setup_template.lines().collect();
     let line_count = lines.len();
     let title = if line_count == 0 {
@@ -187,16 +231,18 @@ fn draw_template_step(frame: &mut Frame, app: &App, area: Rect) {
         .border_style(Style::default().fg(if line_count == 0 { t.border } else { t.accent_dim }))
         .style(Style::default().bg(t.bg));
 
-    let inner = block.inner(chunks[1]);
-    frame.render_widget(block, chunks[1]);
+    let inner = block.inner(area);
+    frame.render_widget(block, area);
 
     if line_count == 0 {
+        let placeholder = if app.setup_template_mode == TemplateInput::Paste {
+            "Press v to paste your template…"
+        } else {
+            "Enter a file path above, then press Enter to load…"
+        };
         frame.render_widget(
-            Paragraph::new(Span::styled(
-                "Waiting for paste…",
-                Style::default().fg(t.dim),
-            ))
-            .alignment(Alignment::Center),
+            Paragraph::new(Span::styled(placeholder, Style::default().fg(t.dim)))
+                .alignment(Alignment::Center),
             inner,
         );
         return;
@@ -272,17 +318,32 @@ fn hint_line(app: &App) -> Line<'static> {
             key("Esc"),
             lbl(" skip"),
         ]),
-        SetupStep::Template => Line::from(vec![
-            Span::raw(" "),
-            key("Enter"),
-            lbl(" continue   "),
-            key("↑/↓"),
-            lbl(" scroll   "),
-            key("Backspace"),
-            lbl(" clear   "),
-            key("Esc"),
-            lbl(" skip"),
-        ]),
+        SetupStep::Template => match app.setup_template_mode {
+            TemplateInput::Paste => Line::from(vec![
+                Span::raw(" "),
+                key("v"),
+                lbl(" paste   "),
+                key("Tab"),
+                lbl(" upload mode   "),
+                key("Enter"),
+                lbl(" continue   "),
+                key("Bksp"),
+                lbl(" clear   "),
+                key("Esc"),
+                lbl(" skip"),
+            ]),
+            TemplateInput::Upload => Line::from(vec![
+                Span::raw(" "),
+                key("Enter"),
+                lbl(" load then continue   "),
+                key("Tab"),
+                lbl(" paste mode   "),
+                key("Bksp"),
+                lbl(" edit path   "),
+                key("Esc"),
+                lbl(" skip"),
+            ]),
+        },
         SetupStep::Cses => Line::from(vec![
             Span::raw(" "),
             key("o"),

@@ -232,6 +232,14 @@ where link.exe       # should find Visual Studio's linker
 | Windows | `%APPDATA%\cpos\config.toml` |
 | Linux | `~/.config/cpos/config.toml` |
 
+### Windows: the TUI shows garbled / Cyrillic ("Russian") text
+
+Fixed in terminal app **0.1.6+** — CPOS now switches the Windows console to UTF-8 on startup. The cause was a legacy console code page decoding the UI's UTF-8 box-drawing/symbol characters as mojibake. Update with `cpos update` (or reinstall via Scoop). If you build from source, pull `main` and rebuild.
+
+### Setup: pasting a template doesn't work / only the first line appears
+
+Use terminal app **0.1.6+** and, on the Template step, press **`v`** to paste (CPOS reads the whole clipboard directly — reliable even where the terminal doesn't support bracketed paste, e.g. Windows conhost). Or press **`Tab`** to switch to **Upload** mode and load the template from a file path. This applies to all platforms; on macOS `⌘V` also still works.
+
 ### Submit from TUI opens wrong browser
 
 The terminal app queues submit for the **browser companion** only (same as VS Code). Install a supported companion and use that browser while logged in.

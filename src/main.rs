@@ -43,7 +43,28 @@ fn main() -> Result<()> {
         .block_on(run_tui())
 }
 
+/// On Windows the console defaults to a legacy code page, which renders the
+/// UI's box-drawing glyphs and arrows (→ ✓ • … ▸) as Cyrillic mojibake — the
+/// "everything is in Russian" bug. Switch input and output to UTF-8.
+#[cfg(windows)]
+fn enable_utf8_console() {
+    unsafe extern "system" {
+        fn SetConsoleOutputCP(code_page: u32) -> i32;
+        fn SetConsoleCP(code_page: u32) -> i32;
+    }
+    const CP_UTF8: u32 = 65001;
+    unsafe {
+        SetConsoleOutputCP(CP_UTF8);
+        SetConsoleCP(CP_UTF8);
+    }
+}
+
+#[cfg(not(windows))]
+fn enable_utf8_console() {}
+
 async fn run_tui() -> Result<()> {
+    enable_utf8_console();
+
     if maybe_prompt_for_updates().await? {
         return Ok(());
     }
@@ -179,7 +200,7 @@ async fn run_app(
 
                     // The setup wizard is modal: it owns all input while open.
                     if app.setup_active {
-                        handle_setup_input(app, key.code);
+                        handle_setup_input(app, key);
                         continue;
                     }
 
@@ -224,9 +245,22 @@ async fn run_app(
 /// Route a pasted blob to the active text field. This is how the setup wizard
 /// lets you paste a whole template in one go.
 fn handle_paste(app: &mut App, text: &str) {
-    if app.setup_active && app.setup_step == SetupStep::Template {
-        app.setup_template = app::normalize_template_text(text);
-        app.setup_template_scroll = 0;
+    use cpos::app::TemplateInput;
+    if app.setup_active && app.setup_step == SetupStep::Handle {
+        // Handles are single-line: take the first non-empty line only.
+        if let Some(line) = text.lines().find(|l| !l.trim().is_empty()) {
+            app.setup_handle.push_str(line.trim());
+        }
+    } else if app.setup_active && app.setup_step == SetupStep::Template {
+        match app.setup_template_mode {
+            TemplateInput::Paste => {
+                app.setup_template = app::normalize_template_text(text);
+                app.setup_template_scroll = 0;
+            }
+            TemplateInput::Upload => {
+                app.setup_template_path.push_str(text.trim());
+            }
+        }
     } else if app.setup_active && app.setup_step == SetupStep::Cses {
         app.setup_cses.push_str(text.trim());
     } else if app.config_editing {
@@ -240,18 +274,21 @@ fn handle_paste(app: &mut App, text: &str) {
 }
 
 /// Modal input for the first-run setup wizard.
-fn handle_setup_input(app: &mut App, key: KeyCode) {
+fn handle_setup_input(app: &mut App, key: crossterm::event::KeyEvent) {
+    let code = key.code;
+    let ctrl = key.modifiers.contains(KeyModifiers::CONTROL);
     match app.setup_step {
-        SetupStep::Handle => match key {
+        SetupStep::Handle => match code {
             KeyCode::Esc => app.skip_setup(),
             KeyCode::Enter => app.setup_step = SetupStep::Language,
             KeyCode::Backspace => {
                 app.setup_handle.pop();
             }
-            KeyCode::Char(c) => app.setup_handle.push(c),
+            // Handles are single-line; drop any newlines a keystroke-paste injects.
+            KeyCode::Char(c) if !c.is_whitespace() => app.setup_handle.push(c),
             _ => {}
         },
-        SetupStep::Language => match key {
+        SetupStep::Language => match code {
             KeyCode::Esc => app.skip_setup(),
             KeyCode::Enter => app.setup_step = SetupStep::Template,
             KeyCode::Left | KeyCode::Char('h') => app.setup_cycle_lang(-1),
@@ -260,27 +297,8 @@ fn handle_setup_input(app: &mut App, key: KeyCode) {
             }
             _ => {}
         },
-        SetupStep::Template => match key {
-            KeyCode::Esc => app.skip_setup(),
-            KeyCode::Enter => {
-                app.setup_step = SetupStep::Cses;
-                app.setup_template_scroll = 0;
-            }
-            KeyCode::Backspace => {
-                app.setup_template.clear();
-                app.setup_template_scroll = 0;
-            }
-            KeyCode::Up | KeyCode::Char('k') => {
-                app.setup_template_scroll = app.setup_template_scroll.saturating_sub(1);
-            }
-            KeyCode::Down | KeyCode::Char('j') => {
-                let lines = app.setup_template.lines().count();
-                let max = lines.saturating_sub(1) as u16;
-                app.setup_template_scroll = (app.setup_template_scroll + 1).min(max);
-            }
-            _ => {}
-        },
-        SetupStep::Cses => match key {
+        SetupStep::Template => handle_template_input(app, code, ctrl),
+        SetupStep::Cses => match code {
             // Enter and Esc both finish here (CSES is the last, optional step).
             KeyCode::Enter | KeyCode::Esc => finish_setup(app),
             KeyCode::Char('o') | KeyCode::Char('O') => {
@@ -291,6 +309,93 @@ fn handle_setup_input(app: &mut App, key: KeyCode) {
             }
             _ => {}
         },
+    }
+}
+
+/// Input for the Template step, which toggles between Paste and Upload modes.
+fn handle_template_input(app: &mut App, code: KeyCode, ctrl: bool) {
+    use cpos::app::TemplateInput;
+
+    // Tab switches between pasting and uploading a file.
+    if code == KeyCode::BackTab || (code == KeyCode::Tab) {
+        app.setup_template_mode = match app.setup_template_mode {
+            TemplateInput::Paste => TemplateInput::Upload,
+            TemplateInput::Upload => TemplateInput::Paste,
+        };
+        return;
+    }
+
+    match app.setup_template_mode {
+        TemplateInput::Paste => match code {
+            KeyCode::Esc => app.skip_setup(),
+            KeyCode::Enter => {
+                app.setup_step = SetupStep::Cses;
+                app.setup_template_scroll = 0;
+            }
+            // v or Ctrl+V pulls the whole clipboard in — reliable across terminals.
+            KeyCode::Char('v') | KeyCode::Char('V') => paste_template_from_clipboard(app),
+            KeyCode::Char(_) if ctrl => paste_template_from_clipboard(app),
+            KeyCode::Backspace => {
+                app.setup_template.clear();
+                app.setup_template_scroll = 0;
+            }
+            KeyCode::Up => {
+                app.setup_template_scroll = app.setup_template_scroll.saturating_sub(1);
+            }
+            KeyCode::Down => {
+                let lines = app.setup_template.lines().count();
+                let max = lines.saturating_sub(1) as u16;
+                app.setup_template_scroll = (app.setup_template_scroll + 1).min(max);
+            }
+            _ => {}
+        },
+        TemplateInput::Upload => match code {
+            KeyCode::Esc => app.skip_setup(),
+            // Enter loads the file; once loaded, Enter again continues.
+            KeyCode::Enter => {
+                if app.setup_template.trim().is_empty() {
+                    match app.load_template_from_path() {
+                        Ok(n) => {
+                            app.status_message = format!("Loaded template ({n} lines).");
+                        }
+                        Err(e) => app.status_message = e,
+                    }
+                } else {
+                    app.setup_step = SetupStep::Cses;
+                    app.setup_template_scroll = 0;
+                }
+            }
+            KeyCode::Backspace => {
+                app.setup_template_path.pop();
+                // Editing the path invalidates a previously loaded preview.
+                app.setup_template.clear();
+                app.setup_template_scroll = 0;
+            }
+            // Ctrl+V pastes a copied path; plain characters type into the field.
+            KeyCode::Char(_) if ctrl => {
+                if let Some(text) = read_clipboard() {
+                    app.setup_template_path.push_str(text.trim());
+                }
+            }
+            KeyCode::Char(c) => app.setup_template_path.push(c),
+            _ => {}
+        },
+    }
+}
+
+/// Pull the clipboard contents into the template buffer (Paste mode).
+fn paste_template_from_clipboard(app: &mut App) {
+    match read_clipboard() {
+        Some(text) => {
+            app.setup_template = app::normalize_template_text(&text);
+            app.setup_template_scroll = 0;
+            let n = app.setup_template.lines().count();
+            app.status_message = format!("Pasted template ({n} lines).");
+        }
+        None => {
+            app.status_message =
+                "Clipboard is empty or unavailable — copy your template first.".to_string();
+        }
     }
 }
 
@@ -710,6 +815,44 @@ fn copy_to_clipboard(text: &str) -> bool {
         let _ = stdin.write_all(text.as_bytes());
     }
     child.wait().map(|s| s.success()).unwrap_or(false)
+}
+
+/// Read the system clipboard as text (`Get-Clipboard` on Windows, `pbpaste` on
+/// macOS, `xclip`/`xsel` on Linux). This is how the setup wizard pastes a whole
+/// multi-line template reliably even where the terminal doesn't emit bracketed
+/// paste events (notably Windows conhost).
+fn read_clipboard() -> Option<String> {
+    use std::process::Command;
+
+    let output = if cfg!(target_os = "windows") {
+        // Force UTF-8 so non-ASCII template characters survive the pipe, and
+        // -Raw so newlines are preserved instead of being split into an array.
+        Command::new("powershell")
+            .args([
+                "-NoProfile",
+                "-Command",
+                "[Console]::OutputEncoding=[System.Text.Encoding]::UTF8; Get-Clipboard -Raw",
+            ])
+            .output()
+    } else if cfg!(target_os = "macos") {
+        Command::new("pbpaste").output()
+    } else {
+        Command::new("xclip")
+            .args(["-selection", "clipboard", "-o"])
+            .output()
+            .or_else(|_| Command::new("xsel").args(["--clipboard", "--output"]).output())
+    };
+
+    let output = output.ok()?;
+    if !output.status.success() {
+        return None;
+    }
+    let text = String::from_utf8_lossy(&output.stdout).to_string();
+    if text.trim().is_empty() {
+        None
+    } else {
+        Some(text)
+    }
 }
 
 fn handle_input(app: &mut App, key: KeyCode) {

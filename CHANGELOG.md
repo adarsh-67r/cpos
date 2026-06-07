@@ -4,7 +4,7 @@ All notable changes to CPOS are documented here. Components are versioned indepe
 
 | Component | Current version | Version file |
 | --- | --- | --- |
-| Terminal app | 0.1.5 | `Cargo.toml` |
+| Terminal app | 0.1.6 | `Cargo.toml` |
 | VS Code extension | 0.3.26 | `extensions/vscode/package.json` |
 | Browser companion (Chrome) | 0.6.14 | `extensions/chrome/manifest.json` |
 | Browser companion (Firefox) | 0.0.2 | `extensions/firefox/manifest.json` |
@@ -15,6 +15,20 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 - Firefox browser companion source build in `extensions/firefox`, with temporary add-on install instructions and XPI packaging for self-signing or future AMO distribution.
+
+---
+
+## Terminal app — 0.1.6 - 2026-06-07
+
+### Fixed
+- **Windows: the whole TUI rendered as garbled / Cyrillic ("Russian") text.** The console started in a legacy code page, so the UI's box-drawing characters and symbols (`→ ✓ • … ▸`) — which are UTF-8 — were decoded as mojibake. CPOS now switches the Windows console to UTF-8 (`SetConsoleOutputCP`/`SetConsoleCP` to code page 65001) on startup. macOS/Linux are unaffected (already UTF-8).
+- **Windows: pasting a template in setup only captured the first line and could skip the CSES step.** Windows terminals (notably conhost) often don't deliver bracketed-paste events, so a multi-line paste arrived as raw keystrokes — the embedded newline acted as Enter (jumping past the CSES step) and a stray `o` triggered "open CSES login." The setup wizard no longer relies on bracketed paste.
+
+### Added
+- **Setup: paste a template with `v` (or Ctrl+V).** The Template step now reads the full clipboard on a keypress via the platform clipboard tool (`Get-Clipboard` on Windows, `pbpaste` on macOS, `xclip`/`xsel` on Linux), so multi-line templates come in intact on every platform.
+- **Setup: load a template from a file.** The Template step has a **Paste ⇄ Upload** toggle (`Tab`); in Upload mode you type or paste a file path and press Enter to load it, with a live preview.
+
+> macOS behavior is preserved — the existing `⌘V` bracketed-paste path still works, and the UTF-8 console fix is Windows-only.
 
 ---
 
