@@ -100,7 +100,7 @@ cpos
 | `b` | Open problem in browser |
 | `U` | Open by URL |
 | `/` · `f` · `p` | Search · filter by rating · switch platform |
-| `Tab` | Switch between Dashboard, Problems, Contests, Analytics, Recommend |
+| `Tab` | Switch between Dashboard, Problems, Contests, Analytics, Recommend, Target |
 | `r` | Sync with Codeforces and CSES |
 
 Keep the terminal running while you code in VS Code — same captures, same submits, same progress.
@@ -189,6 +189,7 @@ Set `CPOS_NO_UPDATE_CHECK=1` to skip startup checks.
 - **Multi-language templates** — start new solutions in your configured language
 - **Progress & analytics** — rating history, topic breakdown, activity heatmap
 - **Recommendations** — personalized unsolved problems aimed at your weak topics (see below)
+- **Targeted practice** — set a rating goal and get the topics you still need plus an ordered plan to reach it (see below)
 - **Contests** — upcoming and running Codeforces contests with countdowns
 - **Private** — everything stays on your machine (`127.0.0.1`, no external servers)
 
@@ -219,6 +220,20 @@ The top scorers are then **diversified**: CPOS caps how many problems share the 
 If you haven't accepted anything yet, CPOS can't infer weak topics. It falls back to **popular problems around 1200**, spread across tags and ratings, until your submission history fills in.
 
 Press **`r`** after solving more problems to refresh recommendations.
+
+---
+
+## Targeted practice
+
+Recommend answers "what's a good next problem." The **Target** tab answers the goal-shaped question: *where am I, what's left, and in what order.*
+
+Set a goal — cycle Codeforces rank milestones with `[` / `]`, or press `t` to type an exact rating (e.g. `1600`). CPOS then shows:
+
+- **Status** — your effective level, the gap to your goal, an overall **readiness %**, and how many problems you've solved in the goal band.
+- **Topics to Cover** — each prerequisite topic for the goal, labelled **Ready / Developing / Gap / Untouched** (weakest and most relevant first), with the rating it starts to matter at and your best solve so far.
+- **A step-by-step plan** — unsolved problems on rating rungs from your level up to the goal, with weak and uncovered topics front-loaded, labelled **Base → Build → Push → Target**. Press `enter`/`o` on a step to start it in the normal solve flow.
+
+The plan is Codeforces-only, since CSES tasks don't carry ratings.
 
 ---
 

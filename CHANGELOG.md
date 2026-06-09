@@ -4,7 +4,7 @@ All notable changes to CPOS are documented here. Components are versioned indepe
 
 | Component | Current version | Version file |
 | --- | --- | --- |
-| Terminal app | 0.1.6 | `Cargo.toml` |
+| Terminal app | 0.1.7 | `Cargo.toml` |
 | VS Code extension | 0.3.27 | `extensions/vscode/package.json` |
 | Browser companion (Chrome) | 0.6.14 | `extensions/chrome/manifest.json` |
 | Browser companion (Firefox) | 0.0.2 | `extensions/firefox/manifest.json` |
@@ -15,6 +15,19 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 - Firefox browser companion source build in `extensions/firefox`, with temporary add-on install instructions and XPI packaging for self-signing or future AMO distribution.
+
+---
+
+## Terminal app — 0.1.7 - 2026-06-09
+
+### Added
+- **Goal-based Target tab.** Set a rating goal — cycle Codeforces rank milestones with `[` / `]` or type an exact rating with `t` — and CPOS shows where you stand (effective level, gap to goal, overall readiness %, and problems solved in the goal band). The **Topics to Cover** table labels each prerequisite topic **Ready / Developing / Gap / Untouched**, weakest-first, and a **step-by-step plan** ramps unsolved problems from your level up to the goal (labelled **Base → Build → Push → Target**, weak/uncovered topics front-loaded). Press `enter`/`o` on a step to start it in the normal Problems solve flow. (Thanks @ThatDeparted2061, #11.)
+
+### Changed
+- **Recommend is now coverage-aware.** Core prerequisite topics you've never solved are surfaced as coverage gaps ("New topic to cover") instead of being scored as mastered, and topics only ever cleared well below your target band get a small nudge. History-gated, so cold-start output is unchanged.
+
+### Fixed
+- Capture-server tests now bind an OS-assigned ephemeral port instead of a hardcoded one, so they no longer collide with a running CPOS instance or with each other.
 
 ---
 
