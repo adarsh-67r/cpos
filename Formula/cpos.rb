@@ -1,25 +1,25 @@
 class Cpos < Formula
   desc "Competitive Programming Operating System terminal app"
   homepage "https://github.com/Soham109/cpos"
-  version "0.1.6"
+  version "0.1.7"
   license "MIT"
 
   on_macos do
     on_arm do
-      url "https://github.com/Soham109/cpos/releases/download/v0.1.6/cpos-aarch64-apple-darwin.tar.gz"
-      sha256 "7e8340237488038c765ac00e4116b0d5dceff27be4f3f9710fa4ff67c3dd1f9c"
+      url "https://github.com/Soham109/cpos/releases/download/v0.1.7/cpos-aarch64-apple-darwin.tar.gz"
+      sha256 "4976346b0d303660dde575785f0ab4a6b427826f209cdd2626960eda4355cded"
     end
 
     on_intel do
-      url "https://github.com/Soham109/cpos/releases/download/v0.1.6/cpos-x86_64-apple-darwin.tar.gz"
-      sha256 "1041ec334206319102a22308282dcd25c5ea1d7579721e62e311495797d4c83f"
+      url "https://github.com/Soham109/cpos/releases/download/v0.1.7/cpos-x86_64-apple-darwin.tar.gz"
+      sha256 "de0d29d35314cf9e846eafaf7160358ac4a5807a468c0296b0b18549d79e7a5b"
     end
   end
 
   on_linux do
     on_intel do
-      url "https://github.com/Soham109/cpos/releases/download/v0.1.6/cpos-x86_64-unknown-linux-gnu.tar.gz"
-      sha256 "eec72c0e25575708b79cd3d5760f698b865c28b976f9d5c3bcea11f7888cf7d0"
+      url "https://github.com/Soham109/cpos/releases/download/v0.1.7/cpos-x86_64-unknown-linux-gnu.tar.gz"
+      sha256 "0f10ce1e5372218920fe10bdc3823848cd612b6c392c5e2214237f446d51cf5f"
     end
   end
 
@@ -28,6 +28,6 @@ class Cpos < Formula
   end
 
   test do
-    assert_match "CPOS v0.1.6", shell_output("#{bin}/cpos help 2>&1")
+    assert_match "CPOS v0.1.7", shell_output("#{bin}/cpos help 2>&1")
   end
 end
