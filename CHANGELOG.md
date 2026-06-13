@@ -5,7 +5,7 @@ All notable changes to CPOS are documented here. Components are versioned indepe
 | Component | Current version | Version file |
 | --- | --- | --- |
 | Terminal app | 0.1.7 | `Cargo.toml` |
-| VS Code extension | 0.3.27 | `extensions/vscode/package.json` |
+| VS Code extension | 0.3.28 | `extensions/vscode/package.json` |
 | Browser companion (Chrome) | 0.6.14 | `extensions/chrome/manifest.json` |
 | Browser companion (Firefox) | 0.0.2 | `extensions/firefox/manifest.json` |
 
@@ -68,6 +68,13 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - **Clipboard on submit** now uses the platform-native tool (`clip` on Windows, `pbcopy` on macOS, `xclip` on Linux) instead of always shelling out to the macOS-only `pbcopy`.
 
 > macOS behavior is unchanged — every integration point branches by OS and keeps the exact commands it used before.
+
+---
+
+## VS Code extension — 0.3.28 - 2026-06-13
+
+### Fixed
+- **Unscrollable sidebar (Tests tab)** — the Statement/Solution tabs introduced a fixed-height, `overflow: hidden` `#app` flex layout with internal scroll wrappers, but the default **Tests** tab had no scroll region of its own, so its content was clipped and the sidebar could not be scrolled once the test list exceeded the viewport. The Tests body is now wrapped in a `.tests-wrapper` scroll container that mirrors the Statement/Solution wrappers, keeping the header and tab bar pinned while the test list scrolls.
 
 ---
 
