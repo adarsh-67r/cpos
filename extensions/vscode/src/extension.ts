@@ -1086,8 +1086,9 @@ async function submitActiveFile(): Promise<void> {
     expiresAt: Date.now() + 120_000
   };
 
-  void vscode.env.clipboard.writeText(code);
-  vscode.window.showInformationMessage(`Submitting ${meta.id} — opening submit page in Chrome…`);
+  await vscode.env.clipboard.writeText(code);
+  await vscode.env.openExternal(vscode.Uri.parse(submitUrl));
+  vscode.window.showInformationMessage(`Submitting ${meta.id} in your browser…`);
 }
 
 function parseCodeforcesId(id: string): { contest?: string; index?: string } {
@@ -1591,6 +1592,7 @@ class CposActionsProvider implements vscode.WebviewViewProvider {
     --border-soft: #20202e;
     --accent: #b794ff;
     --accent-dim: #7c5cbf;
+    --accent-on: #14141f;
     --highlight: #221c3a;
     --ok: #7ee787;
     --bad: #ff7a93;
@@ -1609,6 +1611,7 @@ class CposActionsProvider implements vscode.WebviewViewProvider {
     --border-soft: #1d242e;
     --accent: #6cb6ff;
     --accent-dim: #3b6ea5;
+    --accent-on: #0d1117;
     --highlight: #16263d;
     --ok: #6fd58a;
     --bad: #ff7a93;
@@ -1627,6 +1630,7 @@ class CposActionsProvider implements vscode.WebviewViewProvider {
     --border-soft: #2a2418;
     --accent: #f0b860;
     --accent-dim: #aa7c30;
+    --accent-on: #14110a;
     --highlight: #2e2510;
     --ok: #b8c46a;
     --bad: #e88a6a;
@@ -1645,6 +1649,7 @@ class CposActionsProvider implements vscode.WebviewViewProvider {
     --border-soft: #2a2a2a;
     --accent: #e0e0e0;
     --accent-dim: #8a8a8a;
+    --accent-on: #101010;
     --highlight: #262626;
     --ok: #c8d4c8;
     --bad: #d6b0b0;
@@ -1663,6 +1668,7 @@ class CposActionsProvider implements vscode.WebviewViewProvider {
     --border-soft: var(--vscode-panel-border, #2a2a2a);
     --accent: var(--vscode-textLink-foreground, #4daafc);
     --accent-dim: var(--vscode-textLink-activeForeground, var(--vscode-textLink-foreground, #3b6ea5));
+    --accent-on: var(--vscode-button-foreground, #ffffff);
     --highlight: var(--vscode-list-hoverBackground, rgba(128,128,128,0.12));
     --ok: var(--vscode-testing-iconPassed, var(--vscode-charts-green, #4caf50));
     --bad: var(--vscode-testing-iconFailed, var(--vscode-errorForeground, #f14c4c));
@@ -1677,6 +1683,22 @@ class CposActionsProvider implements vscode.WebviewViewProvider {
   }
 
   * { box-sizing: border-box; }
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: color-mix(in srgb, var(--dim) 45%, transparent) transparent;
+  }
+  *::-webkit-scrollbar { width: 8px; height: 8px; }
+  *::-webkit-scrollbar-track { background: transparent; }
+  *::-webkit-scrollbar-thumb {
+    background: color-mix(in srgb, var(--dim) 42%, transparent);
+    border: 2px solid transparent;
+    border-radius: 999px;
+    background-clip: padding-box;
+  }
+  *::-webkit-scrollbar-thumb:hover {
+    background: color-mix(in srgb, var(--accent) 55%, transparent);
+    background-clip: padding-box;
+  }
   html {
     height: 100%;
     overflow: hidden;
@@ -1754,15 +1776,6 @@ class CposActionsProvider implements vscode.WebviewViewProvider {
     border-color: #db61a2;
     color: #fbcfe5;
   }
-  .iconbtn.search {
-    background: color-mix(in srgb, var(--cf) 16%, transparent);
-    border-color: color-mix(in srgb, var(--cf) 42%, var(--border));
-    color: var(--cf);
-  }
-  .iconbtn.search:hover {
-    background: color-mix(in srgb, var(--cf) 28%, transparent);
-    color: var(--cf);
-  }
   .iconbtn.theme {
     background: color-mix(in srgb, var(--accent-dim) 32%, transparent);
     border-color: var(--accent-dim);
@@ -1815,13 +1828,41 @@ class CposActionsProvider implements vscode.WebviewViewProvider {
   .tag.codeforces { color: var(--cf); border-color: var(--border); }
   .tag.cses { color: var(--ok); border-color: var(--border); }
   .pid { font-weight: 700; font-size: 14px; color: var(--fg); }
+  .problem-link {
+    border: none;
+    background: transparent;
+    color: var(--accent);
+    padding: 0;
+    border-radius: 0;
+    font-size: 14px;
+    font-weight: 700;
+    line-height: 1.35;
+    text-align: left;
+    text-decoration: underline;
+    text-decoration-color: color-mix(in srgb, var(--accent) 55%, transparent);
+    text-underline-offset: 2px;
+  }
+  .problem-link:hover {
+    color: var(--accent);
+    background: transparent;
+    text-decoration-color: var(--accent);
+  }
+  .problem-link-icon {
+    display: inline-block;
+    margin-left: 4px;
+    color: var(--accent);
+    font-size: 10px;
+    line-height: 1;
+    text-decoration: none;
+    transform: translateY(-1px);
+  }
   .rating { color: var(--warn); font-size: 11px; }
   .pname { color: var(--fg); opacity: 0.82; font-size: 11px; margin-top: 3px; }
   .fileline { margin-top: 7px; font-size: 10px; color: var(--dim); }
 
-  .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-bottom: 10px; }
-  .stat { padding: 7px 4px; text-align: center; }
-  .stat .num { font-size: 15px; font-weight: 700; line-height: 1.2; }
+  .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-bottom: 0; }
+  .stat { padding: 5px 4px; text-align: center; background: color-mix(in srgb, var(--panel) 88%, transparent); }
+  .stat .num { font-size: 13px; font-weight: 700; line-height: 1.2; }
   .stat .num.ok { color: var(--ok); }
   .stat .num.bad { color: var(--bad); }
   .stat .num.accent { color: var(--accent); }
@@ -1833,7 +1874,7 @@ class CposActionsProvider implements vscode.WebviewViewProvider {
     margin-top: 2px;
   }
 
-  .actions { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-bottom: 10px; }
+  .actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; margin-bottom: 0; }
   button {
     font-family: var(--mono);
     font-size: 11px;
@@ -1845,15 +1886,31 @@ class CposActionsProvider implements vscode.WebviewViewProvider {
     color: var(--fg);
   }
   button:hover:not(.primary) { border-color: var(--accent-dim); background: var(--highlight); }
+  button.problem-link:hover:not(.primary) {
+    border-color: transparent;
+    background: transparent;
+    color: var(--accent);
+    text-decoration-color: var(--accent);
+  }
   button:active { opacity: 0.85; }
   button.primary {
-    grid-column: 1 / -1;
     border-color: var(--accent-dim);
     background: var(--accent-dim);
     color: var(--fg);
     font-weight: 700;
   }
-  button.primary:hover { background: var(--accent); border-color: var(--accent); }
+  button.primary:hover { background: var(--accent); border-color: var(--accent); color: var(--accent-on); }
+  button.submit-action {
+    border-color: color-mix(in srgb, var(--ok) 58%, var(--border));
+    background: color-mix(in srgb, var(--ok) 18%, transparent);
+    color: var(--ok);
+    font-weight: 700;
+  }
+  button.submit-action:hover {
+    border-color: var(--ok);
+    background: color-mix(in srgb, var(--ok) 30%, transparent);
+    color: var(--fg);
+  }
   button.primary:disabled {
     opacity: 0.45;
     cursor: default;
@@ -1896,21 +1953,40 @@ class CposActionsProvider implements vscode.WebviewViewProvider {
     color: var(--dim);
   }
 
-  /* Tests tab scroll region: keeps the panel chrome (header + tabs) fixed while
-     the test list scrolls, mirroring .statement-view-wrapper / .sol-wrapper.
-     Without this the Tests view (default tab) overflows the clipped #app and
-     becomes unscrollable. */
+  /* Tests tab: keep the app chrome calm and put long sample scrolling inside
+     the editors instead of turning the whole side panel into a long page. */
   .tests-wrapper {
+    flex: 1 1 auto;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    overflow: hidden;
+    padding-right: 0;
+  }
+  .tests-command {
+    flex: 0 0 auto;
+    display: grid;
+    gap: 7px;
+  }
+  .tests-list-head {
+    flex: 0 0 auto;
+    margin: 0;
+  }
+  .tests-list {
     flex: 1 1 auto;
     min-height: 0;
     overflow-y: auto;
     overflow-x: hidden;
-    padding-right: 6px;
+    padding-right: 2px;
   }
 
-  .test { margin-bottom: 6px; overflow: hidden; }
+  .test { margin-bottom: 8px; overflow: hidden; }
+  .test:last-child { margin-bottom: 0; }
   .test.pass { border-color: color-mix(in srgb, var(--ok) 45%, var(--border)); }
   .test.fail { border-color: color-mix(in srgb, var(--bad) 45%, var(--border)); }
+  .test.collapsed .test-head { border-bottom: none; }
+  .test.collapsed .test-body { display: none; }
   .test-head {
     display: flex;
     align-items: center;
@@ -1921,6 +1997,14 @@ class CposActionsProvider implements vscode.WebviewViewProvider {
   }
   .test-title { display: flex; align-items: center; gap: 8px; font-size: 11px; }
   .test-title .idx { color: var(--fg); font-weight: 700; }
+  .collapse-toggle {
+    padding: 1px 6px;
+    min-width: 20px;
+    color: var(--dim);
+    font-size: 10px;
+    line-height: 1.35;
+  }
+  .collapse-toggle:hover { color: var(--accent); }
   .verdict {
     font-size: 9px;
     font-weight: 700;
@@ -1934,12 +2018,14 @@ class CposActionsProvider implements vscode.WebviewViewProvider {
   .verdict.WA, .verdict.CE { color: var(--bad); border-color: color-mix(in srgb, var(--bad) 50%, var(--border)); }
   .verdict.TLE, .verdict.RE { color: var(--warn); border-color: color-mix(in srgb, var(--warn) 50%, var(--border)); }
   .verdict.run { color: var(--accent); border-color: var(--accent-dim); }
-  .test-body { padding: 8px; display: flex; flex-direction: column; gap: 7px; }
+  .verdict.none { display: none; }
+  .test-body { padding: 8px; display: flex; flex-direction: column; gap: 7px; min-height: 0; }
   .io-grid {
     display: grid;
     grid-template-columns: var(--io-in-pct, 68%) 6px minmax(0, 1fr);
     gap: 0;
     align-items: stretch;
+    min-height: 0;
   }
   .io-col { min-width: 0; display: flex; flex-direction: column; }
   .io-splitter {
@@ -1953,6 +2039,8 @@ class CposActionsProvider implements vscode.WebviewViewProvider {
   .io-splitter:hover, .io-splitter.dragging { background: var(--accent-dim); }
   .io-input-box, .io-exp-box {
     position: relative;
+    height: clamp(132px, calc(100vh - 365px), 300px);
+    min-height: 0;
     border-radius: 4px;
     border: 1px solid var(--border-soft);
     background: var(--input-bg);
@@ -2004,7 +2092,9 @@ class CposActionsProvider implements vscode.WebviewViewProvider {
     z-index: 1;
     display: block;
     width: 100%;
-    resize: vertical;
+    height: 100%;
+    min-height: 0;
+    resize: none;
     border: none;
     background: transparent;
     color: var(--fg);
@@ -2015,8 +2105,7 @@ class CposActionsProvider implements vscode.WebviewViewProvider {
     overflow-y: auto;
     caret-color: var(--fg);
   }
-  .io-input-box textarea.in { min-height: 3.2em; }
-  .io-exp-box textarea.exp { min-height: 2.4em; }
+  .io-input-box textarea.in, .io-exp-box textarea.exp { scrollbar-gutter: stable; }
   .io-input-box textarea.in:focus, .io-exp-box textarea.exp:focus { outline: none; }
   label {
     font-size: 8px;
@@ -2287,6 +2376,7 @@ class CposActionsProvider implements vscode.WebviewViewProvider {
   .sol-link:hover { background: var(--highlight); }
   .sol-link:last-child { border-bottom: none; }
   .sol-no-meta { padding: 18px 12px; text-align: center; color: var(--dim); line-height: 1.6; border-style: dashed; }
+
 </style>
 </head>
 <body>
@@ -2303,10 +2393,11 @@ class CposActionsProvider implements vscode.WebviewViewProvider {
   let activeTab = saved.activeTab || 'tests';
   let themesOpen = false;
   let ioSplit = typeof saved.ioSplit === 'number' ? saved.ioSplit : 68;
+  let collapsedTests = saved.collapsedTests && typeof saved.collapsedTests === 'object' ? saved.collapsedTests : {};
   document.body.setAttribute('data-theme', theme);
 
   function persistUiState() {
-    vscode.setState(Object.assign({}, vscode.getState(), { theme, ioSplit, activeTab }));
+    vscode.setState(Object.assign({}, vscode.getState(), { theme, ioSplit, activeTab, collapsedTests }));
   }
 
   function applyIoSplit(pct) {
@@ -2639,6 +2730,29 @@ class CposActionsProvider implements vscode.WebviewViewProvider {
 
   function send(type, extra) { vscode.postMessage(Object.assign({ type }, extra || {})); }
 
+  function isTestCollapsed(index) {
+    return !!collapsedTests[String(index)];
+  }
+
+  function toggleTestCollapsed(index) {
+    const key = String(index);
+    collapsedTests = Object.assign({}, collapsedTests);
+    if (collapsedTests[key]) delete collapsedTests[key];
+    else collapsedTests[key] = true;
+    persistUiState();
+  }
+
+  function removeCollapsedTest(index) {
+    const next = {};
+    Object.keys(collapsedTests).forEach((key) => {
+      const oldIndex = Number(key);
+      if (Number.isNaN(oldIndex) || oldIndex === index) return;
+      next[String(oldIndex > index ? oldIndex - 1 : oldIndex)] = true;
+    });
+    collapsedTests = next;
+    persistUiState();
+  }
+
   function esc(s) {
     return String(s == null ? "" : s)
       .replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;");
@@ -2682,6 +2796,10 @@ class CposActionsProvider implements vscode.WebviewViewProvider {
 
   function autoResizeTextareas(root) {
     (root || document).querySelectorAll("textarea").forEach((ta) => {
+      if (ta.classList.contains("in") || ta.classList.contains("exp")) {
+        ta.style.height = "";
+        return;
+      }
       ta.style.height = "auto";
       ta.style.height = Math.min(ta.scrollHeight, 280) + "px";
     });
@@ -2707,13 +2825,15 @@ class CposActionsProvider implements vscode.WebviewViewProvider {
 
   function header() {
     const m = state.meta;
-    const searchDisabled = state.meta ? "" : " disabled";
     let problemBlock;
     if (m) {
       const pClass = platformClass(m.platform);
       const tag = m.platform ? '<span class="tag ' + pClass + '">' + esc(String(m.platform).toUpperCase()) + '</span>' : '';
       const rating = m.rating ? '<span class="rating">★ ' + esc(m.rating) + '</span>' : '';
-      problemBlock = '<div class="pline">' + tag + '<span class="pid">' + esc(m.id) + '</span>' + rating + '</div>'
+      problemBlock = '<div class="pline">' + tag
+        + '<button class="problem-link pid" data-act="openProblem" title="Open problem in browser">' + esc(m.id)
+        + '<span class="problem-link-icon" aria-hidden="true">↗</span></button>'
+        + rating + '</div>'
         + '<div class="pname">' + esc(m.name) + '</div>';
     } else {
       problemBlock = '<div class="pline"><span class="pid muted">no problem linked</span></div>'
@@ -2727,7 +2847,6 @@ class CposActionsProvider implements vscode.WebviewViewProvider {
       + '<div class="row">'
       + '<span class="brandrow"><img class="logo" src="' + CPOS_LOGO + '" alt="CPOS" /><span class="title">CPOS</span></span>'
       + '<span class="headtools">'
-      + '<button class="iconbtn search" data-act="searchProblem" title="Search editorials on Google"' + searchDisabled + '>Search</button>'
       + '<button class="iconbtn sponsor" data-act="openSponsor" title="Sponsor CPOS — keep it free and local-first">' + HEART_ICON + 'Sponsor</button>'
       + '<button class="iconbtn gh icononly" data-act="openGithub" title="CPOS on GitHub" aria-label="CPOS on GitHub">' + GH_ICON + '</button>'
       + '<button class="iconbtn theme" data-act="toggleThemes" title="Themes">◑ theme</button>'
@@ -2786,16 +2905,17 @@ class CposActionsProvider implements vscode.WebviewViewProvider {
     const runLabel = state.running ? "running…" : "Run All";
     return '<div class="actions">'
       + '<button class="primary" data-act="run" ' + (state.running ? "disabled" : "") + '>' + runLabel + '</button>'
-      + '<button data-act="submit">Submit</button>'
-      + '<button data-act="openProblem">Problem</button>'
+      + '<button class="submit-action" data-act="submit">Submit</button>'
       + '</div>';
   }
 
   function testCard(t, i) {
     const r = state.results.find((x) => x.index === i);
-    let verdict = "—", vClass = "none", cardClass = "";
+    let verdict = "", vClass = "none", cardClass = "";
     if (state.running) { verdict = "RUN"; vClass = "run"; }
     else if (r) { verdict = r.verdict; vClass = verdictClass(r.verdict); cardClass = r.passed ? "pass" : "fail"; }
+    const collapsed = isTestCollapsed(i);
+    const classes = "box test" + (cardClass ? " " + cardClass : "") + (collapsed ? " collapsed" : "");
     const got = '<div class="result-slot">' + resultHtml(r) + '</div>';
     const inRows = textareaRows(t.input, 3, 14);
     const expRows = textareaRows(t.expected_output, 2, 6);
@@ -2808,9 +2928,13 @@ class CposActionsProvider implements vscode.WebviewViewProvider {
     const outBlockAttr = t.output_block_sizes && t.output_block_sizes.length
       ? ' data-output-block-sizes="' + t.output_block_sizes.join(",") + '"'
       : "";
-    return '<div class="box test ' + cardClass + '" data-index="' + i + '"' + blockAttr + offsetAttr + outBlockAttr + '>'
+    return '<div class="' + classes + '" data-index="' + i + '"' + blockAttr + offsetAttr + outBlockAttr + '>'
       + '<div class="test-head">'
-      + '<div class="test-title"><span class="idx">Test ' + (i + 1) + '</span><span class="verdict ' + vClass + '">' + verdict + '</span></div>'
+      + '<div class="test-title"><span class="idx">Test ' + (i + 1) + '</span>'
+      + '<button class="ghost collapse-toggle" data-act="toggleTest" data-index="' + i + '" '
+      + 'aria-expanded="' + (!collapsed) + '" aria-label="' + (collapsed ? "Expand" : "Collapse") + ' test ' + (i + 1) + '">'
+      + (collapsed ? '+' : '-') + '</button>'
+      + '<span class="verdict ' + vClass + '">' + verdict + '</span></div>'
       + '<div class="test-actions">'
       + '<button class="ghost" data-act="runSingle" data-index="' + i + '">run</button>'
       + '<button class="ghost" data-act="deleteTest" data-index="' + i + '">del</button>'
@@ -2838,15 +2962,15 @@ class CposActionsProvider implements vscode.WebviewViewProvider {
     } else {
       body = state.tests.map((t, i) => testCard(t, i)).join("");
     }
-    return '<div class="section"><span>Test Cases</span>'
-      + '<button class="ghost" data-act="addTest">+ add</button></div>' + body;
+    return '<div class="section tests-list-head"><span>Test Cases</span>'
+      + '<button class="ghost" data-act="addTest">+ add</button></div>'
+      + '<div class="tests-list">' + body + '</div>';
   }
 
-  // The full Tests-tab body, wrapped in a scroll region so it stays scrollable
-  // inside the fixed-height #app (header + tabs are pinned, the rest scrolls).
   function testsView() {
     return '<div class="tests-wrapper">'
-      + statbar() + actions() + testsSection()
+      + '<div class="tests-command">' + statbar() + actions() + '</div>'
+      + testsSection()
       + '</div>';
   }
 
@@ -3090,11 +3214,13 @@ class CposActionsProvider implements vscode.WebviewViewProvider {
 
     cards.forEach((card, i) => {
       const r = state.results.find((x) => x.index === i);
-      card.className = "box test" + (state.running ? "" : r ? (r.passed ? " pass" : " fail") : "");
+      card.className = "box test"
+        + (state.running ? "" : r ? (r.passed ? " pass" : " fail") : "")
+        + (isTestCollapsed(i) ? " collapsed" : "");
       const v = card.querySelector(".verdict");
       if (state.running) { v.textContent = "RUN"; v.className = "verdict run"; }
       else if (r) { v.textContent = r.verdict; v.className = "verdict " + verdictClass(r.verdict); }
-      else { v.textContent = "—"; v.className = "verdict none"; }
+      else { v.textContent = ""; v.className = "verdict none"; }
       const slot = card.querySelector(".result-slot");
       if (slot) slot.innerHTML = resultHtml(r);
     });
@@ -3135,7 +3261,14 @@ class CposActionsProvider implements vscode.WebviewViewProvider {
           syncStateFromDom();
           state.tests.splice(Number(idx), 1);
           state.results = [];
+          removeCollapsedTest(Number(idx));
           send("persistTests", { tests: state.tests.slice() });
+          render();
+          return;
+        }
+        if (act === "toggleTest") {
+          syncStateFromDom();
+          toggleTestCollapsed(Number(idx));
           render();
           return;
         }
