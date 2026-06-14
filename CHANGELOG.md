@@ -5,7 +5,7 @@ All notable changes to CPOS are documented here. Components are versioned indepe
 | Component | Current version | Version file |
 | --- | --- | --- |
 | Terminal app | 0.1.7 | `Cargo.toml` |
-| VS Code extension | 0.3.28 | `extensions/vscode/package.json` |
+| VS Code extension | 0.3.29 | `extensions/vscode/package.json` |
 | Browser companion (Chrome) | 0.6.14 | `extensions/chrome/manifest.json` |
 | Browser companion (Firefox) | 0.0.2 | `extensions/firefox/manifest.json` |
 
@@ -71,10 +71,22 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## VS Code extension — 0.3.29 - 2026-06-14
+
+### Fixed
+- **Submit no longer opens the browser (regression)** — `Submit` had stopped opening the judge's submit page: a prior refactor dropped the `openExternal` call, so the extension only copied the code to the clipboard and showed "opening submit page in Chrome…" while nothing actually opened. CPOS now opens the submit URL in your default browser again (and still copies the solution to the clipboard for the companion to paste), restoring the original one-click submit flow.
+
+### Changed
+- **Tests sidebar UI polish.** Thin themed scrollbars across the panel; collapsible test cards (with the collapsed/expanded state persisted per test); the problem ID is now a clickable link that opens the problem in your browser; the **Submit** button is restyled as a distinct primary action (the redundant standalone "Problem" and "Search" buttons were removed); and the sample **Input/Expected** panes use fixed, viewport-aware heights with internal scrolling so long samples no longer stretch the whole sidebar.
+
+> Also ships the **0.3.28** Tests-tab scroll fix (the default Tests view is wrapped in a `.tests-wrapper` scroll container so the sidebar stays scrollable once the test list exceeds the viewport), which was tagged in the repo but never published. (Thanks @ThatDeparted2061.)
+
+---
+
 ## VS Code extension — 0.3.28 - 2026-06-13
 
 ### Fixed
-- **Unscrollable sidebar (Tests tab)** — the Statement/Solution tabs introduced a fixed-height, `overflow: hidden` `#app` flex layout with internal scroll wrappers, but the default **Tests** tab had no scroll region of its own, so its content was clipped and the sidebar could not be scrolled once the test list exceeded the viewport. The Tests body is now wrapped in a `.tests-wrapper` scroll container that mirrors the Statement/Solution wrappers, keeping the header and tab bar pinned while the test list scrolls.
+- **Unscrollable sidebar (Tests tab)** — the Statement/Solution tabs introduced a fixed-height, `overflow: hidden` `#app` flex layout with internal scroll wrappers, but the default **Tests** tab had no scroll region of its own, so its content was clipped and the sidebar could not be scrolled once the test list exceeded the viewport. The Tests body is now wrapped in a `.tests-wrapper` scroll container that mirrors the Statement/Solution wrappers, keeping the header and tab bar pinned while the test list scrolls. (Thanks @ThatDeparted2061.)
 
 ---
 
