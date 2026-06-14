@@ -7,7 +7,7 @@
   const DEFAULTS = {
     "cpos.ui.theme": T.DEFAULT_THEME,
     "cpos.siteThemeId": "github",
-    "cpos.features": { profile: true, siteTheme: false, carrot: true, highlight: true, ide: false }
+    "cpos.features": { profile: true, carrot: true, highlight: true, ide: true, siteTheme: false }
   };
 
   const store = chrome.storage.local;
@@ -113,6 +113,9 @@
 
   (async function init() {
     await load();
+    // Persist the resolved feature set so content scripts and the toggles agree
+    // on first run (otherwise storage stays empty until a toggle is flipped).
+    await set({ "cpos.features": state.features });
     applyUiTheme();
     renderSwatches();
     renderToggles();

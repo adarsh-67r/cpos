@@ -50,18 +50,18 @@
     },
     {
       "matches": ["https://codeforces.com/profile/*"],
-      "js": ["themes.js", "profile.js"],
+      "js": ["cpos-config.js", "themes.js", "profile.js"],
       "css": ["profile.css"],
       "run_at": "document_idle"
     },
     {
       "matches": ["https://codeforces.com/*", "https://cses.fi/*"],
-      "js": ["themes.js", "site-theme.js"],
+      "js": ["cpos-config.js", "themes.js", "site-theme.js"],
       "run_at": "document_start"
     },
     {
       "matches": ["https://codeforces.com/contest/*/standings*"],
-      "js": ["carrot.js"],
+      "js": ["cpos-config.js", "carrot.js"],
       "run_at": "document_idle"
     },
     {
@@ -72,7 +72,7 @@
         "https://codeforces.com/blog/entry/*",
         "https://cses.fi/problemset/task/*"
       ],
-      "js": ["highlight.js"],
+      "js": ["cpos-config.js", "themes.js", "cpos-highlight.js", "highlight.js"],
       "css": ["highlight.css"],
       "run_at": "document_idle"
     },
@@ -86,7 +86,7 @@
         "https://codeforces.com/problemset/submit*",
         "https://cses.fi/problemset/task/*"
       ],
-      "js": ["themes.js", "ide.js"],
+      "js": ["cpos-config.js", "themes.js", "cpos-highlight.js", "ide.js"],
       "css": ["ide.css"],
       "run_at": "document_idle"
     }

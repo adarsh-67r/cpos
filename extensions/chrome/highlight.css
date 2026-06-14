@@ -1,23 +1,23 @@
-/* CPOS code styling — scoped to .cpos-hl blocks injected by highlight.js. */
-pre.cpos-hl, .cpos-hl {
+/* CPOS code styling — applied to pre.cpos-hl blocks. Each block gets its
+   --cpos-* vars set inline from the active CPOS theme, with dark fallbacks. */
+pre.cpos-hl {
   border-radius: 8px !important;
   border: 1px solid var(--cpos-border, #2a2a3e) !important;
   background: var(--cpos-panel2, #1c1c28) !important;
   color: var(--cpos-fg, #e8e6f0) !important;
   padding: 12px 14px !important;
+  margin: 10px 0 !important;
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace !important;
   font-size: 13px !important;
   line-height: 1.5 !important;
   overflow: auto !important;
   tab-size: 4;
+  white-space: pre !important;
 }
-.cpos-hl .hl-kw { color: #c792ea; font-weight: 600; }
-.cpos-hl .hl-type { color: #82aaff; }
-.cpos-hl .hl-str { color: #c3e88d; }
-.cpos-hl .hl-num { color: #f78c6c; }
-.cpos-hl .hl-com { color: #6a7a8c; font-style: italic; }
-.cpos-hl .hl-pre { color: #f0a13e; }
-.cpos-hl .hl-fn { color: #7ee0d0; }
-
-/* Gentle styling for inline math containers under the dark themes. */
-.cpos-math-soft .MathJax, .cpos-math-soft mjx-container { color: inherit !important; }
+pre.cpos-hl .hl-kw { color: #c792ea; font-weight: 600; }
+pre.cpos-hl .hl-type { color: #82aaff; }
+pre.cpos-hl .hl-str { color: #c3e88d; }
+pre.cpos-hl .hl-num { color: #f78c6c; }
+pre.cpos-hl .hl-com { color: #7a869c; font-style: italic; }
+pre.cpos-hl .hl-pre { color: #f0a13e; }
+pre.cpos-hl .hl-fn { color: #7ee0d0; }

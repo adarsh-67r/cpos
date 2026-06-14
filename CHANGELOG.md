@@ -28,7 +28,10 @@ The companion gains a real interface and turns into a full in-browser CP environ
 - **Rating predictions ("Carrot"-style).** On contest standings, a predicted-Δ column is added per row using the official Codeforces rating formula (and exact deltas once a contest is rated).
 - **Site theming.** Restyle Codeforces and CSES with any CPOS palette, toggled from the popup.
 - **Code & LaTeX styling.** Dependency-free syntax highlighting for code blocks in statements and editorials, with dark-theme-friendly math.
-- **In-browser editor.** A slide-in editor panel on problem pages with per-problem persistence and language selection; submitting reuses the existing background submit injector (no changes to submit logic). Codeforces auto-fills and submits; CSES copies and opens the submit page. (Editor is a fast textarea today; a Monaco drop-in is wired behind a one-time `npm`-vendoring step — see `extensions/chrome/README.md`.)
+- **In-browser editor.** A slide-in editor panel on problem pages — line-numbered, with a live syntax-highlight overlay, per-problem persistence, language selection, and starter templates. Submitting reuses the existing background submit injector (no changes to submit logic): Codeforces auto-fills and submits; CSES copies and opens the submit page. On by default. (A Monaco drop-in is wired behind a one-time `npm`-vendoring step — see `extensions/chrome/README.md`.)
+
+### Shared internals
+- `cpos-config.js` (single source of truth for feature flags + theme selection, sensible defaults) and `cpos-highlight.js` (shared self-contained highlighter used by both the page highlighter and the editor overlay). Profile analytics now render with explicit loading / empty / error states and a rank-progress bar; site theming was rewritten to be comprehensive and layout-preserving (Codeforces rating-tier handle colours are kept).
 
 ---
 

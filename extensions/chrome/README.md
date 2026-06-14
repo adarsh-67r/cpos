@@ -28,7 +28,7 @@ Click the toolbar icon for the **popup hub** — flat, themeable, with a live CP
 - **Rating predictions** — a predicted-Δ column on contest standings using the official Codeforces rating formula (exact deltas once a contest is rated).
 - **Site theming** — restyle Codeforces / CSES with any CPOS palette.
 - **Code & LaTeX styling** — self-contained syntax highlighting for statement/editorial code blocks (no remote scripts).
-- **In-browser editor** — a slide-in editor on problem pages; write and submit without leaving the browser. Submission reuses the existing background submit injector, so the capture/submit flow is unchanged.
+- **In-browser editor** — a slide-in, line-numbered editor with a live syntax-highlight overlay and starter templates; write and submit without leaving the browser. On by default. Submission reuses the existing background submit injector, so the capture/submit flow is unchanged.
 
 All UI is gradient-free and shares one theme palette (`themes.js`). Feature toggles live in `chrome.storage.local`; content scripts react live.
 
