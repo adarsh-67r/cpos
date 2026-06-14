@@ -1087,8 +1087,32 @@ async function submitActiveFile(): Promise<void> {
   };
 
   await vscode.env.clipboard.writeText(code);
-  await vscode.env.openExternal(vscode.Uri.parse(submitUrl));
-  vscode.window.showInformationMessage(`Submitting ${meta.id} in your browser…`);
+  void showSubmitQueuedStatus(meta.id, submitUrl, pendingSubmit);
+}
+
+async function showSubmitQueuedStatus(problemId: string, submitUrl: string, queued: PendingSubmit): Promise<void> {
+  const consumed = await waitForPendingSubmitConsumed(queued, 3500);
+  if (consumed) {
+    vscode.window.showInformationMessage(`Submitting ${problemId} in Chrome...`);
+    return;
+  }
+
+  const choice = await vscode.window.showWarningMessage(
+    "Submission queued, but the CPOS Chrome companion has not picked it up yet.",
+    "Open submit page"
+  );
+  if (choice === "Open submit page") {
+    await vscode.env.openExternal(vscode.Uri.parse(submitUrl));
+  }
+}
+
+async function waitForPendingSubmitConsumed(queued: PendingSubmit, timeoutMs: number): Promise<boolean> {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    if (pendingSubmit !== queued) return true;
+    await new Promise((resolve) => setTimeout(resolve, 100));
+  }
+  return pendingSubmit !== queued;
 }
 
 function parseCodeforcesId(id: string): { contest?: string; index?: string } {

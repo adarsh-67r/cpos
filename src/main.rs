@@ -200,7 +200,7 @@ async fn run_app(
 
                     // The setup wizard is modal: it owns all input while open.
                     if app.setup_active {
-                        handle_setup_input(app, key);
+                        handle_setup_input(terminal, app, key);
                         continue;
                     }
 
@@ -220,7 +220,7 @@ async fn run_app(
                     }
 
                     if app.url_input_active {
-                        handle_url_input(app, key.code);
+                        handle_url_input(terminal, app, key.code);
                         continue;
                     }
 
@@ -237,7 +237,7 @@ async fn run_app(
                         continue;
                     }
 
-                    handle_input(app, key.code);
+                    handle_input(terminal, app, key.code);
                 }
                 _ => {}
             }
@@ -279,7 +279,11 @@ fn handle_paste(app: &mut App, text: &str) {
 }
 
 /// Modal input for the first-run setup wizard.
-fn handle_setup_input(app: &mut App, key: crossterm::event::KeyEvent) {
+fn handle_setup_input(
+    terminal: &mut Terminal<CrosstermBackend<io::Stdout>>,
+    app: &mut App,
+    key: crossterm::event::KeyEvent,
+) {
     let code = key.code;
     let ctrl = key.modifiers.contains(KeyModifiers::CONTROL);
     match app.setup_step {
@@ -305,7 +309,7 @@ fn handle_setup_input(app: &mut App, key: crossterm::event::KeyEvent) {
         SetupStep::Template => handle_template_input(app, code, ctrl),
         SetupStep::Cses => match code {
             // Enter and Esc both finish here (CSES is the last, optional step).
-            KeyCode::Enter | KeyCode::Esc => finish_setup(app),
+            KeyCode::Enter | KeyCode::Esc => finish_setup(terminal, app),
             KeyCode::Char('o') | KeyCode::Char('O') => {
                 open_url("https://cses.fi/login");
             }
@@ -405,9 +409,9 @@ fn paste_template_from_clipboard(app: &mut App) {
 }
 
 /// Persist setup, open the workspace folder in the editor, and start a sync.
-fn finish_setup(app: &mut App) {
+fn finish_setup(terminal: &mut Terminal<CrosstermBackend<io::Stdout>>, app: &mut App) {
     let folder = app.finish_setup();
-    open_in_editor(app.config.editor.as_deref(), &folder);
+    open_in_editor(app.config.editor.as_deref(), &folder, Some(terminal));
     app.status_message = format!(
         "All set! Your solutions live in {} — opened it in your editor. Syncing…",
         folder.display()
@@ -629,22 +633,30 @@ fn trigger_refresh(app: &mut App) {
 
 /// Start working on the selected problem: scaffold the solution file, open the
 /// statement in the browser, open the file in the editor, and fetch samples.
-fn start_selected_problem(app: &mut App) {
+fn start_selected_problem(terminal: &mut Terminal<CrosstermBackend<io::Stdout>>, app: &mut App) {
     if let Some(sp) = app.start_problem() {
-        launch_started(app, sp);
+        launch_started(terminal, app, sp);
     }
 }
 
 /// Same, but for a problem resolved from a pasted URL.
-fn start_problem_from_url(app: &mut App, url: &str) {
+fn start_problem_from_url(
+    terminal: &mut Terminal<CrosstermBackend<io::Stdout>>,
+    app: &mut App,
+    url: &str,
+) {
     if let Some(sp) = app.start_problem_from_url(url) {
-        launch_started(app, sp);
+        launch_started(terminal, app, sp);
     }
 }
 
 /// Open the statement in the browser, open the solution file in the editor, and
 /// kick off background sample fetching.
-fn launch_started(app: &mut App, started: StartedProblem) {
+fn launch_started(
+    terminal: &mut Terminal<CrosstermBackend<io::Stdout>>,
+    app: &mut App,
+    started: StartedProblem,
+) {
     let StartedProblem {
         problem,
         solution_path,
@@ -653,12 +665,11 @@ fn launch_started(app: &mut App, started: StartedProblem) {
     } = started;
 
     open_url(&url);
-    open_in_editor(app.config.editor.as_deref(), &solution_path);
-
     let (tx, rx) = std::sync::mpsc::channel();
     app.aux_rx = Some(rx);
     let config = app.config.clone();
     tokio::spawn(app::fetch_samples_task(problem, config, tx));
+    open_in_editor(app.config.editor.as_deref(), &solution_path, Some(terminal));
 }
 
 /// Run the selected problem's solution against its cached sample tests.
@@ -732,6 +743,20 @@ fn run_shell(cmd: &str) -> bool {
         .is_ok()
 }
 
+/// Run an interactive command in the foreground, inheriting the terminal.
+fn run_shell_interactive(cmd: &str) -> bool {
+    let mut command = if cfg!(target_os = "windows") {
+        let mut c = std::process::Command::new("cmd");
+        c.args(["/C", cmd]);
+        c
+    } else {
+        let mut c = std::process::Command::new("sh");
+        c.arg("-c").arg(cmd);
+        c
+    };
+    command.status().map(|s| s.success()).unwrap_or(false)
+}
+
 /// Launch an editor binary (e.g. `code`, `cursor`) on a file. On Windows these
 /// are `.cmd` shims that `Command` can't spawn directly, so we go through `cmd`.
 fn run_editor(editor_cmd: &str, path: &Path) -> bool {
@@ -752,18 +777,106 @@ fn run_editor(editor_cmd: &str, path: &Path) -> bool {
         .is_ok()
 }
 
+fn suspend_tui(terminal: &mut Terminal<CrosstermBackend<io::Stdout>>) -> io::Result<()> {
+    terminal.show_cursor()?;
+    io::stdout().execute(DisableBracketedPaste)?;
+    disable_raw_mode()?;
+    io::stdout().execute(LeaveAlternateScreen)?;
+    Ok(())
+}
+
+fn resume_tui(terminal: &mut Terminal<CrosstermBackend<io::Stdout>>) -> io::Result<()> {
+    enable_raw_mode()?;
+    io::stdout().execute(EnterAlternateScreen)?;
+    io::stdout().execute(EnableBracketedPaste)?;
+    terminal.clear()?;
+    Ok(())
+}
+
+fn run_interactive_editor(
+    terminal: &mut Terminal<CrosstermBackend<io::Stdout>>,
+    cmd: &str,
+) -> bool {
+    if suspend_tui(terminal).is_err() {
+        return false;
+    }
+    let ok = run_shell_interactive(cmd);
+    let _ = resume_tui(terminal);
+    ok
+}
+
+fn shell_quote_path(path: &Path) -> String {
+    let s = path.to_string_lossy();
+    if cfg!(target_os = "windows") {
+        format!("\"{}\"", s.replace('"', "\"\""))
+    } else {
+        format!("'{}'", s.replace('\'', "'\\''"))
+    }
+}
+
+fn first_command_word(cmd: &str) -> Option<String> {
+    let trimmed = cmd.trim_start();
+    if trimmed.is_empty() {
+        return None;
+    }
+    let mut chars = trimmed.chars();
+    let first = chars.next()?;
+    if first == '"' || first == '\'' {
+        let rest = &trimmed[first.len_utf8()..];
+        let end = rest.find(first)?;
+        Some(rest[..end].to_string())
+    } else {
+        Some(trimmed.split_whitespace().next()?.to_string())
+    }
+}
+
+fn is_terminal_editor_command(cmd: &str) -> bool {
+    let Some(program) = first_command_word(cmd) else {
+        return false;
+    };
+    let name = Path::new(&program)
+        .file_stem()
+        .and_then(|s| s.to_str())
+        .unwrap_or(program.as_str())
+        .to_ascii_lowercase();
+    matches!(
+        name.as_str(),
+        "nvim" | "vim" | "vi" | "nano" | "micro" | "hx" | "helix" | "kak" | "kakoune"
+    ) || (name == "emacs"
+        && cmd
+            .split_whitespace()
+            .any(|arg| arg == "-nw" || arg == "--no-window-system"))
+}
+
 /// Open a file in the user's editor. Auto-detects Cursor/VS Code when no
 /// working custom command is configured, then falls back to the OS default.
-fn open_in_editor(editor: Option<&str>, path: &Path) {
+fn open_in_editor(
+    editor: Option<&str>,
+    path: &Path,
+    terminal: Option<&mut Terminal<CrosstermBackend<io::Stdout>>>,
+) {
+    let mut terminal = terminal;
     if let Some(tmpl) = editor.filter(|s| !s.trim().is_empty()) {
+        let quoted_path = shell_quote_path(path);
         let cmd = if tmpl.contains("{file}") {
-            tmpl.replace("{file}", &path.to_string_lossy())
+            tmpl.replace("{file}", &quoted_path)
         } else {
-            format!("{tmpl} {}", path.to_string_lossy())
+            format!("{tmpl} {quoted_path}")
         };
-        if let Some(program) = cmd.split_whitespace().next() {
-            if command_exists(program) && run_shell(&cmd) {
-                return;
+        if let Some(program) = first_command_word(&cmd) {
+            if command_exists(&program) {
+                let launched = if is_terminal_editor_command(&cmd) {
+                    if let Some(t) = terminal.as_deref_mut() {
+                        run_interactive_editor(t, &cmd)
+                    } else {
+                        run_shell_interactive(&cmd)
+                    }
+                } else {
+                    run_shell(&cmd)
+                };
+                if launched {
+                    return;
+                }
             }
         }
     }
@@ -789,7 +902,9 @@ fn command_exists(name: &str) -> bool {
     } else {
         std::process::Command::new("sh")
             .arg("-c")
-            .arg(format!("command -v {name} >/dev/null 2>&1"))
+            .arg("command -v \"$1\" >/dev/null 2>&1")
+            .arg("sh")
+            .arg(name)
             .status()
             .map(|s| s.success())
             .unwrap_or(false)
@@ -861,7 +976,11 @@ fn read_clipboard() -> Option<String> {
     }
 }
 
-fn handle_input(app: &mut App, key: KeyCode) {
+fn handle_input(
+    terminal: &mut Terminal<CrosstermBackend<io::Stdout>>,
+    app: &mut App,
+    key: KeyCode,
+) {
     // Keys common to every tab.
     match key {
         KeyCode::Char('q') => {
@@ -884,10 +1003,10 @@ fn handle_input(app: &mut App, key: KeyCode) {
     }
 
     match app.active_tab {
-        Tab::Problems => handle_problems_input(app, key),
+        Tab::Problems => handle_problems_input(terminal, app, key),
         Tab::Config => handle_config_input(app, key),
-        Tab::Recommend => handle_recommend_input(app, key),
-        Tab::Target => handle_target_input(app, key),
+        Tab::Recommend => handle_recommend_input(terminal, app, key),
+        Tab::Target => handle_target_input(terminal, app, key),
         Tab::Contests => handle_contests_input(app, key),
         Tab::Dashboard | Tab::Analytics => {}
     }
@@ -918,20 +1037,28 @@ fn handle_contests_input(app: &mut App, key: KeyCode) {
     }
 }
 
-fn handle_recommend_input(app: &mut App, key: KeyCode) {
+fn handle_recommend_input(
+    terminal: &mut Terminal<CrosstermBackend<io::Stdout>>,
+    app: &mut App,
+    key: KeyCode,
+) {
     match key {
         KeyCode::Char('j') | KeyCode::Down => app.recommend_scroll_down(),
         KeyCode::Char('k') | KeyCode::Up => app.recommend_scroll_up(),
         KeyCode::Enter | KeyCode::Char('o') => {
             if let Some(sp) = app.start_recommended() {
-                launch_started(app, sp);
+                launch_started(terminal, app, sp);
             }
         }
         _ => {}
     }
 }
 
-fn handle_target_input(app: &mut App, key: KeyCode) {
+fn handle_target_input(
+    terminal: &mut Terminal<CrosstermBackend<io::Stdout>>,
+    app: &mut App,
+    key: KeyCode,
+) {
     match key {
         KeyCode::Char('j') | KeyCode::Down => app.target_scroll_down(),
         KeyCode::Char('k') | KeyCode::Up => app.target_scroll_up(),
@@ -945,7 +1072,7 @@ fn handle_target_input(app: &mut App, key: KeyCode) {
         }
         KeyCode::Enter | KeyCode::Char('o') => {
             if let Some(sp) = app.start_target_step() {
-                launch_started(app, sp);
+                launch_started(terminal, app, sp);
             }
         }
         _ => {}
@@ -1002,7 +1129,11 @@ fn handle_config_edit_input(app: &mut App, key: KeyCode) {
     }
 }
 
-fn handle_problems_input(app: &mut App, key: KeyCode) {
+fn handle_problems_input(
+    terminal: &mut Terminal<CrosstermBackend<io::Stdout>>,
+    app: &mut App,
+    key: KeyCode,
+) {
     match key {
         KeyCode::Char('j') | KeyCode::Down => app.scroll_down(),
         KeyCode::Char('k') | KeyCode::Up => app.scroll_up(),
@@ -1010,7 +1141,7 @@ fn handle_problems_input(app: &mut App, key: KeyCode) {
         KeyCode::Char('g') => app.page_up(),
         KeyCode::Char('d') => app.page_down(),
         KeyCode::Char('u') => app.page_up(),
-        KeyCode::Char('o') => start_selected_problem(app),
+        KeyCode::Char('o') => start_selected_problem(terminal, app),
         KeyCode::Char('U') => {
             app.url_input_active = true;
             app.url_input_buf.clear();
@@ -1056,14 +1187,18 @@ fn handle_rating_input(app: &mut App, key: KeyCode) {
     }
 }
 
-fn handle_url_input(app: &mut App, key: KeyCode) {
+fn handle_url_input(
+    terminal: &mut Terminal<CrosstermBackend<io::Stdout>>,
+    app: &mut App,
+    key: KeyCode,
+) {
     match key {
         KeyCode::Esc => app.url_input_active = false,
         KeyCode::Enter => {
             app.url_input_active = false;
             let url = app.url_input_buf.clone();
             if !url.trim().is_empty() {
-                start_problem_from_url(app, &url);
+                start_problem_from_url(terminal, app, &url);
             }
         }
         KeyCode::Backspace => {

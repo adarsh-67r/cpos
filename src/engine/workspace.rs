@@ -446,7 +446,7 @@ mod tests {
     fn cses_solution_uses_slug() {
         let p = cses_problem("1068", "Weird Algorithm");
         let path = solution_path(&Config::default(), &p, "cpp");
-        assert!(path.to_string_lossy().ends_with("cses/WeirdAlgorithm.cpp"));
+        assert!(path.ends_with(Path::new("cses").join("WeirdAlgorithm.cpp")));
     }
 
     #[test]
@@ -463,7 +463,7 @@ mod tests {
             status: SolveStatus::Unsolved,
         };
         let path = solution_path(&Config::default(), &p, "cpp");
-        assert!(path.to_string_lossy().ends_with("codeforces/2232F.cpp"));
+        assert!(path.ends_with(Path::new("codeforces").join("2232F.cpp")));
     }
 
     #[test]
