@@ -6,7 +6,7 @@ All notable changes to CPOS are documented here. Components are versioned indepe
 | --- | --- | --- |
 | Terminal app | 0.1.8 | `Cargo.toml` |
 | VS Code extension | 0.3.30 | `extensions/vscode/package.json` |
-| Browser companion (Chrome) | 0.6.14 | `extensions/chrome/manifest.json` |
+| Browser companion (Chrome) | 0.7.0 | `extensions/chrome/manifest.json` |
 | Browser companion (Firefox) | 0.0.2 | `extensions/firefox/manifest.json` |
 
 Format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
@@ -15,6 +15,20 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 - Firefox browser companion source build in `extensions/firefox`, with temporary add-on install instructions and XPI packaging for self-signing or future AMO distribution.
+
+---
+
+## Browser companion (Chrome) — 0.7.0 - 2026-06-14
+
+The companion gains a real interface and turns into a full in-browser CP environment. All additive — the existing problem capture and submit flow is unchanged.
+
+### Added
+- **Popup hub.** Clicking the toolbar icon now opens a flat, themeable control panel (no gradients; matches the VS Code panel / TUI) with live CPOS connection status and on/off switches for every feature below. Five built-in themes; the extension UI and injected site themes share one palette.
+- **Profile analytics (in-page).** On `codeforces.com/profile/<handle>`, CPOS injects an analytics panel directly into the page — rating history chart, solved-by-rating, top tags, verdict breakdown, and languages — computed from the public CF API.
+- **Rating predictions ("Carrot"-style).** On contest standings, a predicted-Δ column is added per row using the official Codeforces rating formula (and exact deltas once a contest is rated).
+- **Site theming.** Restyle Codeforces and CSES with any CPOS palette, toggled from the popup.
+- **Code & LaTeX styling.** Dependency-free syntax highlighting for code blocks in statements and editorials, with dark-theme-friendly math.
+- **In-browser editor.** A slide-in editor panel on problem pages with per-problem persistence and language selection; submitting reuses the existing background submit injector (no changes to submit logic). Codeforces auto-fills and submits; CSES copies and opens the submit page. (Editor is a fast textarea today; a Monaco drop-in is wired behind a one-time `npm`-vendoring step — see `extensions/chrome/README.md`.)
 
 ---
 

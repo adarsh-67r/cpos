@@ -1,0 +1,52 @@
+/* CPOS in-browser editor — slide-in panel on CF/CSES problem pages. Scoped
+   under #cpos-ide-* ids; uses CPOS theme vars with safe fallbacks. */
+#cpos-ide-launch {
+  position: fixed; top: 50%; right: 0; transform: translateY(-50%);
+  z-index: 2147483640;
+  background: var(--cpos-accent, #b794ff); color: #14141f;
+  font: 700 12px/1 ui-monospace, Consolas, monospace;
+  border: none; border-radius: 8px 0 0 8px; padding: 12px 8px; cursor: pointer;
+  writing-mode: vertical-rl; letter-spacing: 0.08em;
+  box-shadow: -3px 0 14px rgba(0,0,0,0.3);
+}
+#cpos-ide-panel {
+  position: fixed; top: 0; right: 0; height: 100vh; width: min(620px, 48vw);
+  z-index: 2147483641; display: flex; flex-direction: column;
+  background: var(--cpos-bg, #14141f); color: var(--cpos-fg, #e8e6f0);
+  border-left: 1px solid var(--cpos-border, #2a2a3e);
+  box-shadow: -8px 0 30px rgba(0,0,0,0.4);
+  transform: translateX(100%); transition: transform 0.18s ease;
+  font-family: ui-sans-serif, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+#cpos-ide-panel.open { transform: translateX(0); }
+#cpos-ide-panel * { box-sizing: border-box; }
+
+.cpos-ide-head { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-bottom: 1px solid var(--cpos-border, #2a2a3e); }
+.cpos-ide-head .pid { font-weight: 800; letter-spacing: 0.03em; }
+.cpos-ide-head .grow { flex: 1 1 auto; }
+.cpos-ide-head select, .cpos-ide-head button {
+  background: var(--cpos-panel, #1b1b2b); color: var(--cpos-fg, #e8e6f0);
+  border: 1px solid var(--cpos-border, #2a2a3e); border-radius: 7px;
+  padding: 6px 9px; font: inherit; font-size: 12px; cursor: pointer;
+}
+.cpos-ide-head .x { padding: 6px 10px; }
+
+.cpos-ide-editor { flex: 1 1 auto; min-height: 0; display: flex; }
+#cpos-ide-ta {
+  flex: 1 1 auto; width: 100%; height: 100%; resize: none; border: none; outline: none;
+  background: var(--cpos-panel2, #1c1c28); color: var(--cpos-fg, #e8e6f0);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 13.5px; line-height: 1.5; padding: 12px 14px; tab-size: 4;
+  white-space: pre; overflow: auto;
+}
+.cpos-ide-mount { flex: 1 1 auto; min-height: 0; }
+
+.cpos-ide-foot { display: flex; align-items: center; gap: 8px; padding: 10px 12px; border-top: 1px solid var(--cpos-border, #2a2a3e); }
+.cpos-ide-foot .msg { flex: 1 1 auto; font-size: 11px; color: var(--cpos-dim, #8a86a3); }
+.cpos-ide-foot button {
+  background: var(--cpos-panel, #1b1b2b); color: var(--cpos-fg, #e8e6f0);
+  border: 1px solid var(--cpos-border, #2a2a3e); border-radius: 7px;
+  padding: 8px 12px; font: inherit; font-size: 12px; font-weight: 600; cursor: pointer;
+}
+.cpos-ide-foot button.primary { background: var(--cpos-accent, #b794ff); color: #14141f; border-color: var(--cpos-accent, #b794ff); }
+.cpos-ide-foot button:hover { filter: brightness(1.08); }

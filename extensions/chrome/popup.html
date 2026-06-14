@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<link rel="stylesheet" href="popup.css" />
+</head>
+<body data-theme="purple">
+  <header class="hdr">
+    <div class="brand">
+      <img src="icons/icon48.png" alt="" class="logo" />
+      <div>
+        <div class="title">CPOS</div>
+        <div class="sub">Competitive Programming OS</div>
+      </div>
+    </div>
+    <div class="conn" id="conn" title="CPOS app connection">
+      <span class="dot" id="connDot"></span><span id="connText">checking…</span>
+    </div>
+  </header>
+
+  <section class="card">
+    <div class="card-h">Tools</div>
+    <div class="row toggle" data-feature="profile">
+      <span class="ic">▤</span>
+      <span class="rtxt"><b>Profile analytics</b><small>extra charts on Codeforces profiles</small></span>
+      <label class="sw"><input type="checkbox" data-feature-input="profile" /><span></span></label>
+    </div>
+    <div class="row toggle" data-feature="ide">
+      <span class="ic">⌨</span>
+      <span class="rtxt"><b>In-browser editor</b><small>code & submit on the problem page</small></span>
+      <label class="sw"><input type="checkbox" data-feature-input="ide" /><span></span></label>
+    </div>
+    <div class="row toggle" data-feature="carrot">
+      <span class="ic">★</span>
+      <span class="rtxt"><b>Rating predictions</b><small>predicted deltas on standings</small></span>
+      <label class="sw"><input type="checkbox" data-feature-input="carrot" /><span></span></label>
+    </div>
+    <div class="row toggle" data-feature="highlight">
+      <span class="ic">❮❯</span>
+      <span class="rtxt"><b>Code & LaTeX styling</b><small>highlight statements & editorials</small></span>
+      <label class="sw"><input type="checkbox" data-feature-input="highlight" /><span></span></label>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="card-h">Page theme <small id="siteHint"></small></div>
+    <div class="row toggle" data-feature="siteTheme">
+      <span class="ic">◑</span>
+      <span class="rtxt"><b>Theme Codeforces / CSES</b><small>restyle the site with your theme</small></span>
+      <label class="sw"><input type="checkbox" data-feature-input="siteTheme" /><span></span></label>
+    </div>
+    <div class="swatches" id="siteSwatches"></div>
+  </section>
+
+  <section class="card">
+    <div class="card-h">Settings</div>
+    <label class="field">
+      <span>Extension theme</span>
+      <div class="swatches" id="uiSwatches"></div>
+    </label>
+  </section>
+
+  <footer class="ftr">
+    <a href="https://github.com/Soham109/cpos" target="_blank" rel="noopener">GitHub</a>
+    <span class="ver" id="ver"></span>
+  </footer>
+
+  <script src="themes.js"></script>
+  <script src="popup.js"></script>
+</body>
+</html>
