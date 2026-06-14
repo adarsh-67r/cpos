@@ -145,6 +145,22 @@
     `;
   }
 
+  // Never let the site theme bleed into CPOS's own injected UI (editor panel,
+  // analytics, launcher). Re-assert critical editor styles with high specificity
+  // so the highlight overlay keeps working when site theming is on.
+  function protectCss() {
+    return `
+      #cpos-ide-panel, #cpos-ide-panel *, #cpos-ide-launch,
+      .cpos-analytics, .cpos-analytics * { box-shadow: none; }
+      #cpos-ide-panel .cpos-ed-ta { color: transparent !important; background: transparent !important; border: none !important; }
+      #cpos-ide-panel .cpos-ed-hl, #cpos-ide-panel .cpos-ed-hl * { background: transparent !important; }
+      #cpos-ide-panel input, #cpos-ide-panel textarea, #cpos-ide-panel select,
+      #cpos-ide-panel pre, #cpos-ide-panel code { border-color: var(--cpos-border, #2a2a3e) !important; }
+      .cpos-analytics a, .cpos-analytics a:visited { color: var(--accent, #b794ff) !important; }
+      .cpos-analytics pre, .cpos-analytics code { background: transparent !important; }
+    `;
+  }
+
   let currentTheme = (T && T.get(C ? C.DEFAULT_SITE_THEME : "github")) || { name: "GitHub Dark" };
 
   function apply() {
@@ -154,7 +170,7 @@
       style.id = STYLE_ID;
       (document.head || document.documentElement).appendChild(style);
     }
-    style.textContent = isCf ? cfCss() : isCses ? csesCss() : "";
+    style.textContent = (isCf ? cfCss() : isCses ? csesCss() : "") + protectCss();
   }
 
   function remove() {

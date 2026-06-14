@@ -1,6 +1,6 @@
-/* CPOS in-browser editor — slide-in panel + overlay code editor on CF/CSES
-   problem pages. Scoped under #cpos-ide-* / .cpos-ed; uses --cpos-* theme vars
-   set inline by ide.js with safe dark fallbacks. */
+/* CPOS in-browser editor. Panel chrome uses --cpos-* (extension palette); the
+   editor surface uses --ed-* (the selected IDE colour scheme). Both are set
+   inline by ide.js with safe fallbacks. */
 #cpos-ide-launch {
   position: fixed; top: 50%; right: 0; transform: translateY(-50%);
   z-index: 2147483640;
@@ -13,7 +13,7 @@
 #cpos-ide-launch:hover { filter: brightness(1.08); }
 
 #cpos-ide-panel {
-  position: fixed; top: 0; right: 0; height: 100vh; width: min(640px, 50vw);
+  position: fixed; top: 0; right: 0; height: 100vh; width: 640px;
   z-index: 2147483641; display: flex; flex-direction: column;
   background: var(--cpos-bg, #14141f); color: var(--cpos-fg, #e8e6f0);
   border-left: 1px solid var(--cpos-border, #2a2a3e);
@@ -24,64 +24,88 @@
 #cpos-ide-panel.open { transform: translateX(0); }
 #cpos-ide-panel * { box-sizing: border-box; }
 
-.cpos-ide-head { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-bottom: 1px solid var(--cpos-border, #2a2a3e); }
+.cpos-ide-grip {
+  position: absolute; left: -3px; top: 0; width: 7px; height: 100%;
+  cursor: col-resize; z-index: 2; background: transparent;
+}
+.cpos-ide-grip:hover { background: var(--cpos-accent, #b794ff); opacity: 0.5; }
+
+.cpos-ide-head { display: flex; align-items: center; gap: 8px; padding: 9px 12px; border-bottom: 1px solid var(--cpos-border, #2a2a3e); flex: 0 0 auto; }
 .cpos-ide-head .pid { font-weight: 800; letter-spacing: 0.03em; }
 .cpos-ide-head .grow { flex: 1 1 auto; }
 .cpos-ide-head select, .cpos-ide-head button {
   background: var(--cpos-panel, #1b1b2b); color: var(--cpos-fg, #e8e6f0);
   border: 1px solid var(--cpos-border, #2a2a3e); border-radius: 7px;
-  padding: 6px 9px; font: inherit; font-size: 12px; cursor: pointer;
+  padding: 5px 8px; font: inherit; font-size: 12px; cursor: pointer; max-width: 130px;
 }
-.cpos-ide-head .x { padding: 6px 10px; }
+.cpos-ide-head .x { padding: 5px 9px; }
 
 .cpos-ide-editor { flex: 1 1 auto; min-height: 0; display: flex; }
 .cpos-ide-mount { flex: 1 1 auto; min-height: 0; display: flex; }
 
-/* overlay editor */
+/* overlay editor surface — themed by --ed-* */
 .cpos-ed {
   --ed-font: 13.5px/1.55 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   --ed-pad: 12px;
   flex: 1 1 auto; display: flex; min-height: 0;
-  background: var(--cpos-panel2, #1c1c28);
+  background: var(--ed-bg, #1e1e1e); color: var(--ed-fg, #d4d4d4);
 }
 .cpos-ed-gutter {
-  flex: 0 0 auto; width: 48px; overflow: hidden;
+  flex: 0 0 auto; width: 50px; overflow: hidden;
   padding: var(--ed-pad) 8px var(--ed-pad) 0;
   font: var(--ed-font); text-align: right; white-space: pre;
-  color: var(--cpos-dim, #8a86a3); opacity: 0.7;
-  border-right: 1px solid var(--cpos-border, #2a2a3e);
-  user-select: none;
+  color: var(--ed-gutter, #858585); border-right: 1px solid var(--ed-border, #333); user-select: none;
 }
 .cpos-ed-scroll { position: relative; flex: 1 1 auto; min-width: 0; overflow: hidden; }
 .cpos-ed-hl {
-  position: absolute; top: 0; left: 0; margin: 0;
-  padding: var(--ed-pad) 14px; font: var(--ed-font);
-  white-space: pre; pointer-events: none; color: var(--cpos-fg, #e8e6f0);
-  will-change: transform;
+  position: absolute; top: 0; left: 0; margin: 0; padding: var(--ed-pad) 14px;
+  font: var(--ed-font); white-space: pre; pointer-events: none;
+  color: var(--ed-fg, #d4d4d4); will-change: transform;
 }
 .cpos-ed-ta {
-  position: absolute; inset: 0; width: 100%; height: 100%;
-  padding: var(--ed-pad) 14px; font: var(--ed-font);
-  white-space: pre; overflow: auto; border: none; outline: none; resize: none;
-  background: transparent; color: transparent; caret-color: var(--cpos-fg, #e8e6f0);
-  tab-size: 4;
+  position: absolute; inset: 0; width: 100%; height: 100%; padding: var(--ed-pad) 14px;
+  font: var(--ed-font); white-space: pre; overflow: auto; border: none; outline: none; resize: none;
+  background: transparent; color: transparent; caret-color: var(--ed-caret, #aeafad); tab-size: 4;
 }
-.cpos-ed-ta::selection { background: rgba(120,120,200,0.35); }
+.cpos-ed-ta::selection { background: var(--ed-sel, #264f7855); }
+.cpos-ed-hl .hl-kw { color: var(--ed-kw, #569cd6); font-weight: 600; }
+.cpos-ed-hl .hl-type { color: var(--ed-type, #4ec9b0); }
+.cpos-ed-hl .hl-str { color: var(--ed-str, #ce9178); }
+.cpos-ed-hl .hl-num { color: var(--ed-num, #b5cea8); }
+.cpos-ed-hl .hl-com { color: var(--ed-com, #6a9955); font-style: italic; }
+.cpos-ed-hl .hl-pre { color: var(--ed-pre, #c586c0); }
+.cpos-ed-hl .hl-fn { color: var(--ed-fn, #dcdcaa); }
 
-.cpos-ed-hl .hl-kw { color: #c792ea; font-weight: 600; }
-.cpos-ed-hl .hl-type { color: #82aaff; }
-.cpos-ed-hl .hl-str { color: #c3e88d; }
-.cpos-ed-hl .hl-num { color: #f78c6c; }
-.cpos-ed-hl .hl-com { color: #7a869c; font-style: italic; }
-.cpos-ed-hl .hl-pre { color: #f0a13e; }
-.cpos-ed-hl .hl-fn { color: #7ee0d0; }
+/* run console */
+.cpos-ide-console {
+  flex: 0 0 auto; max-height: 38vh; overflow: auto;
+  background: var(--ed-panel, #252526); border-top: 1px solid var(--cpos-border, #2a2a3e);
+  padding: 10px 12px; font-size: 12px;
+}
+.cpos-ide-console .cpos-con-empty { color: var(--cpos-dim, #8a86a3); line-height: 1.5; }
+.cpos-ide-console .cpos-dim { color: var(--cpos-dim, #8a86a3); }
+.cpos-con-summary { font-weight: 700; margin-bottom: 8px; }
+.cpos-con-test { border: 1px solid var(--cpos-border, #2a2a3e); border-radius: 7px; padding: 7px 9px; margin-bottom: 7px; }
+.cpos-con-test.ok { border-color: color-mix(in srgb, #3fb950 50%, var(--cpos-border, #2a2a3e)); }
+.cpos-con-test.bad { border-color: color-mix(in srgb, #f85149 50%, var(--cpos-border, #2a2a3e)); }
+.cpos-con-head { display: flex; justify-content: space-between; align-items: center; }
+.cpos-con-test.ok .cpos-con-head span { color: #3fb950; }
+.cpos-con-test.bad .cpos-con-head span { color: #f85149; }
+.cpos-con-io { margin-top: 5px; }
+.cpos-con-io label { font-size: 9px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--cpos-dim, #8a86a3); }
+.cpos-con-io pre { margin: 2px 0 0; background: var(--ed-bg, #1e1e1e); border: 1px solid var(--cpos-border, #2a2a3e); border-radius: 5px; padding: 6px 8px; font-family: ui-monospace, Consolas, monospace; font-size: 11.5px; white-space: pre-wrap; max-height: 130px; overflow: auto; }
 
-.cpos-ide-foot { display: flex; align-items: center; gap: 8px; padding: 10px 12px; border-top: 1px solid var(--cpos-border, #2a2a3e); }
+/* status bar */
+.cpos-ide-status { flex: 0 0 auto; display: flex; align-items: center; gap: 8px; padding: 4px 12px; font-size: 11px; color: var(--cpos-dim, #8a86a3); background: var(--cpos-panel, #1b1b2b); border-top: 1px solid var(--cpos-border, #2a2a3e); }
+.cpos-ide-status .grow { flex: 1 1 auto; }
+
+.cpos-ide-foot { flex: 0 0 auto; display: flex; align-items: center; gap: 8px; padding: 9px 12px; border-top: 1px solid var(--cpos-border, #2a2a3e); }
 .cpos-ide-foot .msg { flex: 1 1 auto; font-size: 11px; color: var(--cpos-dim, #8a86a3); }
 .cpos-ide-foot button {
   background: var(--cpos-panel, #1b1b2b); color: var(--cpos-fg, #e8e6f0);
   border: 1px solid var(--cpos-border, #2a2a3e); border-radius: 7px;
   padding: 8px 12px; font: inherit; font-size: 12px; font-weight: 600; cursor: pointer;
 }
+.cpos-ide-foot #cpos-ide-run { border-color: color-mix(in srgb, #3fb950 45%, var(--cpos-border, #2a2a3e)); color: #3fb950; }
 .cpos-ide-foot button.primary { background: var(--cpos-accent, #b794ff); color: #14141f; border-color: var(--cpos-accent, #b794ff); }
 .cpos-ide-foot button:hover { filter: brightness(1.1); }
