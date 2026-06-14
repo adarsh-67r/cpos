@@ -15,6 +15,7 @@
     carrot: true,
     highlight: true,
     ide: true,
+    modernize: false,
     siteTheme: false
   };
   const DEFAULT_UI_THEME = "purple";

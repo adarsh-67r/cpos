@@ -7,7 +7,7 @@
   const DEFAULTS = {
     "cpos.ui.theme": T.DEFAULT_THEME,
     "cpos.siteThemeId": "github",
-    "cpos.features": { profile: true, carrot: true, highlight: true, ide: true, siteTheme: false }
+    "cpos.features": { profile: true, carrot: true, highlight: true, ide: true, modernize: false, siteTheme: false }
   };
 
   const store = chrome.storage.local;

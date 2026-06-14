@@ -24,9 +24,10 @@ Data is not sent to third-party servers—only to CPOS on localhost.
 
 Click the toolbar icon for the **popup hub** — flat, themeable, with a live CPOS connection indicator and switches for each feature:
 
-- **Profile analytics** — augments `codeforces.com/profile/<handle>` in place with a rating chart, solved-by-rating, top tags, verdicts, and languages (public CF API, read-only).
+- **Profile analytics** — augments `codeforces.com/profile/<handle>` in place with charts CF doesn't already show: a submission activity heatmap, solved-by-rating and solved-by-index histograms, verdict and language donuts, top tags, and acceptance rate / rank progress (public CF API, read-only).
 - **Rating predictions** — a predicted-Δ column on contest standings using the official Codeforces rating formula (exact deltas once a contest is rated).
-- **Site theming** — restyle Codeforces / CSES with any CPOS palette.
+- **Modernize** — a sleek restyle for Codeforces / CSES: modern system font, roomier spacing, rounded cards, cleaner tables/buttons/code. Typographic/structural only, so it composes with the colour theme.
+- **Recolor the site** — apply any CPOS palette to Codeforces / CSES.
 - **Code & LaTeX styling** — self-contained syntax highlighting for statement/editorial code blocks (no remote scripts).
 - **In-browser editor** — a slide-in, line-numbered editor with a live syntax-highlight overlay and starter templates; write and submit without leaving the browser. On by default. Submission reuses the existing background submit injector, so the capture/submit flow is unchanged.
 

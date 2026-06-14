@@ -6,7 +6,7 @@ All notable changes to CPOS are documented here. Components are versioned indepe
 | --- | --- | --- |
 | Terminal app | 0.1.8 | `Cargo.toml` |
 | VS Code extension | 0.3.31 | `extensions/vscode/package.json` |
-| Browser companion (Chrome) | 0.7.0 | `extensions/chrome/manifest.json` |
+| Browser companion (Chrome) | 0.7.1 | `extensions/chrome/manifest.json` |
 | Browser companion (Firefox) | 0.0.2 | `extensions/firefox/manifest.json` |
 
 Format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
@@ -15,6 +15,16 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 - Firefox browser companion source build in `extensions/firefox`, with temporary add-on install instructions and XPI packaging for self-signing or future AMO distribution.
+
+---
+
+## Browser companion (Chrome) — 0.7.1 - 2026-06-14
+
+### Added
+- **Modernize** — a new toggle that gives Codeforces and CSES a sleek, modern look: a system UI font, roomier spacing, rounded card-style boxes (the old corner-image artifacts are neutralised), cleaner tables/buttons/inputs, and nicer code blocks. Purely typographic/structural and gradient-free, so it composes with the optional colour theme.
+
+### Changed
+- **Profile analytics reworked.** Stop duplicating Codeforces' own rating graph; instead show charts CF doesn't: a **submission activity heatmap** (26 weeks), **solved-by-rating** and **solved-by-index** histograms, **verdict** and **language** donut charts, top tags, and an overview with acceptance rate + rank progress.
 
 ---
 

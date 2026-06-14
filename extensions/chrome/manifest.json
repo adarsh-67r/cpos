@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "CPOS Companion",
-  "version": "0.7.0",
+  "version": "0.7.1",
   "description": "Codeforces & CSES companion: capture & submit, profile analytics, rating predictions, site themes, code highlighting, and an in-browser editor. Local-first.",
   "icons": {
     "16": "icons/icon16.png",
@@ -56,7 +56,7 @@
     },
     {
       "matches": ["https://codeforces.com/*", "https://cses.fi/*"],
-      "js": ["cpos-config.js", "themes.js", "site-theme.js"],
+      "js": ["cpos-config.js", "themes.js", "site-theme.js", "modernize.js"],
       "run_at": "document_start"
     },
     {

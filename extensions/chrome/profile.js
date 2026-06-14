@@ -1,7 +1,8 @@
-// CPOS profile analytics — augments codeforces.com/profile/<handle> in place.
-// Read-only: fetches the public CF API and injects a panel. Never touches
-// capture/submit. Each panel renders independently with explicit
-// loading / empty / error states so one failure can't blank the whole thing.
+// CPOS profile analytics — augments codeforces.com/profile/<handle> in place
+// with charts Codeforces does NOT already show (it has its own rating graph, so
+// we don't repeat it): an activity heatmap, solved-by-rating and index
+// histograms, verdict and language donuts, and top tags. Read-only: fetches the
+// public CF API and injects a panel. Never touches capture/submit.
 // Toggle from the CPOS popup (feature "profile").
 (function () {
   const ROOT_ID = "cpos-analytics-root";
@@ -9,17 +10,12 @@
   const C = self.CPOS;
 
   const RANKS = [
-    [0, "Newbie", "#9aa0a6"],
-    [1200, "Pupil", "#42c267"],
-    [1400, "Specialist", "#41b5b3"],
-    [1600, "Expert", "#7aa2f7"],
-    [1900, "Candidate Master", "#c77dff"],
-    [2100, "Master", "#f0a13e"],
-    [2300, "Int. Master", "#f0a13e"],
-    [2400, "Grandmaster", "#ff5b5b"],
-    [2600, "Int. Grandmaster", "#ff3333"],
+    [0, "Newbie", "#9aa0a6"], [1200, "Pupil", "#42c267"], [1400, "Specialist", "#41b5b3"],
+    [1600, "Expert", "#7aa2f7"], [1900, "Candidate Master", "#c77dff"], [2100, "Master", "#f0a13e"],
+    [2300, "Int. Master", "#f0a13e"], [2400, "Grandmaster", "#ff5b5b"], [2600, "Int. Grandmaster", "#ff3333"],
     [3000, "Legendary GM", "#ff0000"]
   ];
+  const PALETTE = ["#7aa2f7", "#c792ea", "#7ee787", "#f0b860", "#ff7a93", "#56d4dd", "#e0af68", "#bb9af7", "#9ece6a", "#f7768e"];
 
   function handleFromUrl() {
     const m = location.pathname.match(/^\/profile\/([^/]+)/);
@@ -48,69 +44,71 @@
     return json.result;
   }
 
-  const esc = (s) =>
-    String(s == null ? "" : s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
-  function el(tag, cls, html) {
-    const e = document.createElement(tag);
-    if (cls) e.className = cls;
-    if (html != null) e.innerHTML = html;
-    return e;
-  }
+  const esc = (s) => String(s == null ? "" : s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+  function el(tag, cls, html) { const e = document.createElement(tag); if (cls) e.className = cls; if (html != null) e.innerHTML = html; return e; }
+  const pad2 = (n) => String(n).padStart(2, "0");
+  const ymd = (d) => d.getFullYear() + "-" + pad2(d.getMonth() + 1) + "-" + pad2(d.getDate());
 
   function bars(rows, colorFn) {
     if (!rows || !rows.length) return '<div class="cpos-empty">No data.</div>';
     const max = Math.max(...rows.map((r) => r.value), 1);
-    return (
-      '<div class="cpos-bars">' +
-      rows
-        .map((r) => {
-          const pct = Math.max(3, Math.round((r.value / max) * 100));
-          const color = colorFn ? colorFn(r) : "var(--accent)";
-          return (
-            '<div class="cpos-bar">' +
-            '<span class="lbl" title="' + esc(r.label) + '">' + esc(r.label) + "</span>" +
-            '<span class="track"><span class="fill" style="width:' + pct + "%;background:" + color + '"></span></span>' +
-            '<span class="num">' + r.value + "</span></div>"
-          );
-        })
-        .join("") +
-      "</div>"
-    );
+    return '<div class="cpos-bars">' + rows.map((r) => {
+      const pct = Math.max(3, Math.round((r.value / max) * 100));
+      const color = colorFn ? colorFn(r) : "var(--accent)";
+      return '<div class="cpos-bar"><span class="lbl" title="' + esc(r.label) + '">' + esc(r.label) + '</span>' +
+        '<span class="track"><span class="fill" style="width:' + pct + "%;background:" + color + '"></span></span>' +
+        '<span class="num">' + r.value + "</span></div>";
+    }).join("") + "</div>";
   }
 
-  function ratingChart(history) {
-    if (!history || history.length < 2) return '<div class="cpos-empty">Not enough rated contests.</div>';
-    const W = 680, H = 200, padL = 34, padR = 14, padT = 14, padB = 22;
-    const xs = history.map((h) => h.ratingUpdateTimeSeconds);
-    const ys = history.map((h) => h.newRating);
-    const minX = Math.min(...xs), maxX = Math.max(...xs);
-    const minY = Math.min(...ys) - 60, maxY = Math.max(...ys) + 60;
-    const px = (x) => padL + ((x - minX) / (maxX - minX || 1)) * (W - padL - padR);
-    const py = (y) => H - padB - ((y - minY) / (maxY - minY || 1)) * (H - padT - padB);
+  function donut(rows, colorFn) {
+    const total = rows.reduce((s, r) => s + r.value, 0);
+    if (!total) return '<div class="cpos-empty">No data.</div>';
+    const R = 46, CIRC = 2 * Math.PI * R;
+    let off = 0;
+    const segs = rows.map((r, i) => {
+      const len = (r.value / total) * CIRC;
+      const seg = '<circle r="' + R + '" cx="60" cy="60" fill="none" stroke="' + (colorFn ? colorFn(r, i) : PALETTE[i % PALETTE.length]) +
+        '" stroke-width="16" stroke-dasharray="' + len.toFixed(2) + " " + (CIRC - len).toFixed(2) + '" stroke-dashoffset="' + (-off).toFixed(2) +
+        '" transform="rotate(-90 60 60)"><title>' + esc(r.label) + ": " + r.value + "</title></circle>";
+      off += len;
+      return seg;
+    }).join("");
+    const legend = rows.map((r, i) => '<div class="cpos-leg"><span class="dot" style="background:' + (colorFn ? colorFn(r, i) : PALETTE[i % PALETTE.length]) + '"></span>' +
+      '<span class="ll">' + esc(r.label) + '</span><b>' + r.value + "</b></div>").join("");
+    return '<div class="cpos-donut-wrap"><svg viewBox="0 0 120 120" class="cpos-donut">' + segs +
+      '<text x="60" y="58" text-anchor="middle" font-size="17" font-weight="700" fill="var(--fg)">' + total + "</text>" +
+      '<text x="60" y="74" text-anchor="middle" font-size="8" fill="var(--dim)">total</text></svg>' +
+      '<div class="cpos-legend">' + legend + "</div></div>";
+  }
 
-    // Rating-tier background bands.
-    let bands = "";
-    for (let i = 0; i < RANKS.length; i++) {
-      const lo = RANKS[i][0];
-      const hi = i + 1 < RANKS.length ? RANKS[i + 1][0] : maxY;
-      if (hi < minY || lo > maxY) continue;
-      const y1 = py(Math.min(hi, maxY)), y2 = py(Math.max(lo, minY));
-      bands += `<rect x="${padL}" y="${y1.toFixed(1)}" width="${(W - padL - padR).toFixed(1)}" height="${Math.max(0, y2 - y1).toFixed(1)}" fill="${RANKS[i][2]}" opacity="0.10"/>`;
+  function heatmap(byDay) {
+    const WEEKS = 26;
+    const today = new Date();
+    const total = WEEKS * 7;
+    // Align the last column so today lands on its real weekday.
+    const trailing = 6 - today.getDay();
+    const cells = [];
+    let maxC = 1, sum = 0;
+    for (let i = total - 1; i >= 0; i--) {
+      const offset = i - trailing; // 0 = today
+      if (offset < 0) { cells.push({ blank: true }); continue; }
+      const d = new Date(today);
+      d.setDate(d.getDate() - offset);
+      const c = byDay[ymd(d)] || 0;
+      maxC = Math.max(maxC, c);
+      sum += c;
+      cells.push({ c, date: ymd(d) });
     }
-    const pts = history.map((h) => `${px(h.ratingUpdateTimeSeconds).toFixed(1)},${py(h.newRating).toFixed(1)}`).join(" ");
-    const dots = history
-      .map((h) => `<circle cx="${px(h.ratingUpdateTimeSeconds).toFixed(1)}" cy="${py(h.newRating).toFixed(1)}" r="2.6" fill="${ratingColor(h.newRating)}"><title>${esc(h.contestName)}: ${h.newRating}</title></circle>`)
-      .join("");
-    const last = history[history.length - 1];
-    return (
-      `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet" role="img">` +
-      bands +
-      `<polyline points="${pts}" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linejoin="round"/>` +
-      dots +
-      `<text x="${padL}" y="12" fill="var(--dim)" font-size="11">peak ${Math.max(...ys)}</text>` +
-      `<text x="${W - padR}" y="12" fill="${ratingColor(last.newRating)}" font-size="12" text-anchor="end" font-weight="700">now ${last.newRating}</text>` +
-      "</svg>"
-    );
+    const cellHtml = cells.map((cell) => {
+      if (cell.blank) return '<span class="cpos-hc blank"></span>';
+      const c = cell.c;
+      const lvl = c === 0 ? 0 : c >= maxC * 0.66 ? 4 : c >= maxC * 0.33 ? 3 : c >= maxC * 0.12 ? 2 : 1;
+      return '<span class="cpos-hc l' + lvl + '" title="' + cell.date + ": " + c + ' submissions"></span>';
+    }).join("");
+    return '<div class="cpos-heatwrap"><div class="cpos-heat">' + cellHtml + "</div>" +
+      '<div class="cpos-heat-foot"><span>' + sum + ' submissions · 26 weeks</span><span class="cpos-heat-legend">less ' +
+      '<span class="cpos-hc l0"></span><span class="cpos-hc l1"></span><span class="cpos-hc l2"></span><span class="cpos-hc l3"></span><span class="cpos-hc l4"></span> more</span></div></div>';
   }
 
   function rankProgress(rating) {
@@ -119,35 +117,31 @@
     const span = info.hi - info.lo || 1;
     const pct = Math.max(0, Math.min(100, Math.round(((rating - info.lo) / span) * 100)));
     const toNext = Math.max(0, info.hi - rating);
-    return (
-      '<div class="cpos-rank">' +
-      '<div class="cpos-rank-row"><span style="color:' + info.color + ';font-weight:700">' + esc(info.name) + "</span>" +
+    return '<div class="cpos-rank"><div class="cpos-rank-row"><span style="color:' + info.color + ';font-weight:700">' + esc(info.name) + "</span>" +
       '<span class="cpos-dim">' + (toNext > 0 ? "+" + toNext + " to next" : "max tier") + "</span></div>" +
-      '<div class="cpos-rank-track"><span class="cpos-rank-fill" style="width:' + pct + "%;background:" + info.color + '"></span></div>' +
-      "</div>"
-    );
+      '<div class="cpos-rank-track"><span class="cpos-rank-fill" style="width:' + pct + "%;background:" + info.color + '"></span></div></div>';
   }
 
   function computeStats(submissions) {
     const solved = new Set();
-    const solvedByRating = {}, tagCount = {}, verdicts = {}, langs = {}, byMonth = {};
+    const solvedByRating = {}, tagCount = {}, verdicts = {}, langs = {}, byDay = {}, byIndex = {};
     const tagSeen = new Set();
-    let firstAC = 0;
+    let acCount = 0;
     for (const s of submissions) {
       const v = s.verdict || "UNKNOWN";
       verdicts[v] = (verdicts[v] || 0) + 1;
       const lang = (s.programmingLanguage || "").replace(/\s*\(.*\)$/, "").trim() || "Unknown";
       langs[lang] = (langs[lang] || 0) + 1;
+      if (s.creationTimeSeconds) byDay[ymd(new Date(s.creationTimeSeconds * 1000))] = (byDay[ymd(new Date(s.creationTimeSeconds * 1000))] || 0) + 1;
       if (v !== "OK") continue;
+      acCount++;
       const p = s.problem || {};
       const key = `${p.contestId}-${p.index}`;
       if (solved.has(key)) continue;
       solved.add(key);
-      const d = new Date((s.creationTimeSeconds || 0) * 1000);
-      const ym = d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0");
-      byMonth[ym] = (byMonth[ym] || 0) + 1;
-      if (!firstAC || s.creationTimeSeconds < firstAC) firstAC = s.creationTimeSeconds;
       if (p.rating) solvedByRating[p.rating] = (solvedByRating[p.rating] || 0) + 1;
+      const letter = (p.index || "?").charAt(0).toUpperCase();
+      byIndex[letter] = (byIndex[letter] || 0) + 1;
       for (const tag of p.tags || []) {
         const tk = key + "|" + tag;
         if (tagSeen.has(tk)) continue;
@@ -155,36 +149,25 @@
         tagCount[tag] = (tagCount[tag] || 0) + 1;
       }
     }
-    return { solvedCount: solved.size, solvedByRating, tagCount, verdicts, langs, byMonth, firstAC };
+    const accept = submissions.length ? Math.round((acCount / submissions.length) * 100) : 0;
+    return { solvedCount: solved.size, solvedByRating, tagCount, verdicts, langs, byDay, byIndex, accept };
   }
 
-  function topRows(obj, n, byKeyNum) {
-    let e = Object.entries(obj).map(([label, value]) => ({ label, value }));
+  function topRows(obj, n, byKeyNum, keyMap) {
+    let e = Object.entries(obj).map(([label, value]) => ({ label: keyMap ? keyMap(label) : label, value }));
     if (byKeyNum) { e.sort((a, b) => Number(a.label) - Number(b.label)); return e; }
     e.sort((a, b) => b.value - a.value);
     return n ? e.slice(0, n) : e;
   }
-  const verdictColor = (r) => (r.label === "OK" ? "var(--ok)" : /WRONG/.test(r.label) ? "var(--bad)" : /TIME|MEMORY|IDLENESS/.test(r.label) ? "var(--warn)" : "var(--accent)");
-  const prettyVerdict = (v) => ({ OK: "Accepted", WRONG_ANSWER: "Wrong answer", TIME_LIMIT_EXCEEDED: "TLE", MEMORY_LIMIT_EXCEEDED: "MLE", RUNTIME_ERROR: "Runtime error", COMPILATION_ERROR: "Compile error" }[v] || v.replace(/_/g, " ").toLowerCase());
+  const verdictColor = (r) => (/^AC|Accepted|OK/.test(r.label) ? "var(--ok)" : /WRONG|WA/.test(r.label) ? "var(--bad)" : /TIME|MEM|IDLE|TLE|MLE/.test(r.label) ? "var(--warn)" : "var(--accent)");
+  const prettyVerdict = (v) => ({ OK: "Accepted", WRONG_ANSWER: "Wrong answer", TIME_LIMIT_EXCEEDED: "TLE", MEMORY_LIMIT_EXCEEDED: "MLE", RUNTIME_ERROR: "Runtime error", COMPILATION_ERROR: "Compile error", IDLENESS_LIMIT_EXCEEDED: "ILE" }[v] || String(v).replace(/_/g, " ").toLowerCase());
 
-  function panel(cls, title, bodyHtml) {
-    return el("div", "cpos-panel " + cls, "<h4>" + esc(title) + "</h4>" + bodyHtml);
-  }
-  function stat(value, label, color) {
-    return '<div class="cpos-stat"><b' + (color ? ' style="color:' + color + '"' : "") + ">" + esc(value) + "</b><span>" + esc(label) + "</span></div>";
-  }
+  function panel(cls, title, bodyHtml) { return el("div", "cpos-panel " + cls, "<h4>" + esc(title) + "</h4>" + bodyHtml); }
+  function stat(value, label, color) { return '<div class="cpos-stat"><b' + (color ? ' style="color:' + color + '"' : "") + ">" + esc(value) + "</b><span>" + esc(label) + "</span></div>"; }
 
-  async function applyTheme(root) {
-    if (!T || !C) return;
-    const id = await C.activeThemeId();
-    T.applyTheme(root, id);
-  }
-
+  async function applyTheme(root) { if (!T || !C) return; T.applyTheme(root, await C.activeThemeId()); }
   function insertPanel(node) {
-    const anchor =
-      document.querySelector(".userbox") ||
-      document.querySelector("#pageContent .roundbox") ||
-      document.querySelector("#pageContent");
+    const anchor = document.querySelector(".userbox") || document.querySelector("#pageContent .roundbox") || document.querySelector("#pageContent");
     if (anchor && anchor.parentNode) anchor.parentNode.insertBefore(node, anchor.nextSibling);
     else (document.querySelector("#pageContent") || document.body).prepend(node);
   }
@@ -203,19 +186,14 @@
     insertPanel(root);
     await applyTheme(root);
 
-    // Fetch the three sources independently so one failure degrades gracefully.
     const info = await cfApi("user.info", "handles=" + encodeURIComponent(handle)).then((r) => r[0]).catch((e) => ({ _err: e.message }));
-    const history = await cfApi("user.rating", "handle=" + encodeURIComponent(handle)).catch(() => []);
     const submissions = await cfApi("user.status", "handle=" + encodeURIComponent(handle) + "&from=1&count=100000").catch((e) => ({ _err: e.message }));
+    head.querySelector(".spin")?.remove();
 
-    const sp = head.querySelector(".spin");
-    if (sp) sp.remove();
-
-    if (info && info._err && (!submissions || submissions._err)) {
-      grid.appendChild(panel("span3", "Error", '<div class="cpos-empty">Could not reach the Codeforces API (' + esc(info._err) + "). Try reloading.</div>"));
+    if ((!info || info._err) && (!submissions || submissions._err)) {
+      grid.appendChild(panel("span3", "Error", '<div class="cpos-empty">Could not reach the Codeforces API. Try reloading.</div>'));
       return;
     }
-
     const rating = info && !info._err ? info.rating : null;
     const maxRating = info && !info._err ? info.maxRating : null;
     const subs = Array.isArray(submissions) ? submissions : [];
@@ -227,33 +205,28 @@
       stat(maxRating != null ? maxRating : "—", "max", ratingColor(maxRating)) +
       stat(st.solvedCount, "solved") +
       stat(subs.length, "submissions") +
-      stat(history.length, "contests") +
+      stat(st.accept + "%", "accepted", "var(--ok)") +
       "</div>"));
-    grid.appendChild(panel("", "Rank progress", rankProgress(rating)));
-    grid.appendChild(panel("span3", "Rating history", ratingChart(history)));
+    grid.appendChild(panel("", "Rank", rankProgress(rating)));
+    grid.appendChild(panel("span3", "Submission activity", heatmap(st.byDay)));
     grid.appendChild(panel("span2", "Solved by rating", bars(topRows(st.solvedByRating, 0, true), (r) => ratingColor(Number(r.label)))));
-    grid.appendChild(panel("", "Verdicts", bars(topRows(st.verdicts, 6).map((r) => ({ label: prettyVerdict(r.label), value: r.value })), verdictColor)));
+    grid.appendChild(panel("", "Verdicts", donut(topRows(st.verdicts, 7).map((r) => ({ label: prettyVerdict(r.label), value: r.value })), verdictColor)));
     grid.appendChild(panel("span2", "Top tags solved", bars(topRows(st.tagCount, 12))));
-    grid.appendChild(panel("", "Languages", bars(topRows(st.langs, 6))));
-    grid.appendChild(panel("span3", "Solved per month", bars(topRows(st.byMonth, 0, true).slice(-18))));
+    grid.appendChild(panel("", "Languages", donut(topRows(st.langs, 6))));
+    grid.appendChild(panel("span3", "Solved by problem index", bars(topRows(st.byIndex, 0, false).sort((a, b) => a.label.localeCompare(b.label)), (r) => PALETTE[(r.label.charCodeAt(0) - 65) % PALETTE.length])));
   }
 
   function remove() { document.getElementById(ROOT_ID)?.remove(); }
-
   async function sync() {
     if (!C) return;
     const on = await C.feature("profile");
     if (on) build().catch((e) => console.debug("CPOS profile:", e));
     else remove();
   }
-
   if (C) {
     C.onChange((changes) => {
       if (changes[C.KEYS.FEATURES]) sync();
-      else {
-        const root = document.getElementById(ROOT_ID);
-        if (root) applyTheme(root);
-      }
+      else { const root = document.getElementById(ROOT_ID); if (root) applyTheme(root); }
     });
     sync();
   }
