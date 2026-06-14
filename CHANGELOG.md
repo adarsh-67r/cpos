@@ -4,8 +4,8 @@ All notable changes to CPOS are documented here. Components are versioned indepe
 
 | Component | Current version | Version file |
 | --- | --- | --- |
-| Terminal app | 0.1.7 | `Cargo.toml` |
-| VS Code extension | 0.3.29 | `extensions/vscode/package.json` |
+| Terminal app | 0.1.8 | `Cargo.toml` |
+| VS Code extension | 0.3.30 | `extensions/vscode/package.json` |
 | Browser companion (Chrome) | 0.6.14 | `extensions/chrome/manifest.json` |
 | Browser companion (Firefox) | 0.0.2 | `extensions/firefox/manifest.json` |
 
@@ -15,6 +15,21 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 - Firefox browser companion source build in `extensions/firefox`, with temporary add-on install instructions and XPI packaging for self-signing or future AMO distribution.
+
+---
+
+## Terminal app — 0.1.8 - 2026-06-14
+
+### Fixed
+- **Starting a problem no longer glitches the TUI when opening terminal editors.** CPOS now temporarily leaves the alternate-screen/raw-mode UI before launching interactive editors such as `vim`, `nvim`, `nano`, `micro`, Helix, Kakoune, or terminal Emacs, then restores the app afterward.
+- **Custom editor commands handle paths safely.** `{file}` replacements and appended file paths are shell-quoted, and editor detection now handles quoted command names instead of splitting only on whitespace.
+
+---
+
+## VS Code extension — 0.3.30 - 2026-06-14
+
+### Changed
+- **Submit now waits for the browser companion before opening a fallback page.** The extension queues the submission and watches for the companion to consume it; if that does not happen quickly, CPOS shows an **Open submit page** action instead of immediately opening an extra browser tab.
 
 ---
 

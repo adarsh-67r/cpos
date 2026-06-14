@@ -36,9 +36,8 @@ Open the **CPOS** view in the activity bar:
 
 - **Tests / Statement tabs** — switch between the sample tests and the captured problem statement (rendered natively with MathJax) without leaving the editor
 - **Run All** — compile and run every sample; verdicts shown inline (`AC`, `WA`, `TLE`, `RE`, `CE`)
-- **Submit** — queue submission and autofill the judge page in your logged-in browser
-- **Problem** — open the problem statement
-- **Search** — Google search for editorials and solutions for the linked problem
+- **Submit** — queue submission for the browser companion; if it is not picked up quickly, CPOS offers an **Open submit page** fallback
+- **Problem ID link** — open the problem statement from the Tests header
 - **GitHub** — open the CPOS repository
 - **Test cases** — edit, add, or remove samples; Codeforces multi-case inputs can show linked input/output blocks
 - **Themes** — CPOS, Midnight, Amber, Paper, or Native (matches your VS Code theme; Run All uses VS Code button styling)

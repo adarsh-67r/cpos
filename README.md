@@ -65,9 +65,8 @@ Install from the [Marketplace](https://marketplace.visualstudio.com/items?itemNa
 
 - **Tests / Statement tabs** — switch between samples and the captured problem statement, rendered natively with MathJax
 - **Run All** — compile and test every sample
-- **Submit** — autofill the judge submit page in your logged-in browser
-- **Problem** — open the statement again
-- **Search** — Google search for editorials and solutions for the linked problem
+- **Submit** — queue the solution for the browser companion; if the companion is not ready, CPOS offers to open the submit page manually
+- **Problem ID link** — open the statement again from the Tests header
 - **GitHub** — open the CPOS repository
 - **Test cases** — edit samples; multi-case inputs show linked input/output blocks when captured from Codeforces
 - **Theme** — five panel themes (see [Settings](#settings))
@@ -104,6 +103,8 @@ cpos
 | `r` | Sync with Codeforces and CSES |
 
 Keep the terminal running while you code in VS Code — same captures, same submits, same progress.
+
+Terminal editor users can set `editor` to commands such as `nvim {file}`, `vim {file}`, `nano {file}`, `hx {file}`, or `emacs -nw {file}`. CPOS temporarily steps out of the full-screen TUI while that editor runs, then restores the dashboard when the editor exits.
 
 ### First run
 

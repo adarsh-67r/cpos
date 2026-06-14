@@ -85,6 +85,7 @@ Sync with the terminal app via `~/Library/Application Support/cpos/config.toml` 
 2. Stay **logged in** to Codeforces or CSES in that browser.
 3. CPOS talks to supported browser companions over `127.0.0.1`; Safari is not supported.
 4. Keep the VS Code extension running (capture server on port `27122`).
+5. In VS Code extension **0.3.30+**, if the companion does not pick up a queued submit quickly, CPOS shows an **Open submit page** fallback action.
 
 ### Codeforces submits with wrong compiler (e.g. C++17 instead of C++23)
 
@@ -249,6 +250,10 @@ Use terminal app **0.1.6+** and, on the Template step, press **`v`** to paste (C
 ### Submit from TUI opens wrong browser
 
 The terminal app queues submit for the **browser companion** only (same as VS Code). Install a supported companion and use that browser while logged in.
+
+### Starting a problem makes the TUI flicker or corrupt the editor
+
+Use terminal app **0.1.8+**. CPOS now suspends the full-screen TUI before launching interactive terminal editors such as `vim`, `nvim`, `nano`, `micro`, Helix, Kakoune, or `emacs -nw`, then restores the UI after the editor exits.
 
 ### CSES progress not syncing
 
