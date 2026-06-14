@@ -5,7 +5,7 @@ All notable changes to CPOS are documented here. Components are versioned indepe
 | Component | Current version | Version file |
 | --- | --- | --- |
 | Terminal app | 0.1.8 | `Cargo.toml` |
-| VS Code extension | 0.3.30 | `extensions/vscode/package.json` |
+| VS Code extension | 0.3.31 | `extensions/vscode/package.json` |
 | Browser companion (Chrome) | 0.7.0 | `extensions/chrome/manifest.json` |
 | Browser companion (Firefox) | 0.0.2 | `extensions/firefox/manifest.json` |
 
@@ -15,6 +15,13 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 - Firefox browser companion source build in `extensions/firefox`, with temporary add-on install instructions and XPI packaging for self-signing or future AMO distribution.
+
+---
+
+## VS Code extension — 0.3.31 - 2026-06-14
+
+### Added
+- **Local `/run` endpoint** on the capture server, for the browser companion's in-page editor "Run". It compiles the supplied code and runs it against caller-supplied sample tests using the same compile/run pipeline as Run Samples, returning per-test verdicts. Self-contained (writes only to the build dir) — capture, submit, and sample-fetch behavior are unchanged.
 
 ---
 
