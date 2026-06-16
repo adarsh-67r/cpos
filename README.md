@@ -61,6 +61,9 @@ Write code in the editor. The CPOS panel runs samples and submits.
 <p align="center">
   <img src="docs/img/vscode-panel-ui.png" alt="CPOS VS Code panel with test cases, Run All, Submit, and a Codeforces solution open" width="900">
 </p>
+<p align="center">
+  <img src="docs/img/vscode-statement.png" alt="CPOS VS Code panel rendering a Codeforces problem statement in a native Statement tab next to the editor" width="900">
+</p>
 
 Install from the [Marketplace](https://marketplace.visualstudio.com/items?itemName=sohamaggarwal.cpos-vscode). Open your folder, capture a problem from the browser, then use the **CPOS panel**:
 
@@ -106,6 +109,54 @@ cpos
 Keep the terminal running while you code in VS Code — same captures, same submits, same progress.
 
 Terminal editor users can set `editor` to commands such as `nvim {file}`, `vim {file}`, `nano {file}`, `hx {file}`, or `emacs -nw {file}`. CPOS temporarily steps out of the full-screen TUI while that editor runs, then restores the dashboard when the editor exits.
+
+---
+
+## Browser companion
+
+The companion captures samples and autofills the judge submit form — that's the core, and it's unchanged. On top of that it adds an optional layer of practice and on-page tooling for Codeforces and CSES. Everything is read-only (public CF API + localhost), and **every feature toggles individually from the popup**. Available for Chrome/Edge/Brave and Firefox.
+
+<p align="center">
+  <img src="docs/shots/companion-popup.png" alt="CPOS companion popup — every feature toggles in one place" width="800">
+</p>
+<p align="center">
+  <img src="docs/shots/companion-analytics.png" alt="CPOS profile analytics — heatmap, streaks, solved-by-rating, tags and verdicts" width="800">
+</p>
+
+**Capture & submit**
+
+- Reads Codeforces/CSES samples and sends them to local CPOS
+- Autofills the judge submit form, reusing your logged-in session
+
+**In-browser editor**
+
+- LeetCode-style editor on problem pages: run against the samples with per-test diff and custom stdin
+- Current-line highlight, bracket matching/auto-close, auto-indent, find & replace
+- Font-size and line-wrap controls, a maximize/zen layout, and multiple editor color schemes
+- Submit reuses the companion's existing flow
+- _Running_ compiles locally, so it needs CPOS on `127.0.0.1` — the VS Code extension or the terminal app (browsers can't run C++/Java). Editing works on its own.
+
+**Practice**
+
+- **Profile analytics** — charts on CF profile pages: activity heatmap, current & longest streak, solved-by-rating and by-index histograms, top tags, verdict & language donuts, and rating-history insights (no duplicate of CF's own rating graph)
+- **Profile compare (VS)** — add other handles and compare stats side-by-side with a rating-history overlay
+- **Daily problem & streak** — a rating-tuned, deterministic "problem of the day" plus a practice streak
+- **Favorites** — bookmark problems with a star and view them in the popup
+- **Problem timer** — a draggable per-problem stopwatch that persists and auto-resumes
+
+**On the page**
+
+- **Rating predictions** — predicted rating deltas on contest standings
+- **Contest reminders** — desktop notifications before upcoming Codeforces contests, with a configurable lead time (needs the notifications permission)
+- **Problem tools** — rating badge, tag-hider / training mode (reveal all or one-by-one), one-click copy of sample input, and similar-problem links
+- **Problemset tools** — solve-status row coloring, a hide-solved toggle, and per-problem submission counts
+- **Standings tools** — colorize standings rows by language (with a legend) and a friends-only filter
+- **Marker & notes** — highlight statement text and attach notes, saved per problem (off by default)
+
+**Appearance**
+
+- **Code & LaTeX styling** — syntax highlighting for code in statements, editorials, and comments
+- **Site themes + Modernize** — recolor Codeforces/CSES with CPOS palettes and a sleek, flat modern restyle; they compose
 
 ### First run
 

@@ -1,6 +1,10 @@
 // CPOS background worker — polls VS Code (:27122) and TUI (:27121) for pending
 // submissions, then injects into the logged-in browser tab.
 
+// Contest reminders run as an isolated module with their own alarms /
+// notifications / message listeners; this never touches the submit-pickup logic.
+importScripts("cpos-contests.js");
+
 const ENDPOINTS = [
   { name: "CPOS VS Code", baseUrl: "http://127.0.0.1:27122" },
   { name: "CPOS TUI", baseUrl: "http://127.0.0.1:27121" }

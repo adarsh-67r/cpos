@@ -295,7 +295,65 @@ async function handleRequest(req: http.IncomingMessage, res: http.ServerResponse
     return;
   }
 
+  // Additive: compile + run arbitrary code against caller-supplied tests, for
+  // the browser companion's in-page editor "Run". Reuses the same compile/run
+  // pipeline as Run Samples; does not touch capture or submit.
+  if (req.method === "POST" && req.url === "/run") {
+    try {
+      const body = await readJson<{ code: string; language?: string; tests?: Array<{ input?: string; expected?: string; expected_output?: string }> }>(req);
+      if (!body.code || !Array.isArray(body.tests)) {
+        sendJson(res, 400, { ok: false, error: "missing code/tests" });
+        return;
+      }
+      const results = await runCodeAgainstTests(body.code, body.language, body.tests);
+      sendJson(res, 200, { ok: true, results });
+    } catch (error) {
+      sendJson(res, 400, { ok: false, error: error instanceof Error ? error.message : String(error) });
+    }
+    return;
+  }
+
   sendJson(res, 404, { error: "not found" });
+}
+
+// Compile `code` in `language` and run it against each test, returning per-test
+// verdicts. Self-contained (writes to the build dir), so it never disturbs the
+// user's solution files, capture state, or pending submissions.
+async function runCodeAgainstTests(
+  code: string,
+  language: string | undefined,
+  tests: Array<{ input?: string; expected?: string; expected_output?: string }>
+): Promise<Array<{ index: number; verdict: Verdict; passed: boolean; actual: string; expected: string; timeMs: number; stderr?: string }>> {
+  const lang = language && DEFAULT_COMMANDS[language] ? language : resolveDefaultLanguage();
+  const cfg = getCompileConfig(lang);
+  const buildDir = path.join(dataDir(), "build");
+  await fs.mkdir(buildDir, { recursive: true });
+  const ext = cfg.extension || "txt";
+  // Java needs the file named after its public class (Main); anything else is fine.
+  const base = lang === "java" ? "Main" : "cpos_run";
+  const source = path.join(buildDir, `${base}.${ext}`);
+  await fs.writeFile(source, code);
+  const timeoutMs = config().get<number>("runTimeoutMs", 5000);
+
+  if (cfg.compile) {
+    const compileCommand = expandCommand(cfg.compile, source, base, buildDir);
+    const compileResult = await runShell(compileCommand, "", buildDir, Math.max(timeoutMs, 20000));
+    if (compileResult.code !== 0) {
+      const detail = (compileResult.stderr || compileResult.stdout).trim();
+      return tests.map((_, index) => ({ index, verdict: "CE" as Verdict, passed: false, actual: detail, expected: "", timeMs: 0 }));
+    }
+  }
+
+  const results = [];
+  for (let i = 0; i < tests.length; i++) {
+    const t = tests[i];
+    const expected = (t.expected ?? t.expected_output ?? "").toString();
+    const runCommand = expandCommand(cfg.run, source, base, buildDir);
+    const r = await runShell(runCommand, (t.input ?? "").toString(), buildDir, timeoutMs);
+    const ev = evaluate(i, { input: t.input ?? "", expected_output: expected }, r);
+    results.push({ index: i, verdict: ev.verdict, passed: ev.passed, actual: ev.actual, expected, timeMs: ev.timeMs, stderr: ev.stderr });
+  }
+  return results;
 }
 
 function setCors(res: http.ServerResponse): void {

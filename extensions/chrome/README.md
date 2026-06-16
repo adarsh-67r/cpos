@@ -2,7 +2,7 @@
 
 Browser extension for Codeforces and CSES. Captures public sample tests and relays them to CPOS on your machine. Autofills judge submit pages when you submit from VS Code or the terminal app.
 
-**Current version:** 0.6.14 (see [CHANGELOG.md](../../CHANGELOG.md)).
+**Current version:** 0.10.0 (see [CHANGELOG.md](../../CHANGELOG.md)).
 
 ## Install
 
@@ -19,6 +19,36 @@ Also install the **[CPOS VS Code extension](https://marketplace.visualstudio.com
 - Scrapes CSES solved and attempted status on the problem list when requested
 
 Data is not sent to third-party servers—only to CPOS on localhost.
+
+## Interface & features (0.10.0)
+
+Click the toolbar icon for the **popup hub** — flat, themeable, with a live CPOS connection indicator and switches for each feature:
+
+- **Profile analytics** — augments `codeforces.com/profile/<handle>` in place with charts CF doesn't already show: a submission activity heatmap, solved-by-rating and solved-by-index histograms, verdict and language donuts, top tags, and acceptance rate / rank progress (public CF API, read-only).
+- **Rating predictions** — a predicted-Δ column on contest standings using the official Codeforces rating formula (exact deltas once a contest is rated).
+- **Modernize** — a sleek restyle for Codeforces / CSES: modern system font, roomier spacing, rounded cards, cleaner tables/buttons/code. Typographic/structural only, so it composes with the colour theme.
+- **Recolor the site** — apply any CPOS palette to Codeforces / CSES.
+- **Code & LaTeX styling** — self-contained syntax highlighting for statement/editorial code blocks (no remote scripts).
+- **In-browser editor** — a LeetCode-style, line-numbered editor with a live syntax-highlight overlay, per-test diff, custom stdin, find & replace, and starter templates; write, run, and submit without leaving the browser. On by default. _Running_ compiles on the local CPOS runner (VS Code extension or terminal app) since browsers can't execute C++/Java; editing and submit don't need it. Submission reuses the existing background submit injector, so the capture/submit flow is unchanged.
+- **Profile compare (VS)** — add other handles on a profile and compare stats side-by-side with a rating-history overlay.
+- **Contest reminders** — desktop notifications before upcoming Codeforces contests, with a configurable lead time (public `contest.list`).
+- **Daily problem & streak**, **Favorites**, and a draggable per-problem **timer**.
+- **Problem tools** (rating badge, tag-hider/training mode, copy sample input, similar problems), **problemset tools** (solve-status coloring, hide-solved, solve counts), **standings tools** (colorize by language, friends filter), and **marker & notes**.
+
+All UI is gradient-free and shares **one theme palette** across the popup, the site, and every CPOS tool (`themes.js`). Feature toggles live in `chrome.storage.local`; content scripts react live.
+
+### Optional: vendor Monaco for the editor
+
+The in-browser editor ships with a fast textarea by default. Manifest V3 forbids loading scripts from a CDN, so to use the full Monaco (VS Code) editor you vendor it locally once:
+
+```bash
+cd extensions/chrome
+npm i monaco-editor
+mkdir -p vendor/monaco
+cp -r node_modules/monaco-editor/min/vs vendor/monaco/vs
+```
+
+Then add `vendor/monaco/vs/**` to `web_accessible_resources` in `manifest.json`. `ide.js` will use Monaco automatically when `vendor/monaco/vs/loader.js` is present, falling back to the textarea otherwise.
 
 ## Troubleshooting
 

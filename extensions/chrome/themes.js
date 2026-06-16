@@ -1,0 +1,197 @@
+// Shared CPOS theme tokens — loaded by the popup, the analytics page, and the
+// page content scripts so everything (popup chrome + injected site themes)
+// draws from one palette. Flat, no gradients; mirrors the VS Code panel / TUI.
+//
+// Each theme is a flat map of CSS custom properties. `applyTheme(root, id)`
+// writes them onto an element's style. Site theming (Phase 3) maps a subset of
+// these onto Codeforces/CSES selectors.
+
+(function (root) {
+  const THEMES = {
+    purple: {
+      name: "Purple",
+      "--bg": "#14141f",
+      "--panel": "#1b1b2b",
+      "--panel-2": "#20202e",
+      "--fg": "#e8e6f0",
+      "--dim": "#8a86a3",
+      "--border": "#2a2a3e",
+      "--accent": "#b794ff",
+      "--accent-dim": "#7c5cbf",
+      "--accent-on": "#14141f",
+      "--ok": "#7ee787",
+      "--bad": "#ff7a93",
+      "--warn": "#f0b860",
+      "--cf": "#7aa2f7"
+    },
+    github: {
+      name: "GitHub Dark",
+      "--bg": "#0d1117",
+      "--panel": "#161b22",
+      "--panel-2": "#1c2128",
+      "--fg": "#e6edf3",
+      "--dim": "#7d8590",
+      "--border": "#30363d",
+      "--accent": "#6cb6ff",
+      "--accent-dim": "#3b6ea5",
+      "--accent-on": "#0d1117",
+      "--ok": "#3fb950",
+      "--bad": "#f85149",
+      "--warn": "#d29922",
+      "--cf": "#6cb6ff"
+    },
+    amber: {
+      name: "Amber",
+      "--bg": "#16130c",
+      "--panel": "#1e1a10",
+      "--panel-2": "#2a2418",
+      "--fg": "#f1e9d6",
+      "--dim": "#a8966c",
+      "--border": "#2a2418",
+      "--accent": "#f0b860",
+      "--accent-dim": "#aa7c30",
+      "--accent-on": "#16130c",
+      "--ok": "#b8c46a",
+      "--bad": "#e88a6a",
+      "--warn": "#f0b860",
+      "--cf": "#e0b341"
+    },
+    mono: {
+      name: "Mono",
+      "--bg": "#101010",
+      "--panel": "#181818",
+      "--panel-2": "#202020",
+      "--fg": "#e0e0e0",
+      "--dim": "#8a8a8a",
+      "--border": "#2a2a2a",
+      "--accent": "#e0e0e0",
+      "--accent-dim": "#8a8a8a",
+      "--accent-on": "#101010",
+      "--ok": "#c8d4c8",
+      "--bad": "#d6b0b0",
+      "--warn": "#d8cba0",
+      "--cf": "#cfcfcf"
+    },
+    light: {
+      name: "Light",
+      "--bg": "#f6f6fb",
+      "--panel": "#ffffff",
+      "--panel-2": "#eeeef4",
+      "--fg": "#1c1c28",
+      "--dim": "#6a6a80",
+      "--border": "#d8d8e2",
+      "--accent": "#6d4bd0",
+      "--accent-dim": "#9a7ee0",
+      "--accent-on": "#ffffff",
+      "--ok": "#1a7f37",
+      "--bad": "#cf222e",
+      "--warn": "#9a6700",
+      "--cf": "#3b5bdb"
+    },
+    // Flat teal/slate dark palette (no gradients), tuned for CF dark-mode contrast.
+    ocean: {
+      name: "Ocean",
+      "--bg": "#0c1418",
+      "--panel": "#111c22",
+      "--panel-2": "#16242c",
+      "--fg": "#dce8ec",
+      "--dim": "#7e95a0",
+      "--border": "#243640",
+      "--accent": "#4fd1c5",
+      "--accent-dim": "#2c8a82",
+      "--accent-on": "#0c1418",
+      "--ok": "#5bd99a",
+      "--bad": "#ff8b8b",
+      "--warn": "#e6c060",
+      "--cf": "#6cc5e0"
+    },
+    // Flat rose-tinted dark palette (no gradients), warm but high-contrast.
+    rose: {
+      name: "Rose",
+      "--bg": "#15101300",
+      "--panel": "#1c1418",
+      "--panel-2": "#241a1f",
+      "--fg": "#f0e2e6",
+      "--dim": "#a98a92",
+      "--border": "#33242a",
+      "--accent": "#ff8fb0",
+      "--accent-dim": "#bf5d79",
+      "--accent-on": "#151013",
+      "--ok": "#8fd6a0",
+      "--bad": "#ff7a7a",
+      "--warn": "#e8b96a",
+      "--cf": "#f49ac0"
+    }
+  };
+
+  // Fix the typo'd bg above (kept 6-digit hex everywhere downstream expects it).
+  THEMES.rose["--bg"] = "#151013";
+
+  // Structural token defaults — the geometry scale CPOS_STYLE_CORE applies. Kept
+  // here so the palette file is the single place to tweak the look. These are
+  // NOT per-theme colour keys; they're shared, flat (no gradients) and read by
+  // the style core's STRUCT defaults. Exposed for reference / popup use.
+  const STRUCT_TOKENS = {
+    "--radius-sm": "8px",
+    "--radius": "12px",
+    "--radius-lg": "16px",
+    "--space": "16px",
+    "--shadow": "0 1px 2px rgba(0,0,0,0.06), 0 4px 16px rgba(0,0,0,0.04)",
+    "--font-sans":
+      '"Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, system-ui, sans-serif',
+    "--font-mono":
+      '"JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace'
+  };
+
+  const DEFAULT_THEME = "light";
+
+  // ── custom theme (built from a single accent the user picks) ────────────────
+  function clamp8(n) { return Math.max(0, Math.min(255, Math.round(n))); }
+  function parseHex(hex) {
+    const m = /^#?([0-9a-f]{6})$/i.exec(hex || "");
+    if (!m) return null;
+    const n = parseInt(m[1], 16);
+    return { r: (n >> 16) & 255, g: (n >> 8) & 255, b: n & 255 };
+  }
+  function toHex(r, g, b) { return "#" + ((1 << 24) + (clamp8(r) << 16) + (clamp8(g) << 8) + clamp8(b)).toString(16).slice(1); }
+  function mix(hex, amt) { const c = parseHex(hex); return c ? toHex(c.r + amt, c.g + amt, c.b + amt) : hex; }
+  function luminance(hex) { const c = parseHex(hex); return c ? (0.299 * c.r + 0.587 * c.g + 0.114 * c.b) / 255 : 0.5; }
+
+  // Derive a full flat dark palette from one accent colour. Base stays a neutral
+  // near-black so the accent reads on every surface; ink auto-contrasts.
+  function buildFromAccent(accent) {
+    const a = parseHex(accent) ? accent : "#b794ff";
+    const on = luminance(a) > 0.6 ? "#15151c" : "#ffffff";
+    return {
+      name: "Custom",
+      "--bg": "#101015", "--panel": "#17171f", "--panel-2": "#1f1f29",
+      "--fg": "#e9e8f0", "--dim": "#8b8a9c", "--border": "#2b2b39",
+      "--accent": a, "--accent-dim": mix(a, -46), "--accent-on": on,
+      "--ok": "#7ee787", "--bad": "#ff7a93", "--warn": "#f0b860", "--cf": a
+    };
+  }
+  // The live custom theme (re-registered from storage by callers). Defaults to
+  // the default accent until the user picks one.
+  THEMES.custom = buildFromAccent(THEMES.purple["--accent"]);
+  function registerCustom(accent) { THEMES.custom = buildFromAccent(accent); return THEMES.custom; }
+
+  function get(id) {
+    return THEMES[id] || THEMES[DEFAULT_THEME];
+  }
+
+  function applyTheme(el, id) {
+    const theme = get(id);
+    for (const [key, value] of Object.entries(theme)) {
+      if (key === "name") continue;
+      el.style.setProperty(key, value);
+    }
+  }
+
+  // Preset ids only (excludes the special "custom" entry) — for swatch rows.
+  const PRESETS = ["purple", "github", "amber", "mono", "light", "ocean", "rose"];
+  const api = { THEMES, DEFAULT_THEME, STRUCT_TOKENS, get, applyTheme, registerCustom, buildFromAccent, presets: () => PRESETS.slice(), list: () => Object.keys(THEMES) };
+
+  // Works both as a content-script global and (via importScripts-free) the popup.
+  root.CPOS_THEMES = api;
+  if (typeof module !== "undefined" && module.exports) module.exports = api;
+})(typeof self !== "undefined" ? self : this);

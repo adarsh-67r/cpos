@@ -1,0 +1,297 @@
+/* CPOS CF tools — styles for the problem-page strip (cf-problem.js) and the
+   problemset solve-status coloring + info strip (cf-problemset.js). Everything
+   visible is scoped under #cpos-cf-tools or .cpos-cf-* so it never leaks into
+   CF styles. Flat, theme-aware (tokens written by CPOS_THEMES.applyTheme); no
+   gradients. Row tints use the active theme's --ok / --warn tokens. */
+
+#cpos-cf-tools,
+#cpos-cf-tags-widget,
+.cpos-cf-copy {
+  /* fallbacks; the active theme overrides these as inline custom props */
+  --bg: #14141f; --panel: #1b1b2b; --panel-2: #20202e; --fg: #e8e6f0;
+  --dim: #8a86a3; --border: #2a2a3e; --accent: #b794ff; --accent-dim: #7c5cbf;
+  --accent-on: #14141f; --ok: #7ee787; --bad: #ff7a93; --warn: #f0b860; --cf: #7aa2f7;
+}
+
+/* ── the tools strip ──────────────────────────────────────────────────────── */
+#cpos-cf-tools {
+  display: flex; align-items: center; flex-wrap: wrap; gap: 8px 10px;
+  margin: 10px 0; padding: 9px 12px;
+  background: var(--panel); border: 1px solid var(--border); border-radius: 12px;
+  font-family: ui-sans-serif, -apple-system, "Segoe UI", Roboto, sans-serif;
+  font-size: 12px; color: var(--fg); line-height: 1.4;
+  position: relative;
+}
+#cpos-cf-tools.cpos-cf-tools-side {
+  align-items: stretch;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0 0 10px;
+}
+#cpos-cf-tools * { box-sizing: border-box; }
+#cpos-cf-tags-widget,
+#cpos-cf-tags-widget * { box-sizing: border-box; }
+
+#cpos-cf-tools .cpos-cf-head {
+  display: flex; align-items: center; gap: 7px;
+}
+#cpos-cf-tools .cpos-cf-head .badge {
+  font-size: 10px; font-weight: 700; color: var(--accent-on); background: var(--accent);
+  border-radius: 5px; padding: 2px 7px; letter-spacing: 0.06em;
+}
+#cpos-cf-tools .cpos-cf-group {
+  display: inline-flex; align-items: center; flex-wrap: wrap; gap: 6px;
+  padding: 2px 0;
+}
+#cpos-cf-tools .cpos-cf-group-label,
+#cpos-cf-tags-widget .cpos-cf-group-label {
+  color: var(--dim); font-size: 10px; font-weight: 800;
+  letter-spacing: 0.08em; text-transform: uppercase;
+}
+#cpos-cf-tools .cpos-cf-lbl,
+#cpos-cf-tags-widget .cpos-cf-lbl { color: var(--dim); font-size: 11px; }
+
+/* rating badge */
+#cpos-cf-tools .cpos-cf-badge,
+#cpos-cf-tags-widget .cpos-cf-badge {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-weight: 800; font-size: 12.5px; font-variant-numeric: tabular-nums;
+  padding: 2px 9px; border-radius: 999px;
+  border: 1px solid var(--border); background: var(--panel-2); color: var(--fg);
+}
+#cpos-cf-tools .cpos-cf-badge.dim,
+#cpos-cf-tags-widget .cpos-cf-badge.dim { color: var(--dim); }
+#cpos-cf-tools .cpos-cf-badge.hidden,
+#cpos-cf-tags-widget .cpos-cf-badge.hidden {
+  cursor: pointer; color: var(--accent); border-color: var(--accent-dim); background: transparent;
+}
+#cpos-cf-tools .cpos-cf-badge.hidden:hover,
+#cpos-cf-tags-widget .cpos-cf-badge.hidden:hover { background: var(--panel-2); }
+
+/* generic buttons in the strip — !important beats cfColorControls global rule */
+#cpos-cf-tools .cpos-cf-btn,
+#cpos-cf-tags-widget .cpos-cf-btn {
+  font: inherit; font-size: 11.5px; font-weight: 600; cursor: pointer !important;
+  color: var(--accent-on) !important; background: var(--accent) !important;
+  border: 1px solid var(--accent) !important; border-radius: 7px !important; padding: 3px 10px !important;
+}
+#cpos-cf-tools .cpos-cf-btn:hover,
+#cpos-cf-tags-widget .cpos-cf-btn:hover { background: var(--accent-dim) !important; border-color: var(--accent-dim) !important; }
+#cpos-cf-tools .cpos-cf-btn.ghost,
+#cpos-cf-tags-widget .cpos-cf-btn.ghost {
+  color: var(--accent) !important; background: transparent !important; border-color: var(--accent-dim) !important;
+}
+#cpos-cf-tools .cpos-cf-btn.ghost:hover,
+#cpos-cf-tags-widget .cpos-cf-btn.ghost:hover { background: var(--panel-2) !important; }
+#cpos-cf-tools .cpos-cf-btn:disabled,
+#cpos-cf-tags-widget .cpos-cf-btn:disabled { opacity: 0.45; cursor: default !important; }
+
+/* tag chips */
+#cpos-cf-tools .cpos-cf-minirow,
+#cpos-cf-tags-widget .cpos-cf-minirow,
+#cpos-cf-tools .cpos-cf-tags,
+#cpos-cf-tags-widget {
+  display: flex; align-items: center; flex-wrap: wrap; gap: 6px;
+}
+#cpos-cf-tags-widget {
+  flex-direction: column; align-items: stretch;
+  margin: 10px 12px 6px;
+  padding: 8px 0 4px;
+  border-bottom: 1px solid var(--border);
+  font-family: ui-sans-serif, -apple-system, "Segoe UI", Roboto, sans-serif;
+  font-size: 12px; color: var(--fg); line-height: 1.4;
+}
+#cpos-cf-tags-widget .cpos-cf-minirow {
+  align-items: center;
+}
+#cpos-cf-tags-widget .cpos-cf-rating-row {
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--border);
+}
+#cpos-cf-tools .cpos-cf-chips,
+#cpos-cf-tags-widget .cpos-cf-chips { display: inline-flex; flex-wrap: wrap; gap: 5px; }
+#cpos-cf-tools .cpos-cf-chip,
+#cpos-cf-tags-widget .cpos-cf-chip {
+  font-size: 11px; color: var(--fg); background: var(--panel-2);
+  border: 1px solid var(--border); border-radius: 999px; padding: 1px 8px;
+}
+
+/* similar problems mini-list */
+#cpos-cf-tools .cpos-cf-sim-wrap,
+#cpos-cf-tags-widget .cpos-cf-sim-wrap { flex-basis: 100%; width: 100%; }
+#cpos-cf-tools .cpos-cf-sim,
+#cpos-cf-tags-widget .cpos-cf-sim { border-top: 1px solid var(--border); padding-top: 7px; margin-top: 2px; }
+#cpos-cf-tools .cpos-cf-sim-list,
+#cpos-cf-tags-widget .cpos-cf-sim-list { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 5px; }
+#cpos-cf-tools .cpos-cf-sim-item,
+#cpos-cf-tags-widget .cpos-cf-sim-item {
+  display: inline-flex; align-items: center; gap: 6px; text-decoration: none;
+  font-size: 11px; color: var(--fg); background: var(--panel-2);
+  border: 1px solid var(--border); border-radius: 7px; padding: 2px 9px; max-width: 240px;
+}
+#cpos-cf-tools .cpos-cf-sim-item:hover,
+#cpos-cf-tags-widget .cpos-cf-sim-item:hover { border-color: var(--accent-dim); }
+#cpos-cf-tools .cpos-cf-sim-item .r,
+#cpos-cf-tags-widget .cpos-cf-sim-item .r { font-weight: 800; font-variant-numeric: tabular-nums; }
+#cpos-cf-tools .cpos-cf-sim-item .n,
+#cpos-cf-tags-widget .cpos-cf-sim-item .n { color: var(--dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* ── copy-sample button (per input block) ─────────────────────────────────── */
+.cpos-cf-copy {
+  position: absolute; top: 6px; right: 8px; z-index: 5;
+  font: inherit; font-size: 11px; font-weight: 600; line-height: 1; cursor: pointer;
+  color: var(--accent-on); background: var(--accent);
+  border: 1px solid var(--accent); border-radius: 6px; padding: 3px 9px;
+  font-family: ui-sans-serif, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+.cpos-cf-copy:hover { background: var(--accent-dim); border-color: var(--accent-dim); }
+.cpos-cf-copy.ok { color: var(--accent-on); background: var(--ok); border-color: var(--ok); }
+/* anchor the absolutely-positioned button without disturbing CF's own copier
+   (CF positions its copier top-right too; we sit slightly left via the layout). */
+.sample-test .input { position: relative; }
+.sample-test .input .cpos-cf-copy { right: 8px; }
+/* If CF shows its own ".input-output-copier", nudge ours below it so both work. */
+.sample-test .input .input-output-copier ~ .cpos-cf-copy,
+.sample-test .input:has(.input-output-copier) .cpos-cf-copy { top: 30px; }
+
+/* ── solve-status row tints (subtle; preserves CF's own row styling) ──────────
+   The rows aren't descendants of #cpos-cf-tools, so the tint tokens are written
+   by cf-problemset.js onto :root as --cpos-row-ok / --cpos-row-warn (resolved
+   from the active theme). Fallbacks keep it sane before JS runs. */
+html body table.problems > tbody > tr.cpos-cf-solved > td,
+html body table.problems tr.cpos-cf-solved > td {
+  background: color-mix(in srgb, var(--cpos-row-ok, #3fb950) 12%, var(--cpos-row-bg, #161b22)) !important;
+}
+html body table.problems > tbody > tr.cpos-cf-solved > td:first-child,
+html body table.problems tr.cpos-cf-solved > td:first-child {
+  box-shadow: inset 2px 0 0 color-mix(in srgb, var(--cpos-row-ok, #3fb950) 70%, transparent);
+}
+html body table.problems > tbody > tr.cpos-cf-attempted > td,
+html body table.problems tr.cpos-cf-attempted > td {
+  background: color-mix(in srgb, var(--cpos-row-warn, #d29922) 12%, var(--cpos-row-bg, #161b22)) !important;
+}
+html body table.problems > tbody > tr.cpos-cf-attempted > td:first-child,
+html body table.problems tr.cpos-cf-attempted > td:first-child {
+  box-shadow: inset 2px 0 0 color-mix(in srgb, var(--cpos-row-warn, #d29922) 70%, transparent);
+}
+
+/* ── per-problem submission-count column ───────────────────────────────────── */
+table.problems th.cpos-cf-count-cell {
+  text-align: right; white-space: nowrap; font-weight: 700;
+}
+table.problems td.cpos-cf-count-cell {
+  text-align: right; white-space: nowrap; padding-right: 10px;
+}
+table.problems td.cpos-cf-count-cell .cpos-cf-count {
+  display: inline-block; min-width: 38px; text-align: right;
+  font-variant-numeric: tabular-nums; font-size: 12px; font-weight: 700;
+  color: var(--cpos-row-warn, #d29922);
+}
+table.problems td.cpos-cf-count-cell .cpos-cf-count.dim { color: inherit; opacity: 0.4; font-weight: 400; }
+
+/* ════════════════════════════════════════════════════════════════════════════
+   CPOS standings tools (cf-standings.js) — language coloring legend, friends
+   filter, friends editor. Scoped under #cpos-standings-tools / .cpos-st-* and
+   the per-row [data-cpos-lang] attribute. Flat, theme-token based, no gradients.
+   Language tints are solid color-mix of the active theme's tokens, published as
+   --cpos-lang-* on :root by cf-standings.js. Coexists with carrot.js columns.
+   ════════════════════════════════════════════════════════════════════════════ */
+#cpos-standings-tools {
+  --bg: #14141f; --panel: #1b1b2b; --panel-2: #20202e; --fg: #e8e6f0;
+  --dim: #8a86a3; --border: #2a2a3e; --accent: #b794ff; --accent-dim: #7c5cbf;
+  --accent-on: #14141f; --ok: #7ee787; --bad: #ff7a93; --warn: #f0b860; --cf: #7aa2f7;
+  display: flex; align-items: center; flex-wrap: wrap; gap: 8px 10px;
+  margin: 10px 0; padding: 9px 12px;
+  background: var(--panel); border: 1px solid var(--border); border-radius: 12px;
+  font-family: ui-sans-serif, -apple-system, "Segoe UI", Roboto, sans-serif;
+  font-size: 12px; color: var(--fg); line-height: 1.4;
+}
+#cpos-standings-tools * { box-sizing: border-box; }
+#cpos-standings-tools .cpos-st-head .badge {
+  font-size: 10px; font-weight: 700; color: var(--accent-on); background: var(--accent);
+  border-radius: 5px; padding: 2px 7px; letter-spacing: 0.06em;
+}
+#cpos-standings-tools .cpos-st-lbl { color: var(--dim); font-size: 11px; }
+#cpos-standings-tools .cpos-st-friends-count { color: var(--dim); font-size: 11px; }
+
+#cpos-standings-tools .cpos-st-btn {
+  font: inherit; font-size: 11.5px; font-weight: 600; cursor: pointer !important;
+  color: var(--accent-on) !important; background: var(--accent) !important;
+  border: 1px solid var(--accent) !important; border-radius: 7px !important; padding: 3px 10px !important;
+}
+#cpos-standings-tools .cpos-st-btn:hover { background: var(--accent-dim) !important; border-color: var(--accent-dim) !important; }
+#cpos-standings-tools .cpos-st-btn.ghost {
+  color: var(--accent) !important; background: transparent !important; border-color: var(--accent-dim) !important;
+}
+#cpos-standings-tools .cpos-st-btn.ghost:hover { background: var(--panel-2) !important; }
+#cpos-standings-tools .cpos-st-friends-toggle.on {
+  color: var(--accent-on) !important; background: var(--accent) !important; border-color: var(--accent) !important;
+}
+
+/* legend */
+#cpos-standings-tools .cpos-st-legend { display: inline-flex; align-items: center; flex-wrap: wrap; gap: 4px 8px; }
+#cpos-standings-tools .cpos-st-legend-item {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-size: 11px; color: var(--fg);
+  border: 1px solid var(--border); background: var(--panel-2);
+  border-radius: 999px; padding: 1px 8px 1px 6px;
+}
+#cpos-standings-tools .cpos-st-swatch {
+  width: 10px; height: 10px; border-radius: 3px; background: var(--dim);
+  border: 1px solid var(--border);
+}
+
+/* friends editor */
+#cpos-standings-tools .cpos-st-editor { flex-basis: 100%; border-top: 1px solid var(--border); padding-top: 8px; margin-top: 2px; }
+#cpos-standings-tools .cpos-st-ed-lbl { display: block; color: var(--dim); font-size: 11px; margin-bottom: 6px; }
+#cpos-standings-tools .cpos-st-ta {
+  width: 100%; min-height: 56px; resize: vertical;
+  font: inherit; font-size: 12px; color: var(--fg);
+  background: var(--panel-2); border: 1px solid var(--border); border-radius: 8px;
+  padding: 7px 9px; margin-bottom: 7px;
+}
+#cpos-standings-tools .cpos-st-ta:focus { outline: none; border-color: var(--accent-dim); }
+
+/* Rows hidden by the friends-only filter. */
+table.standings tr.cpos-st-hidden { display: none !important; }
+
+/* ── language row tints + legend swatches (driven by --cpos-lang-* on :root) ──
+   Solid color-mix tints; the left edge gets a stronger accent bar. CF's native
+   row styling is preserved; carrot.js's delta cell is untouched. */
+table.standings tr[data-cpos-lang] > td:first-child { box-shadow: inset 3px 0 0 var(--cpos-lang-other, #8a8a8a); }
+table.standings tr[data-cpos-lang] > td {
+  background-color: color-mix(in srgb, var(--cpos-lang-other, #8a8a8a) 9%, transparent) !important;
+}
+table.standings tr[data-cpos-lang="cpp"] > td    { background-color: color-mix(in srgb, var(--cpos-lang-cpp) 11%, transparent) !important; }
+table.standings tr[data-cpos-lang="cpp"] > td:first-child    { box-shadow: inset 3px 0 0 var(--cpos-lang-cpp); }
+table.standings tr[data-cpos-lang="python"] > td { background-color: color-mix(in srgb, var(--cpos-lang-python) 11%, transparent) !important; }
+table.standings tr[data-cpos-lang="python"] > td:first-child { box-shadow: inset 3px 0 0 var(--cpos-lang-python); }
+table.standings tr[data-cpos-lang="java"] > td   { background-color: color-mix(in srgb, var(--cpos-lang-java) 11%, transparent) !important; }
+table.standings tr[data-cpos-lang="java"] > td:first-child   { box-shadow: inset 3px 0 0 var(--cpos-lang-java); }
+table.standings tr[data-cpos-lang="kotlin"] > td { background-color: color-mix(in srgb, var(--cpos-lang-kotlin) 11%, transparent) !important; }
+table.standings tr[data-cpos-lang="kotlin"] > td:first-child { box-shadow: inset 3px 0 0 var(--cpos-lang-kotlin); }
+table.standings tr[data-cpos-lang="rust"] > td   { background-color: color-mix(in srgb, var(--cpos-lang-rust) 11%, transparent) !important; }
+table.standings tr[data-cpos-lang="rust"] > td:first-child   { box-shadow: inset 3px 0 0 var(--cpos-lang-rust); }
+table.standings tr[data-cpos-lang="go"] > td     { background-color: color-mix(in srgb, var(--cpos-lang-go) 11%, transparent) !important; }
+table.standings tr[data-cpos-lang="go"] > td:first-child     { box-shadow: inset 3px 0 0 var(--cpos-lang-go); }
+table.standings tr[data-cpos-lang="csharp"] > td { background-color: color-mix(in srgb, var(--cpos-lang-csharp) 11%, transparent) !important; }
+table.standings tr[data-cpos-lang="csharp"] > td:first-child { box-shadow: inset 3px 0 0 var(--cpos-lang-csharp); }
+table.standings tr[data-cpos-lang="c"] > td      { background-color: color-mix(in srgb, var(--cpos-lang-c) 11%, transparent) !important; }
+table.standings tr[data-cpos-lang="c"] > td:first-child      { box-shadow: inset 3px 0 0 var(--cpos-lang-c); }
+table.standings tr[data-cpos-lang="js"] > td     { background-color: color-mix(in srgb, var(--cpos-lang-js) 11%, transparent) !important; }
+table.standings tr[data-cpos-lang="js"] > td:first-child     { box-shadow: inset 3px 0 0 var(--cpos-lang-js); }
+table.standings tr[data-cpos-lang="mixed"] > td  { background-color: color-mix(in srgb, var(--cpos-lang-mixed) 11%, transparent) !important; }
+table.standings tr[data-cpos-lang="mixed"] > td:first-child  { box-shadow: inset 3px 0 0 var(--cpos-lang-mixed); }
+
+/* legend swatch colors */
+#cpos-standings-tools .cpos-st-legend-item[data-cpos-lang="cpp"] .cpos-st-swatch    { background: var(--cpos-lang-cpp, var(--cf)); }
+#cpos-standings-tools .cpos-st-legend-item[data-cpos-lang="python"] .cpos-st-swatch { background: var(--cpos-lang-python, var(--warn)); }
+#cpos-standings-tools .cpos-st-legend-item[data-cpos-lang="java"] .cpos-st-swatch   { background: var(--cpos-lang-java, var(--bad)); }
+#cpos-standings-tools .cpos-st-legend-item[data-cpos-lang="kotlin"] .cpos-st-swatch { background: var(--cpos-lang-kotlin, var(--accent)); }
+#cpos-standings-tools .cpos-st-legend-item[data-cpos-lang="rust"] .cpos-st-swatch   { background: var(--cpos-lang-rust, var(--accent-dim)); }
+#cpos-standings-tools .cpos-st-legend-item[data-cpos-lang="go"] .cpos-st-swatch     { background: var(--cpos-lang-go, var(--ok)); }
+#cpos-standings-tools .cpos-st-legend-item[data-cpos-lang="csharp"] .cpos-st-swatch { background: var(--cpos-lang-csharp, var(--accent)); }
+#cpos-standings-tools .cpos-st-legend-item[data-cpos-lang="c"] .cpos-st-swatch      { background: var(--cpos-lang-c, var(--dim)); }
+#cpos-standings-tools .cpos-st-legend-item[data-cpos-lang="js"] .cpos-st-swatch     { background: var(--cpos-lang-js, var(--warn)); }
+#cpos-standings-tools .cpos-st-legend-item[data-cpos-lang="other"] .cpos-st-swatch  { background: var(--cpos-lang-other, var(--dim)); }
+#cpos-standings-tools .cpos-st-legend-item[data-cpos-lang="mixed"] .cpos-st-swatch  { background: var(--cpos-lang-mixed, var(--accent-dim)); }

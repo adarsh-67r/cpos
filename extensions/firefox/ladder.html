@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>CPOS · Practice Ladders</title>
+  <link rel="stylesheet" href="ladder.css" />
+</head>
+<body>
+  <div id="cpos-ladder-app">
+    <header class="cpos-ladder-hdr">
+      <div class="cpos-ladder-brand">
+        <span class="cpos-ladder-badge">CPOS</span>
+        <div>
+          <div class="cpos-ladder-title">Practice Ladders</div>
+          <div class="cpos-ladder-sub">Rating-bucketed Codeforces problem sets</div>
+        </div>
+      </div>
+      <form id="cpos-handle-form" class="cpos-handle-form" autocomplete="off">
+        <input id="cpos-handle-input" class="cpos-handle-input" type="text"
+               placeholder="Codeforces handle" spellcheck="false" />
+        <button id="cpos-handle-btn" class="cpos-btn" type="submit">Load</button>
+        <button id="cpos-refresh-btn" class="cpos-btn cpos-btn-ghost" type="button" title="Refresh solved status">Refresh</button>
+      </form>
+    </header>
+
+    <div id="cpos-ladder-status" class="cpos-ladder-status"></div>
+
+    <main class="cpos-ladder-main">
+      <nav id="cpos-ladder-nav" class="cpos-ladder-nav" aria-label="Ladders"></nav>
+      <section id="cpos-ladder-content" class="cpos-ladder-content"></section>
+    </main>
+
+    <footer class="cpos-ladder-ftr">
+      <span>Local-first · data from the public Codeforces API · nothing leaves your browser</span>
+    </footer>
+  </div>
+
+  <script src="themes.js"></script>
+  <script src="cpos-config.js"></script>
+  <script src="ladder.js"></script>
+</body>
+</html>

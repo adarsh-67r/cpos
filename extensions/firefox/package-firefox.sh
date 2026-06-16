@@ -12,8 +12,9 @@ fi
 rm -f cpos-companion.xpi
 zip -r cpos-companion.xpi \
   manifest.json \
-  background.js \
-  content.js \
+  *.html \
+  *.js \
+  *.css \
   icons/icon16.png \
   icons/icon48.png \
   icons/icon128.png

@@ -5,16 +5,101 @@ All notable changes to CPOS are documented here. Components are versioned indepe
 | Component | Current version | Version file |
 | --- | --- | --- |
 | Terminal app | 0.1.8 | `Cargo.toml` |
-| VS Code extension | 0.3.30 | `extensions/vscode/package.json` |
-| Browser companion (Chrome) | 0.6.14 | `extensions/chrome/manifest.json` |
-| Browser companion (Firefox) | 0.0.2 | `extensions/firefox/manifest.json` |
+| VS Code extension | 0.3.31 | `extensions/vscode/package.json` |
+| Browser companion (Chrome) | 0.10.0 | `extensions/chrome/manifest.json` |
+| Browser companion (Firefox) | 0.2.0 | `extensions/firefox/manifest.json` |
 
 Format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## [Unreleased]
+---
+
+## Browser companion (Chrome) — 0.10.0 - 2026-06-16
+
+A polish and unification pass, plus a refreshed brand.
+
+### Changed
+- **One theme palette everywhere.** A single palette now drives the popup, the recolored site, and every CPOS tool, so the whole companion stays visually consistent.
+- **New app icon** — a pixelated "C" mark, shared across the Chrome and Firefox companions, the VS Code extension, and the website.
+- Polish across the popup, profile analytics, profile compare, the in-browser editor, problemset/standings tools, and Modernize.
+- Refreshed Chrome Web Store screenshots and the website companion gallery from real product captures.
+
+### Fixed
+- **In-browser editor caret alignment.** The line box is now rounded to a whole pixel and the highlight overlay matches the textarea's `tab-size`, so the caret no longer drifts from the rendered text.
+- **Run feedback.** When a CPOS runner is reachable but too old to serve `/run`, the editor now says so (and points to updating) instead of "couldn't reach the runner". (Running needs the VS Code extension 0.3.31+ or the terminal app.)
+- **Light theme in the popup.** `color-scheme` now follows the chosen palette, so the light theme no longer renders with dark scrollbars/controls; selecting a theme (including Default) recolors the popup live without a reopen.
+
+### Removed
+- **Practice ladders.** The standalone rating-bucketed ladders page was retired; daily problem & streak, favorites, and problemset solve-status cover day-to-day practice.
+
+---
+
+## Browser companion (Chrome) — 0.9.0 - 2026-06-14
+
+The companion grows from an in-page CP environment into a full practice toolkit. All features are individually toggleable from the popup; everything stays read-only (public CF API + localhost).
 
 ### Added
-- Firefox browser companion source build in `extensions/firefox`, with temporary add-on install instructions and XPI packaging for self-signing or future AMO distribution.
+- **Profile compare (VS).** Add other handles on a CF profile and compare stats side-by-side, with a rating-history overlay chart.
+- **Contest reminders.** Desktop notifications before upcoming Codeforces contests, with a configurable lead time (uses the public `contest.list` API; requires the `notifications` permission).
+- **Daily problem & streak.** A rating-tuned "problem of the day" (deterministic per day) plus a practice streak.
+- **Favorites.** Bookmark problems with a star and view them in the popup.
+- **Problem timer.** A draggable per-problem stopwatch that persists and auto-resumes.
+- **Practice ladders.** A standalone page with rating-bucketed CF problem sets and solved-progress tracking.
+- **Problem tools.** Problem rating badge, tag-hider / training mode (reveal all or one-by-one), one-click copy of sample input, and similar-problem links.
+- **Problemset tools.** Solve-status row coloring, a hide-solved toggle, and per-problem submission counts.
+- **Standings tools.** Colorize standings rows by programming language (with a legend) and a friends-only filter.
+- **Marker & notes.** Highlight statement text in marker colors and attach notes, saved per problem (off by default).
+
+### Changed
+- **In-browser editor expanded** to a LeetCode-style workflow: run against the sample tests with a per-test diff and custom stdin, current-line highlight, bracket matching/auto-close, auto-indent, find & replace, font-size and line-wrap controls, a maximize/zen layout, and multiple editor color schemes. Submit still reuses the existing companion flow.
+
+---
+
+## Browser companion (Chrome) — 0.8.0 - 2026-06-14
+
+### Added
+- **Profile analytics revamp.** Replaces the earlier in-page analytics with charts CF doesn't show: a submission **activity heatmap**, **current & longest streak**, **solved-by-rating** and **solved-by-index** histograms, **top tags**, **verdict** and **language** donuts, and rating-history-derived insights (no duplicate of CF's own rating graph).
+- **In-browser editor.** A slide-in editor on problem pages with sample-test runs, per-problem persistence, language selection, and starter templates; submitting reuses the existing background submit injector.
+- **Code & LaTeX styling.** Dependency-free syntax highlighting for code in statements, editorials, and comments, with dark-theme-friendly math.
+- **Rating predictions.** Predicted rating deltas on contest standings using the official CF formula.
+- **Site themes + Modernize.** Recolor Codeforces/CSES with CPOS palettes and a sleek, flat, gradient-free modern restyle; the two compose.
+- **Popup hub.** A flat, themeable control panel with live CPOS connection status and an on/off switch for every feature.
+
+---
+
+## Browser companion (Chrome) — 0.7.1 - 2026-06-14
+
+### Added
+- **Modernize** — a new toggle that gives Codeforces and CSES a sleek, modern look: a system UI font, roomier spacing, rounded card-style boxes (the old corner-image artifacts are neutralised), cleaner tables/buttons/inputs, and nicer code blocks. Purely typographic/structural and gradient-free, so it composes with the optional colour theme.
+
+### Changed
+- **Profile analytics reworked.** Stop duplicating Codeforces' own rating graph; instead show charts CF doesn't: a **submission activity heatmap** (26 weeks), **solved-by-rating** and **solved-by-index** histograms, **verdict** and **language** donut charts, top tags, and an overview with acceptance rate + rank progress.
+
+---
+
+## VS Code extension — 0.3.31 - 2026-06-16
+
+### Added
+- **Local `/run` endpoint** on the capture server, for the browser companion's in-page editor "Run". It compiles the supplied code and runs it against caller-supplied sample tests using the same compile/run pipeline as Run Samples, returning per-test verdicts. Self-contained (writes only to the build dir) — capture, submit, and sample-fetch behavior are unchanged.
+
+### Changed
+- **New app icon** — the shared pixelated "C" brand mark, matching the browser companions and the website.
+
+---
+
+## Browser companion (Chrome) — 0.7.0 - 2026-06-14
+
+The companion gains a real interface and turns into a full in-browser CP environment. All additive — the existing problem capture and submit flow is unchanged.
+
+### Added
+- **Popup hub.** Clicking the toolbar icon now opens a flat, themeable control panel (no gradients; matches the VS Code panel / TUI) with live CPOS connection status and on/off switches for every feature below. Five built-in themes; the extension UI and injected site themes share one palette.
+- **Profile analytics (in-page).** On `codeforces.com/profile/<handle>`, CPOS injects an analytics panel directly into the page — rating history chart, solved-by-rating, top tags, verdict breakdown, and languages — computed from the public CF API.
+- **Rating predictions ("Carrot"-style).** On contest standings, a predicted-Δ column is added per row using the official Codeforces rating formula (and exact deltas once a contest is rated).
+- **Site theming.** Restyle Codeforces and CSES with any CPOS palette, toggled from the popup.
+- **Code & LaTeX styling.** Dependency-free syntax highlighting for code blocks in statements and editorials, with dark-theme-friendly math.
+- **In-browser editor.** A slide-in editor panel on problem pages — line-numbered, with a live syntax-highlight overlay, per-problem persistence, language selection, and starter templates. Submitting reuses the existing background submit injector (no changes to submit logic): Codeforces auto-fills and submits; CSES copies and opens the submit page. On by default. (A Monaco drop-in is wired behind a one-time `npm`-vendoring step — see `extensions/chrome/README.md`.)
+
+### Shared internals
+- `cpos-config.js` (single source of truth for feature flags + theme selection, sensible defaults) and `cpos-highlight.js` (shared self-contained highlighter used by both the page highlighter and the editor overlay). Profile analytics now render with explicit loading / empty / error states and a rank-progress bar; site theming was rewritten to be comprehensive and layout-preserving (Codeforces rating-tier handle colours are kept).
 
 ---
 
@@ -149,6 +234,21 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 - **Submit tab explosion** — submit polling now reuses the same browser tab via tracked tab IDs and gives up after a bounded number of attempts (acking the queue) instead of spawning duplicate tabs forever (#8).
+
+## Browser companion (Firefox) — 0.2.0 - 2026-06-14
+
+### Added
+- **Full feature parity with the Chrome companion.** The expanded practice and on-page tooling lands on Firefox: profile analytics, profile compare (VS), the in-browser editor, rating predictions, contest reminders, daily problem & streak, favorites, problem timer, practice ladders, problemset/standings tools, problem tools, marker & notes, code & LaTeX styling, and site themes + Modernize. As on Chrome, every feature is individually toggleable from the popup.
+- Requests the `notifications` permission for contest reminders. Temporary source installs are removed on Firefox restart; reload the manifest to restore them.
+
+---
+
+## Browser companion (Firefox) — 0.1.0 - 2026-06-14
+
+### Added
+- **Initial full-feature port.** Firefox graduates from capture/submit-only to the same popup hub and feature set as the Chrome 0.8.0 companion, sharing the read-only CF API + localhost design.
+
+---
 
 ## Browser companion (Firefox) — 0.0.2 - 2026-06-06
 

@@ -935,6 +935,18 @@ code {
   align-items: center;
 }
 
+.split-feature + .split-feature {
+  margin-top: 30px;
+}
+
+.split-feature.reverse {
+  grid-template-columns: minmax(300px, 0.75fr) minmax(0, 1.25fr);
+}
+
+.split-feature.reverse .eco-shot {
+  order: 2;
+}
+
 .split-copy {
   padding: 6px 0;
 }
@@ -1080,8 +1092,13 @@ code {
   }
 
   .hero-grid,
-  .split-feature {
+  .split-feature,
+  .split-feature.reverse {
     grid-template-columns: minmax(0, 1fr);
+  }
+
+  .split-feature.reverse .eco-shot {
+    order: -1;
   }
 
   .hero-shot {
@@ -1203,10 +1220,20 @@ code {
 
 .foot-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
-  gap: 48px;
+  grid-template-columns: minmax(0, 1.5fr) minmax(0, 0.9fr);
+  gap: 56px;
+  align-items: start;
   padding-top: 56px;
-  padding-bottom: 40px;
+  padding-bottom: 44px;
+}
+
+.foot-nav {
+  justify-self: end;
+  text-align: right;
+}
+
+.foot-nav .eyebrow {
+  margin-bottom: 18px;
 }
 
 .foot-support h2 {
@@ -1233,9 +1260,8 @@ code {
 .foot-links {
   display: flex;
   flex-direction: column;
+  align-items: flex-end;
   gap: 12px;
-  align-content: start;
-  justify-self: end;
 }
 
 .foot-links a {
@@ -1276,8 +1302,13 @@ code {
     padding-top: 44px;
   }
 
-  .foot-links {
+  .foot-nav {
     justify-self: start;
+    text-align: left;
+  }
+
+  .foot-links {
+    align-items: flex-start;
   }
 
   .foot-base {

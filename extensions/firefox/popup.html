@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<link rel="stylesheet" href="popup.css" />
+<link rel="stylesheet" href="contests.css" />
+<link rel="stylesheet" href="practice.css" />
+</head>
+<body data-theme="purple">
+  <header class="hdr">
+    <div class="brand">
+      <img src="icons/icon48.png" alt="" class="logo" />
+      <div>
+        <div class="title">CPOS</div>
+        <div class="sub">Competitive Programming OS</div>
+      </div>
+    </div>
+    <div class="conn" id="conn" title="CPOS app connection">
+      <span class="dot" id="connDot"></span><span id="connText">checking…</span>
+    </div>
+  </header>
+
+  <section class="card">
+    <div class="card-h">Tools</div>
+    <div class="row toggle" data-feature="profile">
+      <span class="ic">▤</span>
+      <span class="rtxt"><b>Profile analytics</b><small>extra charts on Codeforces profiles</small></span>
+      <label class="sw"><input type="checkbox" data-feature-input="profile" /><span></span></label>
+    </div>
+    <div class="row toggle" data-feature="ide">
+      <span class="ic">⌨</span>
+      <span class="rtxt"><b>In-browser editor</b><small>code & submit on the problem page</small></span>
+      <label class="sw"><input type="checkbox" data-feature-input="ide" /><span></span></label>
+    </div>
+    <div class="row toggle" data-feature="carrot">
+      <span class="ic">★</span>
+      <span class="rtxt"><b>Rating predictions</b><small>predicted deltas on standings</small></span>
+      <label class="sw"><input type="checkbox" data-feature-input="carrot" /><span></span></label>
+    </div>
+    <div class="row toggle" data-feature="highlight">
+      <span class="ic">❮❯</span>
+      <span class="rtxt"><b>Code & LaTeX styling</b><small>highlight statements & editorials</small></span>
+      <label class="sw"><input type="checkbox" data-feature-input="highlight" /><span></span></label>
+    </div>
+    <div class="row toggle" data-feature="problemTools">
+      <span class="ic">◎</span>
+      <span class="rtxt"><b>Problem tools</b><small>rating badge, tag hider & sample copy</small></span>
+      <label class="sw"><input type="checkbox" data-feature-input="problemTools" /><span></span></label>
+    </div>
+    <div class="row toggle" data-feature="problemsetTools">
+      <span class="ic">▦</span>
+      <span class="rtxt"><b>Problemset solve-status</b><small>color rows by solved / attempted</small></span>
+      <label class="sw"><input type="checkbox" data-feature-input="problemsetTools" /><span></span></label>
+    </div>
+    <div class="row toggle" data-feature="annotate">
+      <span class="ic">✎</span>
+      <span class="rtxt"><b>Marker & notes</b><small>highlight & annotate statement text</small></span>
+      <label class="sw"><input type="checkbox" data-feature-input="annotate" /><span></span></label>
+    </div>
+    <div class="row toggle" data-feature="standingsTools">
+      <span class="ic">▦</span>
+      <span class="rtxt"><b>Standings tools</b><small>color rows by language; friends-only filter</small></span>
+      <label class="sw"><input type="checkbox" data-feature-input="standingsTools" /><span></span></label>
+    </div>
+    <div class="row toggle" data-feature="contestReminders">
+      <span class="ic">⏰</span>
+      <span class="rtxt"><b>Contest reminders</b><small>notify before upcoming CF contests</small></span>
+      <label class="sw"><input type="checkbox" data-feature-input="contestReminders" /><span></span></label>
+    </div>
+    <div class="row toggle" data-feature="dailyProblem">
+      <span class="ic">◐</span>
+      <span class="rtxt"><b>Daily problem & streak</b><small>a problem of the day for your rating</small></span>
+      <label class="sw"><input type="checkbox" data-feature-input="dailyProblem" /><span></span></label>
+    </div>
+    <div class="row toggle" data-feature="favorites">
+      <span class="ic">★</span>
+      <span class="rtxt"><b>Favorites</b><small>bookmark problems with a star</small></span>
+      <label class="sw"><input type="checkbox" data-feature-input="favorites" /><span></span></label>
+    </div>
+    <div class="row toggle" data-feature="problemTimer">
+      <span class="ic">⏱</span>
+      <span class="rtxt"><b>Problem timer</b><small>per-problem stopwatch that auto-resumes</small></span>
+      <label class="sw"><input type="checkbox" data-feature-input="problemTimer" /><span></span></label>
+    </div>
+    <div class="row toggle" data-feature="profileCompare">
+      <span class="ic">⚔</span>
+      <span class="rtxt"><b>Profile compare (VS)</b><small>side-by-side stats & rating overlay</small></span>
+      <label class="sw"><input type="checkbox" data-feature-input="profileCompare" /><span></span></label>
+    </div>
+    <button class="row toggle" id="cpos-open-ladder" type="button">
+      <span class="ic">▥</span>
+      <span class="rtxt"><b>Practice ladders</b><small>rating-bucketed CF problem sets · opens a tab</small></span>
+      <span class="ic">›</span>
+    </button>
+  </section>
+
+  <section class="card">
+    <div class="card-h">Contests</div>
+    <div id="cpos-contests-section"></div>
+  </section>
+
+  <section class="card">
+    <div class="card-h">Practice</div>
+    <div id="cpos-practice-section"></div>
+  </section>
+
+  <section class="card">
+    <div class="card-h">Appearance <small id="siteHint"></small></div>
+    <div class="row toggle" data-feature="modernize">
+      <span class="ic">✦</span>
+      <span class="rtxt"><b>Modernize</b><small>sleek font, spacing & cards for CF / CSES</small></span>
+      <label class="sw"><input type="checkbox" data-feature-input="modernize" /><span></span></label>
+    </div>
+    <div class="row toggle" data-feature="siteTheme">
+      <span class="ic">◑</span>
+      <span class="rtxt"><b>Recolor the site</b><small>apply your CPOS palette to CF / CSES</small></span>
+      <label class="sw"><input type="checkbox" data-feature-input="siteTheme" /><span></span></label>
+    </div>
+    <div class="swatches" id="siteSwatches"></div>
+  </section>
+
+  <section class="card">
+    <div class="card-h">Settings</div>
+    <label class="field">
+      <span>Extension theme</span>
+      <div class="swatches" id="uiSwatches"></div>
+    </label>
+  </section>
+
+  <footer class="ftr">
+    <a href="https://github.com/Soham109/cpos" target="_blank" rel="noopener">GitHub</a>
+    <span class="ver" id="ver"></span>
+  </footer>
+
+  <script src="themes.js"></script>
+  <script src="cpos-config.js"></script>
+  <script src="popup.js"></script>
+  <script src="contests-ui.js"></script>
+  <script src="practice-ui.js"></script>
+</body>
+</html>
