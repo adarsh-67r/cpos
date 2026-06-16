@@ -38,7 +38,7 @@ A Codeforces & CSES companion: capture samples to CPOS, an in-browser editor, pr
 
 ### Description
 ```
-CPOS Companion is a local-first companion for Codeforces and CSES. It connects your browser to CPOS (the VS Code extension and terminal app) and layers optional practice and on-page tooling over the judge sites. No accounts, no servers — everything runs on your machine. Every feature toggles individually from the popup.
+CPOS Companion is a local-first companion for Codeforces and CSES. It connects your browser to CPOS (the VS Code extension and terminal app) and layers optional practice and on-page tooling over the judge sites. No accounts, no servers — everything runs on your machine, and every feature toggles individually from the popup.
 
 CAPTURE & SUBMIT
 • Open a Codeforces or CSES problem and it captures the public sample tests for CPOS on your machine
@@ -48,24 +48,29 @@ CAPTURE & SUBMIT
 ON THE PROBLEM PAGE
 • In-browser editor — a LeetCode-style editor: run against the samples with a per-test diff and custom stdin, then submit in place (running compiles on the local CPOS runner; editing works on its own)
 • Code & LaTeX styling for statements, editorials and comments
-• Problem tools — rating badge, tag-hider/training mode, one-click sample copy, similar problems, and a per-problem timer
+• Problem tools — rating badge, tag-hider / training mode, one-click sample copy, similar problems, and a per-problem timer
 
 PRACTICE & ANALYTICS
-• Profile analytics — activity heatmap, streaks, solved-by-rating/index, tags, verdict and language charts (public CF API, read-only)
+• Profile analytics — activity heatmap, streaks, solved-by-rating / index, tags, verdict and language charts (public CF API, read-only)
 • Profile compare (VS) — stack handles side by side with a rating-history overlay
 • Daily problem & streak, favorites, problemset solve-status, standings tools, and rating predictions
 • Contest reminders before upcoming Codeforces rounds
 
 APPEARANCE
 • Modernize — a sleek font, calmer spacing and cards for Codeforces & CSES
-• One theme palette shared across the popup, the site and every CPOS tool
+• One theme palette shared across the popup, the site, and every CPOS tool
+
+REQUIRES
+• The CPOS VS Code extension and/or terminal app running locally for capture, run, and submit
+• You must be logged in to Codeforces or CSES in this browser for submissions
 
 PRIVACY
 • No analytics, no accounts, no cloud servers
-• Local communication is to 127.0.0.1 only; the rest is the public Codeforces API and the sites you already use
-• See the privacy policy in the repository for full details
+• Local communication is to 127.0.0.1 only; everything else is the public Codeforces API and the sites you already use
+• Full privacy policy: https://github.com/Soham109/cpos/blob/main/extensions/chrome/PRIVACY.md
 
 Open source: https://github.com/Soham109/cpos
+VS Code extension: https://marketplace.visualstudio.com/items?itemName=sohamaggarwal.cpos-vscode
 ```
 
 ### Single purpose
@@ -79,7 +84,7 @@ A companion for the competitive-programming judges Codeforces and CSES: it captu
 
 ### Host permission: `http://127.0.0.1:27121/*` and `http://127.0.0.1:27122/*`
 ```
-CPOS runs locally on the user's machine. The extension sends captured problem samples and receives pending submissions only via localhost HTTP. No data is sent to external servers.
+CPOS runs locally on the user's machine (terminal app and VS Code extension). Captured samples, the user's code for the in-editor "Run", and pending submissions are sent only to these localhost endpoints. No data is sent to external servers.
 ```
 
 ### Host permission: `https://codeforces.com/*`
