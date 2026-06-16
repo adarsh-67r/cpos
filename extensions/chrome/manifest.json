@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "CPOS Companion",
   "version": "0.10.0",
-  "description": "Codeforces & CSES companion: capture & submit, profile analytics & compare, rating predictions, contest reminders, problem tools (rating, tag-hider, sample copy, timer, favorites), daily problem & streak, standings tools, marker & notes, one-palette site themes, code highlighting, and a LeetCode-style in-browser editor. Local-first.",
+  "description": "Codeforces & CSES companion: capture & submit, in-browser editor, profile analytics, themes, and practice tools. Local-first.",
   "icons": {
     "16": "icons/icon16.png",
     "48": "icons/icon48.png",
