@@ -1,7 +1,44 @@
 <svg width="128" height="128" viewBox="0 0 128 128" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <rect width="128" height="128" rx="24" fill="#0d0d14"/>
-  <rect x="1" y="1" width="126" height="126" rx="23" stroke="#3a3a52" stroke-width="2"/>
-  <path d="M44 44L28 64L44 84" stroke="#b48eff" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="M84 44L100 64L84 84" stroke="#b48eff" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="M76 32L52 96" stroke="#7c5cbf" stroke-width="8" stroke-linecap="round"/>
+  <!-- CPOS mark: a pixelated "C" in warm white on an Anthropic-style near-black tile. -->
+  <rect width="128" height="128" rx="28" fill="#0d0d0f"/>
+  <rect x="1.5" y="1.5" width="125" height="125" rx="26.5" stroke="#26262e" stroke-width="3"/>
+  <g fill="#faf9f5">
+    <!-- row 0 -->
+    <rect x="34" y="22" width="11" height="11" rx="1.5"/>
+    <rect x="46" y="22" width="11" height="11" rx="1.5"/>
+    <rect x="58" y="22" width="11" height="11" rx="1.5"/>
+    <rect x="70" y="22" width="11" height="11" rx="1.5"/>
+    <rect x="82" y="22" width="11" height="11" rx="1.5"/>
+    <!-- row 1 -->
+    <rect x="22" y="34" width="11" height="11" rx="1.5"/>
+    <rect x="34" y="34" width="11" height="11" rx="1.5"/>
+    <rect x="46" y="34" width="11" height="11" rx="1.5"/>
+    <rect x="58" y="34" width="11" height="11" rx="1.5"/>
+    <rect x="70" y="34" width="11" height="11" rx="1.5"/>
+    <rect x="82" y="34" width="11" height="11" rx="1.5"/>
+    <rect x="94" y="34" width="11" height="11" rx="1.5"/>
+    <!-- row 2 -->
+    <rect x="22" y="46" width="11" height="11" rx="1.5"/>
+    <rect x="34" y="46" width="11" height="11" rx="1.5"/>
+    <!-- row 3 -->
+    <rect x="22" y="58" width="11" height="11" rx="1.5"/>
+    <rect x="34" y="58" width="11" height="11" rx="1.5"/>
+    <!-- row 4 -->
+    <rect x="22" y="70" width="11" height="11" rx="1.5"/>
+    <rect x="34" y="70" width="11" height="11" rx="1.5"/>
+    <!-- row 5 -->
+    <rect x="22" y="82" width="11" height="11" rx="1.5"/>
+    <rect x="34" y="82" width="11" height="11" rx="1.5"/>
+    <rect x="46" y="82" width="11" height="11" rx="1.5"/>
+    <rect x="58" y="82" width="11" height="11" rx="1.5"/>
+    <rect x="70" y="82" width="11" height="11" rx="1.5"/>
+    <rect x="82" y="82" width="11" height="11" rx="1.5"/>
+    <rect x="94" y="82" width="11" height="11" rx="1.5"/>
+    <!-- row 6 -->
+    <rect x="34" y="94" width="11" height="11" rx="1.5"/>
+    <rect x="46" y="94" width="11" height="11" rx="1.5"/>
+    <rect x="58" y="94" width="11" height="11" rx="1.5"/>
+    <rect x="70" y="94" width="11" height="11" rx="1.5"/>
+    <rect x="82" y="94" width="11" height="11" rx="1.5"/>
+  </g>
 </svg>

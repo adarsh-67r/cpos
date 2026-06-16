@@ -33,33 +33,44 @@ CPOS Companion
 
 ### Summary (132 chars max)
 ```
-Capture Codeforces & CSES samples and submit from CPOS in VS Code. Sends data only to CPOS on your computer (localhost).
+A Codeforces & CSES companion: capture samples to CPOS, an in-browser editor, profile analytics, themes, and practice tools. Local-first.
 ```
 
 ### Description
 ```
-CPOS Companion connects your browser to CPOS — a competitive programming workflow for VS Code and the CPOS desktop app.
+CPOS Companion is a local-first companion for Codeforces and CSES. It connects your browser to CPOS (the VS Code extension and terminal app) and layers optional practice and on-page tooling over the judge sites. No accounts, no servers — everything runs on your machine. Every feature toggles individually from the popup.
 
-WHAT IT DOES
-• When you open a Codeforces or CSES problem, captures public sample tests and sends them to CPOS on your machine
-• When you click Submit in CPOS (VS Code or TUI), autofills the submit page in your logged-in browser tab
-• On CSES problem lists, can sync solved/attempted status to CPOS when you choose to sync
+CAPTURE & SUBMIT
+• Open a Codeforces or CSES problem and it captures the public sample tests for CPOS on your machine
+• Submit from CPOS (VS Code or terminal) and it autofills the submit page in your logged-in tab, picking the newest matching compiler
+• Optionally syncs CSES solved/attempted status when you choose to sync
 
-REQUIRES
-• CPOS VS Code extension and/or CPOS desktop app running locally
-• You must be logged in to Codeforces or CSES in this browser for submissions
+ON THE PROBLEM PAGE
+• In-browser editor — a LeetCode-style editor: run against the samples with a per-test diff and custom stdin, then submit in place (running compiles on the local CPOS runner; editing works on its own)
+• Code & LaTeX styling for statements, editorials and comments
+• Problem tools — rating badge, tag-hider/training mode, one-click sample copy, similar problems, and a per-problem timer
+
+PRACTICE & ANALYTICS
+• Profile analytics — activity heatmap, streaks, solved-by-rating/index, tags, verdict and language charts (public CF API, read-only)
+• Profile compare (VS) — stack handles side by side with a rating-history overlay
+• Daily problem & streak, favorites, problemset solve-status, standings tools, and rating predictions
+• Contest reminders before upcoming Codeforces rounds
+
+APPEARANCE
+• Modernize — a sleek font, calmer spacing and cards for Codeforces & CSES
+• One theme palette shared across the popup, the site and every CPOS tool
 
 PRIVACY
 • No analytics, no accounts, no cloud servers
-• All communication is to 127.0.0.1 on your computer only
-• See privacy policy in the repository for full details
+• Local communication is to 127.0.0.1 only; the rest is the public Codeforces API and the sites you already use
+• See the privacy policy in the repository for full details
 
 Open source: https://github.com/Soham109/cpos
 ```
 
 ### Single purpose
 ```
-Capture competitive programming problem samples from Codeforces and CSES and relay them to the local CPOS editor on the user's computer; optionally autofill submit forms when the user submits from CPOS.
+A companion for the competitive-programming judges Codeforces and CSES: it captures problem samples to the local CPOS editor and enhances those two sites in place with practice, analytics and editing tools. Every feature operates only on Codeforces, CSES, and the local CPOS endpoint.
 ```
 
 ---
@@ -73,7 +84,7 @@ CPOS runs locally on the user's machine. The extension sends captured problem sa
 
 ### Host permission: `https://codeforces.com/*`
 ```
-Reads public problem and sample data from Codeforces pages the user opens, and autofills the submit form when the user submits from CPOS while logged into Codeforces in this browser.
+Reads public problem and sample data from Codeforces pages the user opens, and autofills the submit form when the user submits from CPOS while logged into Codeforces in this browser. The optional on-page tools (profile analytics, profile compare, rating predictions, problemset/standings helpers) read only public Codeforces pages and the public Codeforces API; they add charts and styling in place and send nothing to external servers.
 ```
 
 ### Host permission: `https://cses.fi/*`
@@ -96,6 +107,16 @@ Finds an existing Codeforces/CSES tab or opens one when the user submits from CP
 Chrome may suspend the extension's background worker when idle. CPOS uses a local alarm every 30 seconds solely to wake that worker and check whether the user queued a submission from CPOS (VS Code or desktop app) on localhost. The alarm does not read browsing data, does not contact external servers, and does not run unless the extension is installed.
 ```
 
+### Permission: `storage`
+```
+Stores the user's own settings locally in chrome.storage.local: which features are toggled on, the chosen theme/palette, favorites, problem-timer state, daily-problem streak, and contest-reminder preferences. This data never leaves the device and is not transmitted anywhere.
+```
+
+### Permission: `notifications`
+```
+Used only by the optional Contest reminders feature (off until the user enables it). Shows a local desktop notification before upcoming Codeforces contests, using the contest schedule from the public Codeforces contest.list API. No notification content is sent off-device.
+```
+
 ---
 
 ## Data usage certification
@@ -110,12 +131,18 @@ When asked whether you collect or use user data:
 
 ## Screenshots
 
-Chrome requires at least one screenshot (1280×800 or 640×400). Capture:
+Chrome requires at least one screenshot (1280×800 or 640×400). Five ready-to-upload
+slides live in [`store/`](store/) (1280×800, not included in the zip):
 
-1. A Codeforces problem page with the green “CPOS · captured …” toast
-2. VS Code CPOS panel with loaded samples (optional second screenshot)
+1. **`screenshot-1.png`** — One hub: the popup with every feature toggle
+2. **`screenshot-2.png`** — In-browser editor: code and submit on the problem page
+3. **`screenshot-3.png`** — Profile analytics: heatmap, streaks, tags, verdicts
+4. **`screenshot-4.png`** — Profile compare (VS): handles side by side with a rating overlay
+5. **`screenshot-5.png`** — Modernize: a cleaner Codeforces with solve-status coloring
 
-Store assets live in `store/` after you add screenshots (not included in the zip).
+Regenerate them from the raw product screenshots with
+`python tools/make_companion_slides.py` (also writes the website gallery in
+`docs/shots/`). The same five files are mirrored in `extensions/firefox/store/`.
 
 ---
 

@@ -6,14 +6,30 @@ All notable changes to CPOS are documented here. Components are versioned indepe
 | --- | --- | --- |
 | Terminal app | 0.1.8 | `Cargo.toml` |
 | VS Code extension | 0.3.31 | `extensions/vscode/package.json` |
-| Browser companion (Chrome) | 0.9.0 | `extensions/chrome/manifest.json` |
+| Browser companion (Chrome) | 0.10.0 | `extensions/chrome/manifest.json` |
 | Browser companion (Firefox) | 0.2.0 | `extensions/firefox/manifest.json` |
 
 Format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## [Unreleased]
+---
 
-_Nothing yet._
+## Browser companion (Chrome) — 0.10.0 - 2026-06-16
+
+A polish and unification pass, plus a refreshed brand.
+
+### Changed
+- **One theme palette everywhere.** A single palette now drives the popup, the recolored site, and every CPOS tool, so the whole companion stays visually consistent.
+- **New app icon** — a pixelated "C" mark, shared across the Chrome and Firefox companions, the VS Code extension, and the website.
+- Polish across the popup, profile analytics, profile compare, the in-browser editor, problemset/standings tools, and Modernize.
+- Refreshed Chrome Web Store screenshots and the website companion gallery from real product captures.
+
+### Fixed
+- **In-browser editor caret alignment.** The line box is now rounded to a whole pixel and the highlight overlay matches the textarea's `tab-size`, so the caret no longer drifts from the rendered text.
+- **Run feedback.** When a CPOS runner is reachable but too old to serve `/run`, the editor now says so (and points to updating) instead of "couldn't reach the runner". (Running needs the VS Code extension 0.3.31+ or the terminal app.)
+- **Light theme in the popup.** `color-scheme` now follows the chosen palette, so the light theme no longer renders with dark scrollbars/controls; selecting a theme (including Default) recolors the popup live without a reopen.
+
+### Removed
+- **Practice ladders.** The standalone rating-bucketed ladders page was retired; daily problem & streak, favorites, and problemset solve-status cover day-to-day practice.
 
 ---
 
@@ -60,10 +76,13 @@ The companion grows from an in-page CP environment into a full practice toolkit.
 
 ---
 
-## VS Code extension — 0.3.31 - 2026-06-14
+## VS Code extension — 0.3.31 - 2026-06-16
 
 ### Added
 - **Local `/run` endpoint** on the capture server, for the browser companion's in-page editor "Run". It compiles the supplied code and runs it against caller-supplied sample tests using the same compile/run pipeline as Run Samples, returning per-test verdicts. Self-contained (writes only to the build dir) — capture, submit, and sample-fetch behavior are unchanged.
+
+### Changed
+- **New app icon** — the shared pixelated "C" brand mark, matching the browser companions and the website.
 
 ---
 

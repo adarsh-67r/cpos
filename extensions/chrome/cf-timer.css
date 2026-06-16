@@ -34,6 +34,15 @@
 }
 #cpos-timer[data-dragging="1"] .cpos-timer-grip { cursor: grabbing; }
 
+#cpos-timer .cpos-timer-label {
+  color: var(--dim, #8a86a3);
+  font-family: ui-sans-serif, -apple-system, "Segoe UI", Roboto, sans-serif;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
 #cpos-timer .cpos-timer-time {
   min-width: 52px;
   text-align: center;

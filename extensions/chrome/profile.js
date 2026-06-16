@@ -68,8 +68,8 @@
       const pct = Math.max(3, Math.round((r.value / max) * 100));
       const color = colorFn ? colorFn(r) : "var(--accent)";
       const title = r.title ? ' title="' + esc(r.title) + '"' : "";
-      return '<div class="cpos-bar"' + title + '><span class="lbl" title="' + esc(r.label) + '">' + esc(r.label) + "</span>" +
-        '<span class="track"><span class="fill" style="width:' + pct + "%;background:" + color + '"></span></span>' +
+      return '<div class="cpos-bar" style="--bar-clr:' + color + '"' + title + '><span class="lbl" title="' + esc(r.label) + '">' + esc(r.label) + "</span>" +
+        '<span class="track"><span class="fill" style="width:' + pct + '%"></span></span>' +
         '<span class="num">' + nf(r.value) + "</span></div>";
     }).join("") + "</div>";
   }
@@ -297,12 +297,20 @@
     return '<div class="cpos-stat"><b' + (color ? ' style="color:' + color + '"' : "") + ">" + esc(value) + "</b>" +
       '<span>' + esc(label) + "</span>" + (sub ? '<i class="cpos-stat-sub">' + esc(sub) + "</i>" : "") + "</div>";
   }
-  function fact(label, value, color) {
-    return '<div class="cpos-fact"><span class="fl">' + esc(label) + "</span>" +
+  // A fact row: label (+ optional one-line hint) on the left, value on the right.
+  // `accent` tints a thin leading rule so the list scans as grouped, not flat.
+  function fact(label, value, color, hint, accent) {
+    const a = accent || color || "var(--accent)";
+    return '<div class="cpos-fact" style="--fa:' + a + '">' +
+      '<span class="fl"><span class="fl-t">' + esc(label) + "</span>" +
+      (hint ? '<span class="fl-h">' + esc(hint) + "</span>" : "") + "</span>" +
       '<span class="fv"' + (color ? ' style="color:' + color + '"' : "") + ">" + esc(value) + "</span></div>";
   }
 
-  async function applyTheme(root) { if (!T || !C) return; T.applyTheme(root, await C.activeThemeId()); }
+  async function applyTheme(root) {
+    if (!T || !C) return;
+    T.applyTheme(root, await (C.activePageThemeId ? C.activePageThemeId() : C.activeThemeId()));
+  }
 
   function insertPanel(node) {
     const anchor = document.querySelector(".userbox") || document.querySelector("#pageContent .roundbox") || document.querySelector("#pageContent");
@@ -345,8 +353,15 @@
     head.querySelector(".spin")?.remove();
     grid.innerHTML = "";
 
+    const mainCol = el("div", "cpos-col cpos-col-main");
+    const sideCol = el("div", "cpos-col cpos-col-side");
+    grid.appendChild(mainCol);
+    grid.appendChild(sideCol);
+    const main = (cls, title, bodyHtml) => mainCol.appendChild(panel(cls, title, bodyHtml));
+    const side = (cls, title, bodyHtml) => sideCol.appendChild(panel(cls, title, bodyHtml));
+
     if ((!info || info._err) && (!submissions || submissions._err)) {
-      grid.appendChild(panel("span3", "Error", '<div class="cpos-empty">Could not reach the Codeforces API (' +
+      mainCol.appendChild(panel("", "Error", '<div class="cpos-empty">Could not reach the Codeforces API (' +
         esc((info && info._err) || (submissions && submissions._err) || "network error") + '). Try reloading the page.</div>'));
       return;
     }
@@ -361,12 +376,12 @@
     const streak = streaks(st.byDay);
 
     if (!subs.length && !ok) {
-      grid.appendChild(panel("span3", "No data", '<div class="cpos-empty">No submissions found for <b>' + esc(handle) + "</b>.</div>"));
+      mainCol.appendChild(panel("", "No data", '<div class="cpos-empty">No submissions found for <b>' + esc(handle) + "</b>.</div>"));
       return;
     }
 
     // 1) Overview tiles
-    grid.appendChild(panel("span2", "Overview",
+    main("span2", "Overview",
       '<div class="cpos-stats">' +
       stat(nf(rating), "rating", ratingColor(rating), rankTitle) +
       stat(nf(maxRating), "max rating", ratingColor(maxRating)) +
@@ -374,17 +389,17 @@
       stat(nf(st.totalSubs), "submissions") +
       stat(st.accept + "%", "acceptance", "var(--ok)", nf(st.acCount) + " AC") +
       stat(nf(rf.contests), "contests") +
-      "</div>"));
+      "</div>");
 
     // 2) Rank progress
-    grid.appendChild(panel("", "Rank progress", rankProgress(rating)));
+    side("", "Rank progress", rankProgress(rating));
 
     // 3) Activity heatmap + streaks
-    grid.appendChild(panel("span3", "Submission activity",
+    main("span3", "Submission activity",
       heatmap(st.byDay) +
       '<div class="cpos-streaks">' +
       '<span><b>' + streak.current + "</b> day current streak</span>" +
-      '<span><b>' + streak.longest + "</b> day longest streak</span></div>"));
+      '<span><b>' + streak.longest + "</b> day longest streak</span></div>");
 
     // 4) Solved by rating histogram (bucketed to nearest 100, tier-colored)
     const ratingBuckets = {};
@@ -392,39 +407,50 @@
       const b = Math.floor(Number(r) / 100) * 100;
       ratingBuckets[b] = (ratingBuckets[b] || 0) + v;
     }
-    grid.appendChild(panel("span2", "Solved by problem rating",
-      bars(topRows(ratingBuckets, 0, true), (r) => ratingColor(Number(r.label)), 54)));
+    main("span2", "Solved by problem rating",
+      bars(topRows(ratingBuckets, 0, true), (r) => ratingColor(Number(r.label)), 54));
 
     // 5) Verdicts donut
-    grid.appendChild(panel("", "Verdicts",
-      donut(topRows(st.verdicts, 8).map((r) => ({ label: prettyVerdict(r.label), value: r.value })), verdictColor)));
+    side("", "Verdicts",
+      donut(topRows(st.verdicts, 8).map((r) => ({ label: prettyVerdict(r.label), value: r.value })), verdictColor));
 
     // 6) Top tags
-    grid.appendChild(panel("span2", "Top tags solved (distinct problems)",
-      bars(topRows(st.tagCount, 14), null, 130)));
+    main("span2", "Top tags solved (distinct problems)",
+      bars(topRows(st.tagCount, 14), null, 130));
 
     // 7) Languages donut
-    grid.appendChild(panel("", "Languages used", donut(topRows(st.langs, 6))));
+    side("", "Languages used", donut(topRows(st.langs, 6)));
 
     // 8) Solved by index
-    grid.appendChild(panel("span2", "Solved by problem index",
+    main("span2", "Solved by problem index",
       bars(topRows(st.byIndex, 0, false).sort((a, b) => a.label.localeCompare(b.label)),
-        (r) => PALETTE[Math.max(0, r.label.charCodeAt(0) - 65) % PALETTE.length], 30)));
+        (r) => PALETTE[Math.max(0, r.label.charCodeAt(0) - 65) % PALETTE.length], 30));
 
-    // 9) Insights panel (derived accurate facts)
-    const span = (st.firstTs && st.lastTs) ? Math.max(1, Math.round((st.lastTs - st.firstTs) / 86400000)) : 0;
+    // 9) Insights panel (derived accurate facts). Each value comes straight from
+    //    computeStats()/ratingFacts(); hints add context, units stay explicit.
+    const spanDays = (st.firstTs && st.lastTs) ? Math.max(1, Math.round((st.lastTs - st.firstTs) / 86400000)) : 0;
+    const spanText = spanDays >= 365 ? (spanDays / 365).toFixed(1) + " yr" : spanDays >= 1 ? spanDays + " days" : "—";
     const hardest = st.hardest;
+    const hardestName = hardest && hardest.name ? hardest.name : "";
     const insights =
-      fact("Avg attempts / solved", st.solvedCount ? st.avgAttempts.toFixed(2) : "—") +
-      fact("Attempted but unsolved", nf(st.attemptedUnsolved), st.attemptedUnsolved > 0 ? "var(--warn)" : "var(--dim)") +
-      fact("Hardest solved", hardest ? hardest.rating + " · " + (hardest.index || "") : "—", hardest ? ratingColor(hardest.rating) : "var(--dim)") +
-      fact("Best contest rank", rf.bestRank != null ? "#" + nf(rf.bestRank) : "—", "var(--cf)") +
-      fact("Max rating gain", rf.maxGain != null ? (rf.maxGain >= 0 ? "+" : "") + rf.maxGain : "—", rf.maxGain != null && rf.maxGain >= 0 ? "var(--ok)" : "var(--bad)") +
-      fact("Biggest drop", rf.maxDrop != null ? rf.maxDrop : "—", rf.maxDrop != null && rf.maxDrop < 0 ? "var(--bad)" : "var(--dim)") +
-      fact("Rating volatility", rf.volatility != null ? "±" + rf.volatility : "—") +
-      fact("Active span", span ? span + " days" : "—") +
-      fact("First submission", st.firstTs ? ymd(new Date(st.firstTs)) : "—");
-    grid.appendChild(panel("", "Insights", '<div class="cpos-facts">' + insights + "</div>"));
+      fact("Avg attempts / solved", st.solvedCount ? st.avgAttempts.toFixed(2) : "—",
+        st.avgAttempts > 2 ? "var(--warn)" : "var(--ok)", "submissions to first AC", "var(--accent)") +
+      fact("Attempted but unsolved", nf(st.attemptedUnsolved),
+        st.attemptedUnsolved > 0 ? "var(--warn)" : "var(--ok)", "distinct problems with no AC", "var(--warn)") +
+      fact("Hardest solved", hardest ? nf(hardest.rating) + (hardest.index ? " · " + hardest.index : "") : "—",
+        hardest ? ratingColor(hardest.rating) : "var(--dim)", hardestName, "var(--cf)") +
+      fact("Best contest rank", rf.bestRank != null ? "#" + nf(rf.bestRank) : "—",
+        "var(--cf)", rf.bestRank != null ? rf.bestRankContest : "", "var(--cf)") +
+      fact("Max rating gain", rf.maxGain != null ? (rf.maxGain >= 0 ? "+" : "") + nf(rf.maxGain) : "—",
+        rf.maxGain != null && rf.maxGain >= 0 ? "var(--ok)" : "var(--bad)",
+        rf.maxGain != null ? rf.maxGainContest : "", "var(--ok)") +
+      fact("Biggest rating drop", rf.maxDrop != null ? nf(rf.maxDrop) : "—",
+        rf.maxDrop != null && rf.maxDrop < 0 ? "var(--bad)" : "var(--dim)", "worst single contest", "var(--bad)") +
+      fact("Rating volatility", rf.volatility != null ? "±" + nf(rf.volatility) : "—",
+        "var(--fg)", "std-dev of contest deltas", "var(--accent)") +
+      fact("Active span", spanText,
+        "var(--fg)", st.firstTs ? "since " + ymd(new Date(st.firstTs)) : "", "var(--accent)");
+    side("", "Insights", '<div class="cpos-facts">' + insights + "</div>");
 
     // 10) Submissions over time (monthly, last ~18 months)
     const months = Object.keys(st.byMonth).sort();
@@ -432,7 +458,7 @@
       const [y, mo] = m.split("-");
       return { label: MONTHS[Number(mo) - 1] + " '" + y.slice(2), value: st.byMonth[m] };
     });
-    grid.appendChild(panel("span2", "Submissions over time (monthly)", bars(recent, () => "var(--cf)", 56)));
+    main("span2", "Submissions over time (monthly)", bars(recent, () => "var(--cf)", 56));
   }
 
   function remove() { document.getElementById(ROOT_ID)?.remove(); }

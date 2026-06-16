@@ -178,24 +178,44 @@
 
   // ── overlaid rating-history line chart (dependency-free SVG) ────────────────
   function ratingChart(data, colorOf) {
-    // Collect series: only handles with non-empty rating history.
+    const ratingTime = (r) => {
+      const t = Number(r.ratingUpdateTimeSeconds ?? r.contestTimeSeconds ?? 0);
+      return Number.isFinite(t) && t > 0 ? t : null;
+    };
+
+    // Collect actual contest/update events only. Codeforces ratings are a step
+    // series: the value changes at the rating update time, then remains current
+    // until the next rated contest.
     const series = data.map((d, i) => ({
       handle: d.handle, color: colorOf(i),
-      points: (Array.isArray(d.rating) ? d.rating : []).map((r) => ({ t: r.ratingUpdateTimeSeconds || 0, y: r.newRating }))
-        .filter((p) => p.y != null)
-    })).filter((s) => s.points.length);
+      events: (Array.isArray(d.rating) ? d.rating : [])
+        .map((r) => ({
+          t: ratingTime(r),
+          y: Number(r.newRating),
+          contestId: Number(r.contestId) || 0
+        }))
+        .filter((p) => p.t != null && Number.isFinite(p.y))
+        .sort((a, b) => (a.t - b.t) || (a.contestId - b.contestId))
+    })).filter((s) => s.events.length);
 
     if (!series.length) {
       return '<div class="cpos-cmp-empty">No rated contests among these handles — nothing to overlay.</div>';
     }
 
-    // Shared scales across all series.
+    // Shared scales across all actual event times. The right edge extends to
+    // today because the last known rating remains active until now; the drawn
+    // path is horizontal for that interval, not a fake diagonal contest change.
     let minT = Infinity, maxT = -Infinity, minY = Infinity, maxY = -Infinity;
-    for (const s of series) for (const p of s.points) {
+    for (const s of series) for (const p of s.events) {
       if (p.t < minT) minT = p.t; if (p.t > maxT) maxT = p.t;
       if (p.y < minY) minY = p.y; if (p.y > maxY) maxY = p.y;
     }
-    if (maxT === minT) maxT = minT + 1;
+    const nowT = Math.floor(Date.now() / 1000);
+    maxT = Math.max(maxT, nowT);
+    if (maxT === minT) {
+      minT -= 24 * 60 * 60;
+      maxT += 24 * 60 * 60;
+    }
     // pad Y to a clean-ish band
     let padY = Math.max(50, Math.round((maxY - minY) * 0.08));
     minY = Math.max(0, minY - padY); maxY = maxY + padY;
@@ -233,16 +253,28 @@
     const xhints = '<text x="' + mL + '" y="' + (H - 8) + '" font-size="9" fill="var(--dim)">' + fmtDate(minT) + "</text>" +
       '<text x="' + (W - mR) + '" y="' + (H - 8) + '" text-anchor="end" font-size="9" fill="var(--dim)">' + fmtDate(maxT) + "</text>";
 
+    const stepPath = (events) => {
+      let d = "M" + sx(events[0].t).toFixed(1) + " " + sy(events[0].y).toFixed(1);
+      for (let i = 1; i < events.length; i++) {
+        const prev = events[i - 1], cur = events[i];
+        d += " L" + sx(cur.t).toFixed(1) + " " + sy(prev.y).toFixed(1);
+        d += " L" + sx(cur.t).toFixed(1) + " " + sy(cur.y).toFixed(1);
+      }
+      const last = events[events.length - 1];
+      if (last.t < maxT) d += " L" + sx(maxT).toFixed(1) + " " + sy(last.y).toFixed(1);
+      return d;
+    };
+
     const lines = series.map((s) => {
-      const pts = s.points.slice().sort((a, b) => a.t - b.t);
-      const d = pts.map((p, i) => (i ? "L" : "M") + sx(p.t).toFixed(1) + " " + sy(p.y).toFixed(1)).join(" ");
-      const dots = pts.length <= 60 ? pts.map((p) =>
+      const pts = s.events;
+      const d = stepPath(pts);
+      const dots = pts.length <= 80 ? pts.map((p) =>
         '<circle cx="' + sx(p.t).toFixed(1) + '" cy="' + sy(p.y).toFixed(1) + '" r="1.8" fill="' + s.color + '"></circle>').join("") : "";
       return '<path d="' + d + '" fill="none" stroke="' + s.color + '" stroke-width="1.8"></path>' + dots;
     }).join("");
 
     const legend = series.map((s) => {
-      const last = s.points[s.points.length - 1].y;
+      const last = s.events[s.events.length - 1].y;
       return '<span class="cpos-cmp-leg"><span class="dot" style="background:' + s.color + '"></span>' +
         '<b>' + esc(s.handle) + "</b><i>" + nf(last) + "</i></span>";
     }).join("");
@@ -256,7 +288,10 @@
   }
 
   // ── theme ────────────────────────────────────────────────────────────────
-  async function applyTheme(root) { if (!T || !C) return; T.applyTheme(root, await C.activeThemeId()); }
+  async function applyTheme(root) {
+    if (!T || !C) return;
+    T.applyTheme(root, await (C.activePageThemeId ? C.activePageThemeId() : C.activeThemeId()));
+  }
 
   // ── persistence of extra handles ───────────────────────────────────────────
   async function getExtraHandles() {
@@ -277,6 +312,17 @@
 
     const body = root.querySelector(".cpos-cmp-body");
     if (!body) return;
+
+    // With zero competitor handles a single-column table / single-line overlay
+    // would just duplicate CF's own rating graph and the CPOS analytics stats.
+    // Show only a friendly hint until at least one extra handle is added.
+    if (!extras.length) {
+      body.innerHTML =
+        '<div class="cpos-cmp-prompt">Add a handle to compare <b>@' + esc(me) +
+        "</b> against — you'll get a side-by-side stat table and an overlaid rating chart.</div>";
+      return;
+    }
+
     const token = ++rendering;
     body.innerHTML = '<div class="cpos-cmp-empty">Loading comparison…</div>';
 

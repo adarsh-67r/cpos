@@ -60,6 +60,9 @@ Write code in the editor. The CPOS panel runs samples and submits.
 <p align="center">
   <img src="docs/img/vscode-panel-ui.png" alt="CPOS VS Code panel with test cases, Run All, Submit, and a Codeforces solution open" width="900">
 </p>
+<p align="center">
+  <img src="docs/img/vscode-statement.png" alt="CPOS VS Code panel rendering a Codeforces problem statement in a native Statement tab next to the editor" width="900">
+</p>
 
 Install from the [Marketplace](https://marketplace.visualstudio.com/items?itemName=sohamaggarwal.cpos-vscode). Open your folder, capture a problem from the browser, then use the **CPOS panel**:
 
@@ -130,13 +133,13 @@ The companion captures samples and autofills the judge submit form — that's th
 - Current-line highlight, bracket matching/auto-close, auto-indent, find & replace
 - Font-size and line-wrap controls, a maximize/zen layout, and multiple editor color schemes
 - Submit reuses the companion's existing flow
+- _Running_ compiles locally, so it needs CPOS on `127.0.0.1` — the VS Code extension or the terminal app (browsers can't run C++/Java). Editing works on its own.
 
 **Practice**
 
 - **Profile analytics** — charts on CF profile pages: activity heatmap, current & longest streak, solved-by-rating and by-index histograms, top tags, verdict & language donuts, and rating-history insights (no duplicate of CF's own rating graph)
 - **Profile compare (VS)** — add other handles and compare stats side-by-side with a rating-history overlay
 - **Daily problem & streak** — a rating-tuned, deterministic "problem of the day" plus a practice streak
-- **Practice ladders** — a standalone page with rating-bucketed problem sets and solved-progress tracking
 - **Favorites** — bookmark problems with a star and view them in the popup
 - **Problem timer** — a draggable per-problem stopwatch that persists and auto-resumes
 

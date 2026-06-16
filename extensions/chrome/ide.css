@@ -1,23 +1,25 @@
 /* CPOS in-browser editor. Panel chrome uses --cpos-* (extension palette); the
    editor surface uses --ed-* (the selected IDE colour scheme). Both are set
    inline by ide.js with safe fallbacks. */
+/* Launch tab — a clean flat pill anchored to the page edge, theme-driven. */
 #cpos-ide-launch {
   position: fixed; top: 50%; right: 0; transform: translateY(-50%);
   z-index: 2147483640;
-  background: var(--cpos-accent, #b794ff); color: #14141f;
-  font: 700 12px/1 ui-monospace, Consolas, monospace;
-  border: none; border-radius: 8px 0 0 8px; padding: 12px 8px; cursor: pointer;
-  writing-mode: vertical-rl; letter-spacing: 0.08em;
-  box-shadow: -3px 0 14px rgba(0,0,0,0.3);
+  background: var(--cpos-panel, #1b1b2b); color: var(--cpos-fg, #e8e6f0);
+  font: 700 11px/1 ui-monospace, Consolas, monospace;
+  border: 1px solid var(--cpos-border, #2a2a3e); border-right: none;
+  border-radius: 8px 0 0 8px; padding: 13px 7px; cursor: pointer;
+  writing-mode: vertical-rl; letter-spacing: 0.1em;
+  transition: background 0.12s ease, color 0.12s ease, padding 0.12s ease;
 }
-#cpos-ide-launch:hover { filter: brightness(1.08); }
+#cpos-ide-launch:hover { background: var(--cpos-accent, #b794ff); color: var(--cpos-bg, #14141f); border-color: var(--cpos-accent, #b794ff); padding-right: 9px; }
 
 #cpos-ide-panel {
   position: fixed; top: 0; right: 0; height: 100vh; width: 640px;
   z-index: 2147483641; display: flex; flex-direction: column;
   background: var(--cpos-bg, #14141f); color: var(--cpos-fg, #e8e6f0);
   border-left: 1px solid var(--cpos-border, #2a2a3e);
-  box-shadow: -10px 0 36px rgba(0,0,0,0.45);
+  box-shadow: -1px 0 4px rgba(0,0,0,0.18);
   transform: translateX(100%); transition: transform 0.18s ease, width 0.18s ease;
   font-family: ui-sans-serif, -apple-system, "Segoe UI", Roboto, sans-serif;
 }
@@ -26,45 +28,101 @@
 #cpos-ide-panel.zen .cpos-ide-grip { display: none; }
 #cpos-ide-panel * { box-sizing: border-box; }
 
+/* Themed scrollbars across the whole panel so no default OS bars show. */
+#cpos-ide-panel ::-webkit-scrollbar { width: 11px; height: 11px; }
+#cpos-ide-panel ::-webkit-scrollbar-track { background: transparent; }
+#cpos-ide-panel ::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--cpos-fg, #e8e6f0) 22%, transparent);
+  border: 3px solid transparent; background-clip: padding-box; border-radius: 8px;
+}
+#cpos-ide-panel ::-webkit-scrollbar-thumb:hover { background: color-mix(in srgb, var(--cpos-fg, #e8e6f0) 38%, transparent); background-clip: padding-box; }
+#cpos-ide-panel ::-webkit-scrollbar-corner { background: transparent; }
+/* The code surface tracks the editor colour scheme instead. */
+.cpos-ed-ta::-webkit-scrollbar { width: 12px; height: 12px; }
+.cpos-ed-ta::-webkit-scrollbar-track { background: transparent; }
+.cpos-ed-ta::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--ed-fg, #d4d4d4) 24%, transparent);
+  border: 3px solid transparent; background-clip: padding-box; border-radius: 8px;
+}
+.cpos-ed-ta::-webkit-scrollbar-thumb:hover { background: color-mix(in srgb, var(--ed-fg, #d4d4d4) 42%, transparent); background-clip: padding-box; }
+.cpos-ed-ta::-webkit-scrollbar-corner { background: transparent; }
+
 .cpos-ide-grip {
   position: absolute; left: -3px; top: 0; width: 7px; height: 100%;
   cursor: col-resize; z-index: 2; background: transparent;
+  transition: background 0.12s ease;
 }
-.cpos-ide-grip:hover { background: var(--cpos-accent, #b794ff); opacity: 0.5; }
+.cpos-ide-grip:hover { background: color-mix(in srgb, var(--cpos-accent, #b794ff) 60%, transparent); }
 
-.cpos-ide-head { display: flex; align-items: center; gap: 6px; padding: 9px 12px; border-bottom: 1px solid var(--cpos-border, #2a2a3e); flex: 0 0 auto; }
-.cpos-ide-head .pid { font-weight: 800; letter-spacing: 0.03em; }
-.cpos-ide-head .grow { flex: 1 1 auto; }
-.cpos-ide-head select, .cpos-ide-head button {
-  background: var(--cpos-panel, #1b1b2b); color: var(--cpos-fg, #e8e6f0);
-  border: 1px solid var(--cpos-border, #2a2a3e); border-radius: 7px;
-  padding: 5px 8px; font: inherit; font-size: 12px; cursor: pointer; max-width: 130px;
+/* Titlebar — reads like a real IDE toolbar. */
+.cpos-ide-head {
+  display: flex; align-items: center; gap: 6px; padding: 8px 12px; flex: 0 0 auto;
+  background: var(--cpos-panel, #1b1b2b);
+  border-bottom: 1px solid var(--cpos-border, #2a2a3e);
 }
-.cpos-ide-head .ic { padding: 5px 7px; min-width: 28px; text-align: center; line-height: 1; }
-.cpos-ide-head .ic.active { border-color: var(--cpos-accent, #b794ff); color: var(--cpos-accent, #b794ff); }
-.cpos-ide-head button:hover { filter: brightness(1.12); }
-.cpos-ide-head .x { padding: 5px 9px; }
+.cpos-ide-head .pid {
+  font-weight: 700; font-size: 12.5px; letter-spacing: 0.02em;
+  padding: 3px 9px; border-radius: 6px;
+  background: var(--cpos-panel-2, #232334);
+  border: 1px solid var(--cpos-border, #2a2a3e);
+  color: var(--cpos-fg, #e8e6f0); white-space: nowrap;
+}
+.cpos-ide-head .grow { flex: 1 1 auto; }
+.cpos-ide-head select {
+  background: var(--cpos-panel-2, #232334); color: var(--cpos-fg, #e8e6f0);
+  border: 1px solid var(--cpos-border, #2a2a3e); border-radius: 6px;
+  padding: 5px 9px; font: inherit; font-size: 12px; font-weight: 600; cursor: pointer;
+  max-width: 130px; transition: border-color 0.12s ease, background 0.12s ease;
+}
+.cpos-ide-head select:hover { border-color: color-mix(in srgb, var(--cpos-accent, #b794ff) 50%, var(--cpos-border, #2a2a3e)); }
+.cpos-ide-head select:focus { outline: none; border-color: var(--cpos-accent, #b794ff); }
+.cpos-ide-head .ic {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 30px; height: 30px; padding: 0; font-size: 14px; line-height: 1;
+  background: transparent; color: var(--cpos-dim, #8a86a3);
+  border: 1px solid transparent; border-radius: 6px; cursor: pointer;
+  transition: background 0.12s ease, color 0.12s ease, border-color 0.12s ease;
+}
+.cpos-ide-head .ic:hover { background: var(--cpos-panel-2, #232334); color: var(--cpos-fg, #e8e6f0); }
+.cpos-ide-head .ic.active {
+  background: color-mix(in srgb, var(--cpos-accent, #b794ff) 16%, transparent);
+  border-color: color-mix(in srgb, var(--cpos-accent, #b794ff) 55%, transparent);
+  color: var(--cpos-accent, #b794ff);
+}
+.cpos-ide-head .x {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 30px; height: 30px; padding: 0; margin-left: 2px; font-size: 13px; line-height: 1;
+  background: transparent; color: var(--cpos-dim, #8a86a3);
+  border: 1px solid transparent; border-radius: 6px; cursor: pointer;
+  transition: background 0.12s ease, color 0.12s ease;
+}
+.cpos-ide-head .x:hover { background: color-mix(in srgb, #f85149 22%, transparent); color: #f85149; }
 
 /* find & replace bar */
 .cpos-ide-find {
-  display: flex; align-items: center; gap: 5px; flex: 0 0 auto;
-  padding: 6px 12px; border-bottom: 1px solid var(--cpos-border, #2a2a3e);
-  background: var(--cpos-panel, #1b1b2b);
+  display: flex; align-items: center; gap: 6px; flex: 0 0 auto;
+  padding: 7px 12px; border-bottom: 1px solid var(--cpos-border, #2a2a3e);
+  background: var(--cpos-panel-2, #232334);
 }
 .cpos-ide-find[hidden] { display: none; }
 .cpos-ide-find input {
   background: var(--cpos-bg, #14141f); color: var(--cpos-fg, #e8e6f0);
   border: 1px solid var(--cpos-border, #2a2a3e); border-radius: 6px;
-  padding: 4px 7px; font: 12px ui-monospace, Consolas, monospace; min-width: 0; flex: 1 1 90px;
+  padding: 5px 8px; font: 12px ui-monospace, Consolas, monospace; min-width: 0; flex: 1 1 90px;
+  transition: border-color 0.12s ease;
 }
 .cpos-ide-find input:focus { outline: none; border-color: var(--cpos-accent, #b794ff); }
-.cpos-ide-find .fcount { font: 11px ui-monospace, Consolas, monospace; color: var(--cpos-dim, #8a86a3); flex: 0 0 auto; min-width: 34px; text-align: center; }
+.cpos-ide-find .fcount { font: 11px ui-monospace, Consolas, monospace; color: var(--cpos-dim, #8a86a3); flex: 0 0 auto; min-width: 36px; text-align: center; }
 .cpos-ide-find button {
-  background: var(--cpos-panel-2, #232334); color: var(--cpos-fg, #e8e6f0);
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 28px; height: 28px; padding: 0 8px;
+  background: var(--cpos-panel, #1b1b2b); color: var(--cpos-fg, #e8e6f0);
   border: 1px solid var(--cpos-border, #2a2a3e); border-radius: 6px;
-  padding: 4px 7px; font: 11px inherit; cursor: pointer; flex: 0 0 auto;
+  font: 600 11px inherit; cursor: pointer; flex: 0 0 auto;
+  transition: background 0.12s ease, border-color 0.12s ease, color 0.12s ease;
 }
-.cpos-ide-find button:hover { filter: brightness(1.15); }
+.cpos-ide-find button:hover { background: var(--cpos-bg, #14141f); border-color: color-mix(in srgb, var(--cpos-accent, #b794ff) 50%, var(--cpos-border, #2a2a3e)); }
+.cpos-ide-find #cpos-find-x:hover { background: color-mix(in srgb, #f85149 22%, transparent); border-color: color-mix(in srgb, #f85149 45%, var(--cpos-border, #2a2a3e)); color: #f85149; }
 
 .cpos-ide-editor { flex: 1 1 auto; min-height: 0; display: flex; }
 .cpos-ide-mount { flex: 1 1 auto; min-height: 0; display: flex; }
@@ -72,30 +130,41 @@
 /* overlay editor surface — themed by --ed-*; font size driven by --ed-fs */
 .cpos-ed {
   --ed-fs: 14px;
-  --ed-font: var(--ed-fs)/1.55 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  /* Integer line box so the textarea caret and the highlight overlay stay on
+     the same grid (fractional line-heights round differently between the two).
+     Kept in sync with --ed-fs by setFontSize() = round(fs * 1.55). */
+  --ed-lh: 22px;
+  --ed-font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --ed-font: var(--ed-fs)/var(--ed-lh) var(--ed-font-family);
   --ed-pad: 12px;
   flex: 1 1 auto; display: flex; min-height: 0;
   background: var(--ed-bg, #1e1e1e); color: var(--ed-fg, #d4d4d4);
 }
+.cpos-ed,
+.cpos-ed * { box-sizing: border-box; }
 .cpos-ed-gutter {
-  flex: 0 0 auto; width: 52px; overflow: hidden;
-  padding: var(--ed-pad) 8px var(--ed-pad) 0;
-  font: var(--ed-font); text-align: right; white-space: pre;
+  flex: 0 0 auto; width: 48px; overflow: hidden;
+  padding: var(--ed-pad) 10px var(--ed-pad) 0;
+  font: var(--ed-font); line-height: var(--ed-lh); text-align: right; white-space: pre;
   color: var(--ed-gutter, #858585); border-right: 1px solid var(--ed-border, #333); user-select: none;
+  opacity: 0.85;
 }
 .cpos-ed-scroll { position: relative; flex: 1 1 auto; min-width: 0; overflow: hidden; }
 .cpos-ed-line {
-  position: absolute; top: 0; left: 0; right: 0; height: 1.55em;
-  background: var(--ed-line, #ffffff0d); pointer-events: none; z-index: 0; will-change: transform;
+  position: absolute; top: 0; left: 0; right: 0; height: var(--ed-lh);
+  background: var(--ed-line, #ffffff0d);
+  box-shadow: inset 2px 0 0 color-mix(in srgb, var(--ed-caret, #aeafad) 35%, transparent);
+  pointer-events: none; z-index: 0; will-change: transform;
 }
 .cpos-ed-hl {
   position: absolute; top: 0; left: 0; margin: 0; padding: var(--ed-pad) 14px;
-  font: var(--ed-font); white-space: pre; pointer-events: none; z-index: 1;
-  color: var(--ed-fg, #d4d4d4); will-change: transform;
+  font: var(--ed-font); line-height: var(--ed-lh); white-space: pre; pointer-events: none; z-index: 1;
+  color: var(--ed-fg, #d4d4d4); will-change: transform; tab-size: 4;
 }
 .cpos-ed-ta {
   position: absolute; inset: 0; width: 100%; height: 100%; padding: var(--ed-pad) 14px;
-  font: var(--ed-font); white-space: pre; overflow: auto; border: none; outline: none; resize: none;
+  display: block; margin: 0;
+  font: var(--ed-font); line-height: var(--ed-lh); white-space: pre; overflow: auto; border: none; outline: none; resize: none;
   background: transparent; color: transparent; caret-color: var(--ed-caret, #aeafad); tab-size: 4; z-index: 2;
 }
 /* line-wrap mode */
@@ -115,7 +184,7 @@
 .cpos-ide-console {
   flex: 0 0 auto; max-height: 42vh; overflow: auto;
   background: var(--ed-panel, #252526); border-top: 1px solid var(--cpos-border, #2a2a3e);
-  padding: 10px 12px; font-size: 12px;
+  padding: 11px 12px; font-size: 12px; color: var(--ed-fg, #d4d4d4);
 }
 #cpos-ide-panel.zen .cpos-ide-console { max-height: 32vh; }
 .cpos-ide-console .cpos-con-empty { color: var(--cpos-dim, #8a86a3); line-height: 1.5; }
@@ -157,10 +226,11 @@
 .cpos-con-customhead .grow { flex: 1 1 auto; }
 .cpos-con-customhead #cpos-custom-run {
   background: var(--cpos-panel-2, #232334); color: #3fb950;
-  border: 1px solid color-mix(in srgb, #3fb950 45%, var(--cpos-border, #2a2a3e)); border-radius: 6px;
-  padding: 4px 9px; font: 600 11px inherit; cursor: pointer;
+  border: 1px solid color-mix(in srgb, #3fb950 40%, var(--cpos-border, #2a2a3e)); border-radius: 6px;
+  padding: 5px 10px; font: 600 11px inherit; cursor: pointer;
+  transition: background 0.12s ease, border-color 0.12s ease;
 }
-.cpos-con-customhead #cpos-custom-run:hover { filter: brightness(1.15); }
+.cpos-con-customhead #cpos-custom-run:hover { background: color-mix(in srgb, #3fb950 14%, transparent); border-color: color-mix(in srgb, #3fb950 60%, transparent); }
 .cpos-con-custom label { display: block; font-size: 9px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--cpos-dim, #8a86a3); margin: 6px 0 2px; }
 .cpos-con-custom textarea {
   width: 100%; min-height: 48px; resize: vertical;
@@ -171,17 +241,43 @@
 .cpos-con-custom textarea:focus { outline: none; border-color: var(--cpos-accent, #b794ff); }
 .cpos-con-custom #cpos-custom-out { margin-top: 7px; }
 
-/* status bar */
-.cpos-ide-status { flex: 0 0 auto; display: flex; align-items: center; gap: 8px; padding: 4px 12px; font-size: 11px; color: var(--cpos-dim, #8a86a3); background: var(--cpos-panel, #1b1b2b); border-top: 1px solid var(--cpos-border, #2a2a3e); }
-.cpos-ide-status .grow { flex: 1 1 auto; }
-
-.cpos-ide-foot { flex: 0 0 auto; display: flex; align-items: center; gap: 8px; padding: 9px 12px; border-top: 1px solid var(--cpos-border, #2a2a3e); }
-.cpos-ide-foot .msg { flex: 1 1 auto; font-size: 11px; color: var(--cpos-dim, #8a86a3); }
-.cpos-ide-foot button {
-  background: var(--cpos-panel, #1b1b2b); color: var(--cpos-fg, #e8e6f0);
-  border: 1px solid var(--cpos-border, #2a2a3e); border-radius: 7px;
-  padding: 8px 12px; font: inherit; font-size: 12px; font-weight: 600; cursor: pointer;
+/* status bar — proper editor status strip */
+.cpos-ide-status {
+  flex: 0 0 auto; display: flex; align-items: center; gap: 8px;
+  padding: 5px 12px; font: 600 11px ui-monospace, Consolas, monospace;
+  color: var(--cpos-dim, #8a86a3);
+  background: var(--cpos-panel-2, #232334);
+  border-top: 1px solid var(--cpos-border, #2a2a3e);
 }
-.cpos-ide-foot #cpos-ide-run { border-color: color-mix(in srgb, #3fb950 45%, var(--cpos-border, #2a2a3e)); color: #3fb950; }
-.cpos-ide-foot button.primary { background: var(--cpos-accent, #b794ff); color: #14141f; border-color: var(--cpos-accent, #b794ff); }
-.cpos-ide-foot button:hover { filter: brightness(1.1); }
+.cpos-ide-status .grow { flex: 1 1 auto; }
+.cpos-ide-status #cpos-ide-langtag {
+  text-transform: uppercase; letter-spacing: 0.06em; font-size: 10px;
+  padding: 2px 8px; border-radius: 5px;
+  color: var(--cpos-accent, #b794ff);
+  background: color-mix(in srgb, var(--cpos-accent, #b794ff) 14%, transparent);
+}
+
+/* footer — refined button hierarchy (neutral / success / primary) */
+.cpos-ide-foot { flex: 0 0 auto; display: flex; align-items: center; gap: 7px; padding: 10px 12px; background: var(--cpos-panel, #1b1b2b); border-top: 1px solid var(--cpos-border, #2a2a3e); }
+.cpos-ide-foot .msg { flex: 1 1 auto; min-width: 0; font-size: 11px; color: var(--cpos-dim, #8a86a3); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cpos-ide-foot button {
+  display: inline-flex; align-items: center; justify-content: center;
+  background: var(--cpos-panel-2, #232334); color: var(--cpos-fg, #e8e6f0);
+  border: 1px solid var(--cpos-border, #2a2a3e); border-radius: 7px;
+  padding: 7px 13px; font: inherit; font-size: 12px; font-weight: 600; cursor: pointer;
+  transition: background 0.12s ease, border-color 0.12s ease, color 0.12s ease;
+}
+.cpos-ide-foot button:hover { background: var(--cpos-bg, #14141f); border-color: color-mix(in srgb, var(--cpos-accent, #b794ff) 45%, var(--cpos-border, #2a2a3e)); }
+.cpos-ide-foot button:active { transform: translateY(1px); }
+/* Run — subtle success accent */
+.cpos-ide-foot #cpos-ide-run {
+  color: #3fb950;
+  border-color: color-mix(in srgb, #3fb950 40%, var(--cpos-border, #2a2a3e));
+}
+.cpos-ide-foot #cpos-ide-run:hover { background: color-mix(in srgb, #3fb950 14%, transparent); border-color: color-mix(in srgb, #3fb950 60%, transparent); }
+/* Submit — primary in accent */
+.cpos-ide-foot button.primary {
+  background: var(--cpos-accent, #b794ff); color: var(--cpos-bg, #14141f);
+  border-color: var(--cpos-accent, #b794ff); font-weight: 700; padding: 7px 16px;
+}
+.cpos-ide-foot button.primary:hover { background: color-mix(in srgb, var(--cpos-accent, #b794ff) 85%, #fff); border-color: color-mix(in srgb, var(--cpos-accent, #b794ff) 85%, #fff); }

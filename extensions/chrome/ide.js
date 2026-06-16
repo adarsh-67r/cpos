@@ -121,6 +121,15 @@
     let curLang = lang;
     let wrapOn = false;
     const escape = (s) => s.replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]));
+    function editorMetrics() {
+      const cs = getComputedStyle(ta);
+      const fs = parseFloat(cs.fontSize) || 14;
+      const parsed = parseFloat(cs.lineHeight);
+      return {
+        lh: Number.isFinite(parsed) ? parsed : fs * 1.55,
+        padTop: parseFloat(cs.paddingTop) || 0
+      };
+    }
 
     function render() {
       const code = ta.value;
@@ -138,9 +147,7 @@
     }
     // Current-line band: measured from line metrics, kept in sync with scroll.
     function positionLine() {
-      const cs = getComputedStyle(ta);
-      const lh = parseFloat(cs.lineHeight) || 20;
-      const padTop = parseFloat(cs.paddingTop) || 0;
+      const { lh, padTop } = editorMetrics();
       const before = ta.value.slice(0, ta.selectionStart);
       // Logical-line row (the band is hidden in wrap mode, where it's ambiguous).
       const row = before.split("\n").length - 1;
@@ -307,7 +314,14 @@
       setValue: (val) => { ta.value = val; render(); syncScroll(); cursor(); },
       setLang: (l) => { curLang = l; render(); },
       focus: () => ta.focus(),
-      setFontSize: (px) => { wrap.style.setProperty("--ed-fs", px + "px"); render(); syncScroll(); },
+      setFontSize: (px) => {
+        wrap.style.setProperty("--ed-fs", px + "px");
+        // Round the line box to a whole pixel so the textarea caret and the
+        // highlight overlay land on the same grid (fractional line-heights
+        // round differently between a textarea and a <pre>).
+        wrap.style.setProperty("--ed-lh", Math.round(px * 1.55) + "px");
+        render(); syncScroll();
+      },
       setWrap: (on) => { wrapOn = on; wrap.classList.toggle("wrap", on); render(); syncScroll(); },
       // For find & replace.
       select: (start, end) => { ta.focus(); ta.selectionStart = start; ta.selectionEnd = end; scrollToCaret(); cursor(); },
@@ -318,10 +332,9 @@
 
     function scrollToCaret() {
       // Best-effort: scroll the line of the caret into view.
-      const cs = getComputedStyle(ta);
-      const lh = parseFloat(cs.lineHeight) || 20;
+      const { lh, padTop } = editorMetrics();
       const row = ta.value.slice(0, ta.selectionStart).split("\n").length - 1;
-      const y = row * lh;
+      const y = padTop + row * lh;
       if (y < ta.scrollTop) ta.scrollTop = y;
       else if (y + lh > ta.scrollTop + ta.clientHeight) ta.scrollTop = y + lh - ta.clientHeight + lh;
       syncScroll();
@@ -675,7 +688,16 @@
   }
   const esc = (s) => String(s == null ? "" : s).replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]));
 
+  // Set when a CPOS runner answered but doesn't have the /run endpoint yet
+  // (older VS Code extension / terminal app) — distinct from "not running".
+  let runnerStale = false;
+
   function runnerDownHtml() {
+    if (runnerStale) {
+      return '<div class="cpos-con-empty">Your CPOS is running but is too old to run code.<br>' +
+        "Update the <b>CPOS VS Code extension</b> (0.3.31+) or the <b>CPOS terminal app</b> to enable Run.<br>" +
+        '<span class="cpos-dim">(Capture and submit still work on the older version.)</span></div>';
+    }
     return '<div class="cpos-con-empty">Couldn\'t reach the CPOS runner.<br>' +
       "Open <b>VS Code</b> with the CPOS extension or start the <b>CPOS terminal app</b> so it can compile & run locally.<br>" +
       '<span class="cpos-dim">(Browsers can\'t execute C++/Java directly — running uses your local compiler.)</span></div>';
@@ -683,11 +705,14 @@
 
   async function callRunner(tests) {
     const payload = { code: editor.getValue(), language: panel.querySelector("#cpos-ide-lang").value, tests };
+    runnerStale = false;
     for (const base of RUNNERS) {
       try {
         const res = await fetch(base + "/run", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
         if (res.ok) return await res.json();
-      } catch { /* try next */ }
+        // Reached a CPOS server, but it doesn't serve /run (older version).
+        runnerStale = true;
+      } catch { /* connection refused — try the next port */ }
     }
     return null;
   }

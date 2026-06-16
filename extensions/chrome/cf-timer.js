@@ -183,7 +183,7 @@
   // ── theme ──────────────────────────────────────────────────────────────────
   async function applyTheme() {
     if (!rootEl || !T) return;
-    T.applyTheme(rootEl, await C.activeThemeId());
+    T.applyTheme(rootEl, await (C.activePageThemeId ? C.activePageThemeId() : C.activeThemeId()));
   }
 
   // ── build / teardown ────────────────────────────────────────────────────────
@@ -197,6 +197,8 @@
     const grip = el("span", "cpos-timer-grip", "&#x205A;");
     grip.title = "Drag to move";
 
+    const label = el("span", "cpos-timer-label", "Timer");
+
     timeEl = el("span", "cpos-timer-time", "00:00");
 
     playBtn = el("button", "cpos-timer-btn cpos-timer-play", PLAY_SVG);
@@ -208,6 +210,7 @@
     resetBtn.addEventListener("click", (e) => { e.stopPropagation(); doReset(); });
 
     rootEl.appendChild(grip);
+    rootEl.appendChild(label);
     rootEl.appendChild(timeEl);
     rootEl.appendChild(playBtn);
     rootEl.appendChild(resetBtn);

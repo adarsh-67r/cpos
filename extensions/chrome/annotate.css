@@ -80,6 +80,15 @@
   border-color: var(--cpos-an-accent, #b794ff);
   color: var(--cpos-an-accent, #b794ff);
 }
+#cpos-annotate-bar .cpos-an-btn.cpos-an-primary {
+  background: var(--cpos-an-accent, #b794ff);
+  border-color: var(--cpos-an-accent, #b794ff);
+  color: var(--cpos-an-bg, #14141f);
+  font-weight: 700;
+}
+#cpos-annotate-bar .cpos-an-btn.cpos-an-primary:hover {
+  filter: brightness(1.05);
+}
 #cpos-annotate-bar .cpos-an-sep {
   width: 1px;
   align-self: stretch;

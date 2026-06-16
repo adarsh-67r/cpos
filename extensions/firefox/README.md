@@ -6,7 +6,7 @@ capture/submit only. Alongside capturing public samples, syncing CSES progress,
 and autofilling judge submit pages through the local CPOS endpoints, it adds the
 same optional practice and on-page tooling: profile analytics and compare, the
 in-browser editor, rating predictions, contest reminders, daily problem & streak,
-favorites, problem timer, practice ladders, problemset/standings tools, problem
+favorites, problem timer, problemset/standings tools, problem
 tools, marker & notes, code & LaTeX styling, and site themes + Modernize. Every
 feature is individually toggleable from the popup, and everything stays read-only
 (public CF API + localhost).
