@@ -2,7 +2,7 @@
 
 CPOS is three local clients plus a static website. Nothing runs in the cloud; the browser extension and desktop apps communicate only over `127.0.0.1`.
 
-**Current releases:** terminal app 0.1.5 · VS Code extension 0.3.26 · browser companion 0.6.14 (see [CHANGELOG.md](CHANGELOG.md)).
+**Current releases:** terminal app 0.1.8 · VS Code extension 0.3.31 · browser companion 0.9.0 (Chrome) / 0.2.0 (Firefox) (see [CHANGELOG.md](CHANGELOG.md)).
 
 ```
 ┌─────────────────┐     capture / submit      ┌──────────────────┐
@@ -24,8 +24,8 @@ CPOS is three local clients plus a static website. Nothing runs in the cloud; th
 | --- | --- |
 | `src/` | Terminal application (ratatui UI, sync, recommendations, local test runner) |
 | `extensions/vscode/` | VS Code extension: side panel, webview UI, capture HTTP server |
-| `extensions/chrome/` | Chrome/Edge/Brave browser companion: DOM capture on problem pages, submit autofill on judge pages |
-| `extensions/firefox/` | Firefox browser companion: same localhost capture/submit protocol, source/self-installed until AMO publishing |
+| `extensions/chrome/` | Chrome/Edge/Brave browser companion: DOM capture on problem pages, submit autofill on judge pages, plus opt-in popup-toggleable tooling (profile analytics/compare, in-browser editor, rating predictions, contest reminders, practice tools, problemset/standings tools, marker & notes, code/LaTeX styling, site themes) — all read-only public CF API + localhost |
+| `extensions/firefox/` | Firefox browser companion: full feature parity with Chrome over the same localhost capture/submit protocol, source/self-installed until AMO publishing |
 | `docs/` | Static landing site |
 
 ## Localhost protocol

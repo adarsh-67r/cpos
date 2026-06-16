@@ -1,8 +1,24 @@
 # CPOS Companion for Firefox
 
-Firefox build of the CPOS browser companion for Codeforces and CSES. It mirrors the Chrome companion: capture public samples, sync CSES progress, and autofill judge submit pages through the local CPOS endpoints.
+Firefox build of the CPOS browser companion for Codeforces and CSES. It now has
+**full feature parity with the Chrome companion** — it was previously
+capture/submit only. Alongside capturing public samples, syncing CSES progress,
+and autofilling judge submit pages through the local CPOS endpoints, it adds the
+same optional practice and on-page tooling: profile analytics and compare, the
+in-browser editor, rating predictions, contest reminders, daily problem & streak,
+favorites, problem timer, practice ladders, problemset/standings tools, problem
+tools, marker & notes, code & LaTeX styling, and site themes + Modernize. Every
+feature is individually toggleable from the popup, and everything stays read-only
+(public CF API + localhost).
 
-**Current version:** 0.0.2 (see [CHANGELOG.md](../../CHANGELOG.md)).
+**Current version:** 0.2.0 (see [CHANGELOG.md](../../CHANGELOG.md)).
+
+## Permissions
+
+The companion requests the `notifications` permission for the **contest
+reminders** feature (desktop notifications before upcoming Codeforces contests).
+If you don't use reminders, that feature can be left off. All other features rely
+only on the public Codeforces API and the local CPOS endpoints.
 
 ## Install From Source
 

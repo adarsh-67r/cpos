@@ -6,15 +6,47 @@ All notable changes to CPOS are documented here. Components are versioned indepe
 | --- | --- | --- |
 | Terminal app | 0.1.8 | `Cargo.toml` |
 | VS Code extension | 0.3.31 | `extensions/vscode/package.json` |
-| Browser companion (Chrome) | 0.7.1 | `extensions/chrome/manifest.json` |
-| Browser companion (Firefox) | 0.0.2 | `extensions/firefox/manifest.json` |
+| Browser companion (Chrome) | 0.9.0 | `extensions/chrome/manifest.json` |
+| Browser companion (Firefox) | 0.2.0 | `extensions/firefox/manifest.json` |
 
 Format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+_Nothing yet._
+
+---
+
+## Browser companion (Chrome) — 0.9.0 - 2026-06-14
+
+The companion grows from an in-page CP environment into a full practice toolkit. All features are individually toggleable from the popup; everything stays read-only (public CF API + localhost).
+
 ### Added
-- Firefox browser companion source build in `extensions/firefox`, with temporary add-on install instructions and XPI packaging for self-signing or future AMO distribution.
+- **Profile compare (VS).** Add other handles on a CF profile and compare stats side-by-side, with a rating-history overlay chart.
+- **Contest reminders.** Desktop notifications before upcoming Codeforces contests, with a configurable lead time (uses the public `contest.list` API; requires the `notifications` permission).
+- **Daily problem & streak.** A rating-tuned "problem of the day" (deterministic per day) plus a practice streak.
+- **Favorites.** Bookmark problems with a star and view them in the popup.
+- **Problem timer.** A draggable per-problem stopwatch that persists and auto-resumes.
+- **Practice ladders.** A standalone page with rating-bucketed CF problem sets and solved-progress tracking.
+- **Problem tools.** Problem rating badge, tag-hider / training mode (reveal all or one-by-one), one-click copy of sample input, and similar-problem links.
+- **Problemset tools.** Solve-status row coloring, a hide-solved toggle, and per-problem submission counts.
+- **Standings tools.** Colorize standings rows by programming language (with a legend) and a friends-only filter.
+- **Marker & notes.** Highlight statement text in marker colors and attach notes, saved per problem (off by default).
+
+### Changed
+- **In-browser editor expanded** to a LeetCode-style workflow: run against the sample tests with a per-test diff and custom stdin, current-line highlight, bracket matching/auto-close, auto-indent, find & replace, font-size and line-wrap controls, a maximize/zen layout, and multiple editor color schemes. Submit still reuses the existing companion flow.
+
+---
+
+## Browser companion (Chrome) — 0.8.0 - 2026-06-14
+
+### Added
+- **Profile analytics revamp.** Replaces the earlier in-page analytics with charts CF doesn't show: a submission **activity heatmap**, **current & longest streak**, **solved-by-rating** and **solved-by-index** histograms, **top tags**, **verdict** and **language** donuts, and rating-history-derived insights (no duplicate of CF's own rating graph).
+- **In-browser editor.** A slide-in editor on problem pages with sample-test runs, per-problem persistence, language selection, and starter templates; submitting reuses the existing background submit injector.
+- **Code & LaTeX styling.** Dependency-free syntax highlighting for code in statements, editorials, and comments, with dark-theme-friendly math.
+- **Rating predictions.** Predicted rating deltas on contest standings using the official CF formula.
+- **Site themes + Modernize.** Recolor Codeforces/CSES with CPOS palettes and a sleek, flat, gradient-free modern restyle; the two compose.
+- **Popup hub.** A flat, themeable control panel with live CPOS connection status and an on/off switch for every feature.
 
 ---
 
@@ -183,6 +215,21 @@ The companion gains a real interface and turns into a full in-browser CP environ
 
 ### Fixed
 - **Submit tab explosion** — submit polling now reuses the same browser tab via tracked tab IDs and gives up after a bounded number of attempts (acking the queue) instead of spawning duplicate tabs forever (#8).
+
+## Browser companion (Firefox) — 0.2.0 - 2026-06-14
+
+### Added
+- **Full feature parity with the Chrome companion.** The expanded practice and on-page tooling lands on Firefox: profile analytics, profile compare (VS), the in-browser editor, rating predictions, contest reminders, daily problem & streak, favorites, problem timer, practice ladders, problemset/standings tools, problem tools, marker & notes, code & LaTeX styling, and site themes + Modernize. As on Chrome, every feature is individually toggleable from the popup.
+- Requests the `notifications` permission for contest reminders. Temporary source installs are removed on Firefox restart; reload the manifest to restore them.
+
+---
+
+## Browser companion (Firefox) — 0.1.0 - 2026-06-14
+
+### Added
+- **Initial full-feature port.** Firefox graduates from capture/submit-only to the same popup hub and feature set as the Chrome 0.8.0 companion, sharing the read-only CF API + localhost design.
+
+---
 
 ## Browser companion (Firefox) — 0.0.2 - 2026-06-06
 
