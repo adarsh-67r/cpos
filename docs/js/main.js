@@ -17,8 +17,8 @@
 
   const loaded = new Set();
   const captionEl = document.getElementById("caption");
-  const tabs = document.querySelectorAll(".tab");
-  const panels = document.querySelectorAll(".frame .panel");
+  const tabs = document.querySelectorAll("#product .tab");
+  const panels = document.querySelectorAll("#product .frame .panel");
 
   function injectScreen(panel) {
     const id = panel.dataset.screen;
@@ -79,6 +79,19 @@
   if ("requestIdleCallback" in window) {
     requestIdleCallback(() => injectScreen(document.getElementById("screen-problems")));
   }
+
+  // Browser-companion showcase — same tab interaction, static slides (the slide
+  // images carry their own labels, so no per-tab caption).
+  const cTabs = document.querySelectorAll("#companion .tab");
+  const cPanels = document.querySelectorAll("#companion .frame .panel");
+  cTabs.forEach((tab) => {
+    tab.addEventListener("click", () => {
+      if (tab.classList.contains("active")) return;
+      const id = tab.dataset.cscreen;
+      cTabs.forEach((t) => t.classList.toggle("active", t === tab));
+      cPanels.forEach((p) => p.classList.toggle("active", p.dataset.cscreen === id));
+    });
+  });
 
   const heroSlides = Array.from(document.querySelectorAll(".hero-slide"));
   const heroDots = Array.from(document.querySelectorAll("[data-hero-slide]"));

@@ -319,34 +319,26 @@
       </div>
     </section>
 
-    <section class="ecosystem" id="companion">
+    <section class="showcase" id="companion">
       <div class="wrap">
         <div class="section-head">
           <p class="eyebrow">Browser companion</p>
           <h2>See the companion in action.</h2>
-          <p>A practice and on-page tooling layer over Codeforces &amp; CSES — profile analytics, an in-browser editor, profile compare, problemset solve-status, contest reminders, problem tools, and full site themes. Read-only and local-first; every feature toggles from the popup.</p>
+          <p>A practice and on-page tooling layer over Codeforces &amp; CSES. Read-only and local-first; every feature toggles from the popup.</p>
         </div>
-        <div class="companion-gallery">
-          <figure class="companion-card">
-            <img src="shots/companion-popup.png" loading="lazy" decoding="async" alt="CPOS companion popup with a toggle for every feature">
-            <figcaption><strong>One popup, every tool</strong><span>Toggle analytics, the editor, themes, reminders and practice tools — all from one place.</span></figcaption>
-          </figure>
-          <figure class="companion-card">
-            <img src="shots/companion-editor.png" loading="lazy" decoding="async" alt="In-browser editor on a Codeforces problem page">
-            <figcaption><strong>In-browser editor</strong><span>Run against the samples with a per-test diff and custom stdin, then submit in place.</span></figcaption>
-          </figure>
-          <figure class="companion-card">
-            <img src="shots/companion-analytics.png" loading="lazy" decoding="async" alt="CPOS profile analytics dashboard on a Codeforces profile">
-            <figcaption><strong>Profile analytics</strong><span>Activity heatmap, streaks, solved-by-rating, tags and verdicts — on the profile page.</span></figcaption>
-          </figure>
-          <figure class="companion-card">
-            <img src="shots/companion-compare.png" loading="lazy" decoding="async" alt="CPOS profile compare with a rating-history overlay">
-            <figcaption><strong>Profile compare</strong><span>Stack handles side by side with an overlaid rating history.</span></figcaption>
-          </figure>
-          <figure class="companion-card">
-            <img src="shots/companion-modernize.png" loading="lazy" decoding="async" alt="Codeforces problemset modernized with solve-status row coloring">
-            <figcaption><strong>Modernize</strong><span>A sleek font and calmer spacing for Codeforces, with solve-status row coloring.</span></figcaption>
-          </figure>
+        <nav class="tabs" aria-label="Companion features">
+          <button class="tab active" data-cscreen="popup">One hub</button>
+          <button class="tab" data-cscreen="editor">In-browser editor</button>
+          <button class="tab" data-cscreen="analytics">Analytics</button>
+          <button class="tab" data-cscreen="compare">Compare</button>
+          <button class="tab" data-cscreen="modernize">Modernize</button>
+        </nav>
+        <div class="frame" id="companion-frame">
+          <div class="panel active" data-cscreen="popup"><img src="shots/companion-popup.png" width="2560" height="1600" decoding="async" alt="CPOS companion popup — every feature toggles in one place"></div>
+          <div class="panel" data-cscreen="editor"><img src="shots/companion-editor.png" width="2560" height="1600" loading="lazy" decoding="async" alt="In-browser editor — run against samples and submit in place"></div>
+          <div class="panel" data-cscreen="analytics"><img src="shots/companion-analytics.png" width="2560" height="1600" loading="lazy" decoding="async" alt="Profile analytics — heatmap, streaks, solved-by-rating, tags and verdicts"></div>
+          <div class="panel" data-cscreen="compare"><img src="shots/companion-compare.png" width="2560" height="1600" loading="lazy" decoding="async" alt="Profile compare — side-by-side stats with a rating-history overlay"></div>
+          <div class="panel" data-cscreen="modernize"><img src="shots/companion-modernize.png" width="2560" height="1600" loading="lazy" decoding="async" alt="Modernize — a cleaner Codeforces with solve-status row coloring"></div>
         </div>
       </div>
     </section>
