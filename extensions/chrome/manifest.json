@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "CPOS Companion",
-  "version": "0.7.1",
-  "description": "Codeforces & CSES companion: capture & submit, profile analytics, rating predictions, site themes, code highlighting, and an in-browser editor. Local-first.",
+  "version": "0.8.0",
+  "description": "Codeforces & CSES companion: capture & submit, profile analytics, rating predictions, problem tools (rating, tag-hider, sample copy), marker & notes, site themes, code highlighting, and a LeetCode-style in-browser editor. Local-first.",
   "icons": {
     "16": "icons/icon16.png",
     "48": "icons/icon48.png",
@@ -56,7 +56,7 @@
     },
     {
       "matches": ["https://codeforces.com/*", "https://cses.fi/*"],
-      "js": ["cpos-config.js", "themes.js", "site-theme.js", "modernize.js"],
+      "js": ["cpos-config.js", "themes.js", "cpos-style-core.js", "site-theme.js", "modernize.js"],
       "run_at": "document_start"
     },
     {
@@ -88,6 +88,38 @@
       ],
       "js": ["cpos-config.js", "themes.js", "cpos-highlight.js", "ide.js"],
       "css": ["ide.css"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "https://codeforces.com/problemset/problem/*",
+        "https://codeforces.com/contest/*/problem/*",
+        "https://codeforces.com/gym/*/problem/*",
+        "https://codeforces.com/blog/entry/*",
+        "https://cses.fi/problemset/task/*"
+      ],
+      "js": ["cpos-config.js", "themes.js", "annotate.js"],
+      "css": ["annotate.css"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "https://codeforces.com/problemset/problem/*",
+        "https://codeforces.com/contest/*/problem/*",
+        "https://codeforces.com/gym/*/problem/*"
+      ],
+      "js": ["cpos-config.js", "themes.js", "cf-problem.js"],
+      "css": ["cf-tools.css"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "https://codeforces.com/problemset*",
+        "https://codeforces.com/contest/*",
+        "https://codeforces.com/gym/*"
+      ],
+      "js": ["cpos-config.js", "themes.js", "cf-problemset.js"],
+      "css": ["cf-tools.css"],
       "run_at": "document_idle"
     }
   ]

@@ -16,17 +16,27 @@
       ".ttypography pre",        // editorials / blog / problem prose code
       ".problem-statement pre",  // (filtered below — skip sample I/O)
       "pre.prettyprint",
+      "pre code",                // CF blog / markdown-rendered fenced blocks
       ".comments pre",
-      ".content pre"             // CSES task pages
+      ".content pre",            // CSES task pages
+      ".md-content pre"          // CSES rendered markdown
     ].join(",");
-    return [...document.querySelectorAll(sel)].filter((pre) => {
-      if (pre.hasAttribute(DONE)) return false;
-      // Skip Codeforces sample input/output blocks.
-      if (pre.closest(".sample-test, .input, .output, .test-example-line")) return false;
-      // Skip blocks with rich child markup we shouldn't flatten.
-      if (pre.querySelector("img, table, a, button, .test-example-line")) return false;
-      return true;
-    });
+    const seen = new Set();
+    const list = [];
+    for (const node of document.querySelectorAll(sel)) {
+      // Normalize "pre code" → the <pre> so we only process the block once.
+      const pre = node.tagName === "PRE" ? node : node.closest("pre");
+      if (!pre || seen.has(pre)) continue;
+      seen.add(pre);
+      if (pre.hasAttribute(DONE)) continue;
+      // Skip Codeforces sample input/output blocks (and CSES equivalents).
+      if (pre.closest(".sample-test, .input, .output, .test-example-line, .test-section")) continue;
+      // Skip blocks with rich child markup we shouldn't flatten. Allow a single
+      // <code> wrapper (common in rendered markdown) — that's not rich markup.
+      if (pre.querySelector("img, table, a, button, input, .test-example-line")) continue;
+      list.push(pre);
+    }
+    return list;
   }
 
   let theme = null;
@@ -73,19 +83,35 @@
     });
   }
 
-  let observer;
+  let observer, pending;
+  function scheduleProcess() {
+    if (pending) return;
+    pending = setTimeout(() => {
+      pending = null;
+      // Pause the observer while we mutate the DOM (innerHTML rewrite) so our
+      // own changes don't retrigger an endless processing loop.
+      observer?.disconnect();
+      process()
+        .catch(() => {})
+        .finally(() => {
+          if (observer) observer.observe(document.body, { childList: true, subtree: true });
+        });
+    }, 120);
+  }
+
   async function sync() {
     if (!C) return;
     const on = await C.feature("highlight");
     if (on) {
       await process();
       if (!observer) {
-        observer = new MutationObserver(() => { process().catch(() => {}); });
+        observer = new MutationObserver(scheduleProcess);
         observer.observe(document.body, { childList: true, subtree: true });
       }
     } else {
       observer?.disconnect();
       observer = null;
+      if (pending) { clearTimeout(pending); pending = null; }
       unprocess();
     }
   }

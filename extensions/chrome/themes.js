@@ -87,7 +87,60 @@
       "--bad": "#cf222e",
       "--warn": "#9a6700",
       "--cf": "#3b5bdb"
+    },
+    // Flat teal/slate dark palette (no gradients), tuned for CF dark-mode contrast.
+    ocean: {
+      name: "Ocean",
+      "--bg": "#0c1418",
+      "--panel": "#111c22",
+      "--panel-2": "#16242c",
+      "--fg": "#dce8ec",
+      "--dim": "#7e95a0",
+      "--border": "#243640",
+      "--accent": "#4fd1c5",
+      "--accent-dim": "#2c8a82",
+      "--accent-on": "#0c1418",
+      "--ok": "#5bd99a",
+      "--bad": "#ff8b8b",
+      "--warn": "#e6c060",
+      "--cf": "#6cc5e0"
+    },
+    // Flat rose-tinted dark palette (no gradients), warm but high-contrast.
+    rose: {
+      name: "Rose",
+      "--bg": "#15101300",
+      "--panel": "#1c1418",
+      "--panel-2": "#241a1f",
+      "--fg": "#f0e2e6",
+      "--dim": "#a98a92",
+      "--border": "#33242a",
+      "--accent": "#ff8fb0",
+      "--accent-dim": "#bf5d79",
+      "--accent-on": "#151013",
+      "--ok": "#8fd6a0",
+      "--bad": "#ff7a7a",
+      "--warn": "#e8b96a",
+      "--cf": "#f49ac0"
     }
+  };
+
+  // Fix the typo'd bg above (kept 6-digit hex everywhere downstream expects it).
+  THEMES.rose["--bg"] = "#151013";
+
+  // Structural token defaults — the geometry scale CPOS_STYLE_CORE applies. Kept
+  // here so the palette file is the single place to tweak the look. These are
+  // NOT per-theme colour keys; they're shared, flat (no gradients) and read by
+  // the style core's STRUCT defaults. Exposed for reference / popup use.
+  const STRUCT_TOKENS = {
+    "--radius-sm": "8px",
+    "--radius": "12px",
+    "--radius-lg": "16px",
+    "--space": "16px",
+    "--shadow": "0 1px 2px rgba(0,0,0,0.06), 0 4px 16px rgba(0,0,0,0.04)",
+    "--font-sans":
+      '"Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, system-ui, sans-serif',
+    "--font-mono":
+      '"JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace'
   };
 
   const DEFAULT_THEME = "purple";
@@ -104,7 +157,7 @@
     }
   }
 
-  const api = { THEMES, DEFAULT_THEME, get, applyTheme, list: () => Object.keys(THEMES) };
+  const api = { THEMES, DEFAULT_THEME, STRUCT_TOKENS, get, applyTheme, list: () => Object.keys(THEMES) };
 
   // Works both as a content-script global and (via importScripts-free) the popup.
   root.CPOS_THEMES = api;

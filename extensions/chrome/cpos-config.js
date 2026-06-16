@@ -15,6 +15,9 @@
     carrot: true,
     highlight: true,
     ide: true,
+    problemTools: true,
+    problemsetTools: true,
+    annotate: false,
     modernize: false,
     siteTheme: false
   };
