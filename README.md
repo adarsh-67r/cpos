@@ -112,6 +112,13 @@ Terminal editor users can set `editor` to commands such as `nvim {file}`, `vim {
 
 The companion captures samples and autofills the judge submit form — that's the core, and it's unchanged. On top of that it adds an optional layer of practice and on-page tooling for Codeforces and CSES. Everything is read-only (public CF API + localhost), and **every feature toggles individually from the popup**. Available for Chrome/Edge/Brave and Firefox.
 
+<p align="center">
+  <img src="docs/shots/companion-popup.png" alt="CPOS companion popup — every feature toggles in one place" width="800">
+</p>
+<p align="center">
+  <img src="docs/shots/companion-analytics.png" alt="CPOS profile analytics — heatmap, streaks, solved-by-rating, tags and verdicts" width="800">
+</p>
+
 **Capture & submit**
 
 - Reads Codeforces/CSES samples and sends them to local CPOS
