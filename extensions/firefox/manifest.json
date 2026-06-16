@@ -1,22 +1,23 @@
 {
     "manifest_version": 3,
     "name": "CPOS Companion",
-    "version": "0.0.2",
-    "description": "Capture Codeforces and CSES problems for the CPOS VS Code extension. All data stays on your computer (localhost only).",
+    "version": "0.1.0",
+    "description": "Codeforces & CSES companion: capture & submit, profile analytics, rating predictions, problem tools (rating, tag-hider, sample copy), marker & notes, site themes, code highlighting, and a LeetCode-style in-browser editor. Local-first.",
     "icons": {
         "16": "icons/icon16.png",
         "48": "icons/icon48.png",
         "128": "icons/icon128.png"
     },
     "action": {
-        "default_title": "CPOS Companion - capture & submit via local CPOS",
+        "default_title": "CPOS Companion — capture, analytics, themes & submit",
+        "default_popup": "popup.html",
         "default_icon": {
             "16": "icons/icon16.png",
             "48": "icons/icon48.png",
             "128": "icons/icon128.png"
         }
     },
-    "permissions": ["scripting", "tabs", "alarms"],
+    "permissions": ["scripting", "tabs", "alarms", "storage"],
     "host_permissions": [
         "http://127.0.0.1:27121/*",
         "http://127.0.0.1:27122/*",
@@ -52,6 +53,80 @@
                 "https://cses.fi/problemset/list/*"
             ],
             "js": ["content.js"],
+            "run_at": "document_idle"
+        },
+        {
+            "matches": ["https://codeforces.com/profile/*"],
+            "js": ["cpos-config.js", "themes.js", "profile.js"],
+            "css": ["profile.css"],
+            "run_at": "document_idle"
+        },
+        {
+            "matches": ["https://codeforces.com/*", "https://cses.fi/*"],
+            "js": ["cpos-config.js", "themes.js", "cpos-style-core.js", "site-theme.js", "modernize.js"],
+            "run_at": "document_start"
+        },
+        {
+            "matches": ["https://codeforces.com/contest/*/standings*"],
+            "js": ["cpos-config.js", "carrot.js"],
+            "run_at": "document_idle"
+        },
+        {
+            "matches": [
+                "https://codeforces.com/problemset/problem/*",
+                "https://codeforces.com/contest/*/problem/*",
+                "https://codeforces.com/gym/*/problem/*",
+                "https://codeforces.com/blog/entry/*",
+                "https://cses.fi/problemset/task/*"
+            ],
+            "js": ["cpos-config.js", "themes.js", "cpos-highlight.js", "highlight.js"],
+            "css": ["highlight.css"],
+            "run_at": "document_idle"
+        },
+        {
+            "matches": [
+                "https://codeforces.com/problemset/problem/*",
+                "https://codeforces.com/contest/*/problem/*",
+                "https://codeforces.com/gym/*/problem/*",
+                "https://codeforces.com/contest/*/submit*",
+                "https://codeforces.com/gym/*/submit*",
+                "https://codeforces.com/problemset/submit*",
+                "https://cses.fi/problemset/task/*"
+            ],
+            "js": ["cpos-config.js", "themes.js", "cpos-highlight.js", "ide.js"],
+            "css": ["ide.css"],
+            "run_at": "document_idle"
+        },
+        {
+            "matches": [
+                "https://codeforces.com/problemset/problem/*",
+                "https://codeforces.com/contest/*/problem/*",
+                "https://codeforces.com/gym/*/problem/*",
+                "https://codeforces.com/blog/entry/*",
+                "https://cses.fi/problemset/task/*"
+            ],
+            "js": ["cpos-config.js", "themes.js", "annotate.js"],
+            "css": ["annotate.css"],
+            "run_at": "document_idle"
+        },
+        {
+            "matches": [
+                "https://codeforces.com/problemset/problem/*",
+                "https://codeforces.com/contest/*/problem/*",
+                "https://codeforces.com/gym/*/problem/*"
+            ],
+            "js": ["cpos-config.js", "themes.js", "cf-problem.js"],
+            "css": ["cf-tools.css"],
+            "run_at": "document_idle"
+        },
+        {
+            "matches": [
+                "https://codeforces.com/problemset*",
+                "https://codeforces.com/contest/*",
+                "https://codeforces.com/gym/*"
+            ],
+            "js": ["cpos-config.js", "themes.js", "cf-problemset.js"],
+            "css": ["cf-tools.css"],
             "run_at": "document_idle"
         }
     ]

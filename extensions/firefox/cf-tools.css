@@ -1,0 +1,121 @@
+/* CPOS CF tools — styles for the problem-page strip (cf-problem.js) and the
+   problemset solve-status coloring + info strip (cf-problemset.js). Everything
+   visible is scoped under #cpos-cf-tools or .cpos-cf-* so it never leaks into
+   CF styles. Flat, theme-aware (tokens written by CPOS_THEMES.applyTheme); no
+   gradients. Row tints use the active theme's --ok / --warn tokens. */
+
+#cpos-cf-tools,
+.cpos-cf-copy {
+  /* fallbacks; the active theme overrides these as inline custom props */
+  --bg: #14141f; --panel: #1b1b2b; --panel-2: #20202e; --fg: #e8e6f0;
+  --dim: #8a86a3; --border: #2a2a3e; --accent: #b794ff; --accent-dim: #7c5cbf;
+  --accent-on: #14141f; --ok: #7ee787; --bad: #ff7a93; --warn: #f0b860; --cf: #7aa2f7;
+}
+
+/* ── the tools strip ──────────────────────────────────────────────────────── */
+#cpos-cf-tools {
+  display: flex; align-items: center; flex-wrap: wrap; gap: 8px 10px;
+  margin: 10px 0; padding: 9px 12px;
+  background: var(--panel); border: 1px solid var(--border); border-radius: 12px;
+  font-family: ui-sans-serif, -apple-system, "Segoe UI", Roboto, sans-serif;
+  font-size: 12px; color: var(--fg); line-height: 1.4;
+}
+#cpos-cf-tools * { box-sizing: border-box; }
+
+#cpos-cf-tools .cpos-cf-head .badge {
+  font-size: 10px; font-weight: 700; color: var(--accent-on); background: var(--accent);
+  border-radius: 5px; padding: 2px 7px; letter-spacing: 0.06em;
+}
+#cpos-cf-tools .cpos-cf-lbl { color: var(--dim); font-size: 11px; }
+
+/* rating badge */
+#cpos-cf-tools .cpos-cf-badge {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-weight: 800; font-size: 12.5px; font-variant-numeric: tabular-nums;
+  padding: 2px 9px; border-radius: 999px;
+  border: 1px solid var(--border); background: var(--panel-2); color: var(--fg);
+}
+#cpos-cf-tools .cpos-cf-badge.dim { color: var(--dim); }
+#cpos-cf-tools .cpos-cf-badge.hidden {
+  cursor: pointer; color: var(--accent); border-color: var(--accent-dim); background: transparent;
+}
+#cpos-cf-tools .cpos-cf-badge.hidden:hover { background: var(--panel-2); }
+
+/* generic buttons in the strip */
+#cpos-cf-tools .cpos-cf-btn {
+  font: inherit; font-size: 11.5px; font-weight: 600; cursor: pointer;
+  color: var(--accent-on); background: var(--accent);
+  border: 1px solid var(--accent); border-radius: 7px; padding: 3px 10px;
+}
+#cpos-cf-tools .cpos-cf-btn:hover { background: var(--accent-dim); border-color: var(--accent-dim); }
+#cpos-cf-tools .cpos-cf-btn.ghost {
+  color: var(--accent); background: transparent; border-color: var(--accent-dim);
+}
+#cpos-cf-tools .cpos-cf-btn.ghost:hover { background: var(--panel-2); }
+#cpos-cf-tools .cpos-cf-btn:disabled { opacity: 0.45; cursor: default; }
+
+/* tag chips */
+#cpos-cf-tools .cpos-cf-tags { display: inline-flex; align-items: center; flex-wrap: wrap; gap: 6px; }
+#cpos-cf-tools .cpos-cf-chips { display: inline-flex; flex-wrap: wrap; gap: 5px; }
+#cpos-cf-tools .cpos-cf-chip {
+  font-size: 11px; color: var(--fg); background: var(--panel-2);
+  border: 1px solid var(--border); border-radius: 999px; padding: 1px 8px;
+}
+
+/* similar problems mini-list */
+#cpos-cf-tools .cpos-cf-sim-wrap { flex-basis: 100%; }
+#cpos-cf-tools .cpos-cf-sim { border-top: 1px solid var(--border); padding-top: 7px; margin-top: 2px; }
+#cpos-cf-tools .cpos-cf-sim-list { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 5px; }
+#cpos-cf-tools .cpos-cf-sim-item {
+  display: inline-flex; align-items: center; gap: 6px; text-decoration: none;
+  font-size: 11px; color: var(--fg); background: var(--panel-2);
+  border: 1px solid var(--border); border-radius: 7px; padding: 2px 9px; max-width: 240px;
+}
+#cpos-cf-tools .cpos-cf-sim-item:hover { border-color: var(--accent-dim); }
+#cpos-cf-tools .cpos-cf-sim-item .r { font-weight: 800; font-variant-numeric: tabular-nums; }
+#cpos-cf-tools .cpos-cf-sim-item .n { color: var(--dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* ── copy-sample button (per input block) ─────────────────────────────────── */
+.cpos-cf-copy {
+  position: absolute; top: 6px; right: 8px; z-index: 5;
+  font: inherit; font-size: 11px; font-weight: 600; line-height: 1; cursor: pointer;
+  color: var(--accent-on); background: var(--accent);
+  border: 1px solid var(--accent); border-radius: 6px; padding: 3px 9px;
+  font-family: ui-sans-serif, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+.cpos-cf-copy:hover { background: var(--accent-dim); border-color: var(--accent-dim); }
+.cpos-cf-copy.ok { color: var(--accent-on); background: var(--ok); border-color: var(--ok); }
+/* anchor the absolutely-positioned button without disturbing CF's own copier
+   (CF positions its copier top-right too; we sit slightly left via the layout). */
+.sample-test .input { position: relative; }
+.sample-test .input .cpos-cf-copy { right: 8px; }
+/* If CF shows its own ".input-output-copier", nudge ours below it so both work. */
+.sample-test .input .input-output-copier ~ .cpos-cf-copy,
+.sample-test .input:has(.input-output-copier) .cpos-cf-copy { top: 30px; }
+
+/* ── problemset info strip extras ─────────────────────────────────────────── */
+#cpos-cf-tools .cpos-cf-stat { color: var(--dim); font-size: 11.5px; }
+#cpos-cf-tools .cpos-cf-stat b { font-size: 13px; font-weight: 800; color: var(--fg); font-variant-numeric: tabular-nums; margin-right: 3px; }
+#cpos-cf-tools .cpos-cf-who { color: var(--accent); font-weight: 700; font-size: 11px; margin-left: auto; }
+#cpos-cf-tools .cpos-cf-spark-wrap { display: inline-flex; align-items: flex-end; }
+#cpos-cf-tools .cpos-cf-spark {
+  display: inline-flex; align-items: flex-end; gap: 2px; height: 22px;
+}
+#cpos-cf-tools .cpos-cf-spark-bar { width: 5px; min-height: 2px; background: var(--cf); border-radius: 2px 2px 0 0; }
+
+/* ── solve-status row tints (subtle; preserves CF's own row styling) ──────────
+   The rows aren't descendants of #cpos-cf-tools, so the tint tokens are written
+   by cf-problemset.js onto :root as --cpos-row-ok / --cpos-row-warn (resolved
+   from the active theme). Fallbacks keep it sane before JS runs. */
+table.problems tr.cpos-cf-solved > td {
+  background-color: color-mix(in srgb, var(--cpos-row-ok, #3fb950) 14%, transparent) !important;
+}
+table.problems tr.cpos-cf-solved > td:first-child {
+  box-shadow: inset 3px 0 0 var(--cpos-row-ok, #3fb950);
+}
+table.problems tr.cpos-cf-attempted > td {
+  background-color: color-mix(in srgb, var(--cpos-row-warn, #d29922) 14%, transparent) !important;
+}
+table.problems tr.cpos-cf-attempted > td:first-child {
+  box-shadow: inset 3px 0 0 var(--cpos-row-warn, #d29922);
+}
