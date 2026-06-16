@@ -1,7 +1,7 @@
 {
     "manifest_version": 3,
     "name": "CPOS Companion",
-    "version": "0.1.0",
+    "version": "0.2.0",
     "description": "Codeforces & CSES companion: capture & submit, profile analytics, rating predictions, problem tools (rating, tag-hider, sample copy), marker & notes, site themes, code highlighting, and a LeetCode-style in-browser editor. Local-first.",
     "icons": {
         "16": "icons/icon16.png",
@@ -17,7 +17,7 @@
             "128": "icons/icon128.png"
         }
     },
-    "permissions": ["scripting", "tabs", "alarms", "storage"],
+    "permissions": ["scripting", "tabs", "alarms", "storage", "notifications"],
     "host_permissions": [
         "http://127.0.0.1:27121/*",
         "http://127.0.0.1:27122/*",
@@ -25,7 +25,7 @@
         "https://cses.fi/*"
     ],
     "background": {
-        "scripts": ["background.js"]
+        "scripts": ["cpos-contests.js", "background.js"]
     },
     "browser_specific_settings": {
         "gecko": {
@@ -127,6 +127,44 @@
             ],
             "js": ["cpos-config.js", "themes.js", "cf-problemset.js"],
             "css": ["cf-tools.css"],
+            "run_at": "document_idle"
+        },
+        {
+            "matches": ["https://codeforces.com/contest/*/standings*"],
+            "js": ["cpos-config.js", "themes.js", "cf-standings.js"],
+            "css": ["cf-tools.css"],
+            "run_at": "document_idle"
+        },
+        {
+            "matches": ["https://codeforces.com/*"],
+            "js": ["cpos-config.js", "themes.js", "cpos-daily.js"],
+            "css": ["practice.css"],
+            "run_at": "document_idle"
+        },
+        {
+            "matches": [
+                "https://codeforces.com/problemset/problem/*",
+                "https://codeforces.com/contest/*/problem/*",
+                "https://codeforces.com/gym/*/problem/*"
+            ],
+            "js": ["cpos-config.js", "themes.js", "cf-favorites.js"],
+            "css": ["practice.css"],
+            "run_at": "document_idle"
+        },
+        {
+            "matches": [
+                "https://codeforces.com/problemset/problem/*",
+                "https://codeforces.com/contest/*/problem/*",
+                "https://codeforces.com/gym/*/problem/*"
+            ],
+            "js": ["cpos-config.js", "themes.js", "cf-timer.js"],
+            "css": ["cf-timer.css"],
+            "run_at": "document_idle"
+        },
+        {
+            "matches": ["https://codeforces.com/profile/*"],
+            "js": ["cpos-config.js", "themes.js", "cf-compare.js"],
+            "css": ["cf-compare.css"],
             "run_at": "document_idle"
         }
     ]

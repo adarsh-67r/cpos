@@ -7,7 +7,7 @@
   const DEFAULTS = {
     "cpos.ui.theme": T.DEFAULT_THEME,
     "cpos.siteThemeId": "github",
-    "cpos.features": { profile: true, carrot: true, highlight: true, ide: true, problemTools: true, problemsetTools: true, annotate: false, modernize: false, siteTheme: false }
+    "cpos.features": { profile: true, carrot: true, highlight: true, ide: true, problemTools: true, problemsetTools: true, standingsTools: true, contestReminders: true, dailyProblem: true, favorites: true, problemTimer: true, ladder: true, profileCompare: true, annotate: false, modernize: false, siteTheme: false }
   };
 
   const store = chrome.storage.local;
@@ -100,6 +100,11 @@
 
   function wire() {
     document.getElementById("ver").textContent = "v" + chrome.runtime.getManifest().version;
+
+    // Open the standalone Practice Ladders page in a new tab.
+    document.getElementById("cpos-open-ladder")?.addEventListener("click", () => {
+      chrome.tabs.create({ url: chrome.runtime.getURL("ladder.html") });
+    });
 
     // Hint which site the active tab is on.
     chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {

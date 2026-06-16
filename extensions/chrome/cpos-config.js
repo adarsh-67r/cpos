@@ -17,6 +17,13 @@
     ide: true,
     problemTools: true,
     problemsetTools: true,
+    standingsTools: true,
+    contestReminders: true,
+    dailyProblem: true,
+    favorites: true,
+    problemTimer: true,
+    ladder: true,
+    profileCompare: true,
     annotate: false,
     modernize: false,
     siteTheme: false

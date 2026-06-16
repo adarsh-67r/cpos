@@ -12,7 +12,7 @@ fi
 rm -f cpos-companion.xpi
 zip -r cpos-companion.xpi \
   manifest.json \
-  popup.html \
+  *.html \
   *.js \
   *.css \
   icons/icon16.png \

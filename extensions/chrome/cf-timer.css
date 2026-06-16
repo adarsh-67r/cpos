@@ -1,0 +1,73 @@
+/* CPOS problem timer — flat, theme-token based, no gradients. All selectors are
+   scoped under #cpos-timer (protected by site-theme.js). */
+
+#cpos-timer {
+  position: fixed;
+  z-index: 2147483600;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 8px;
+  background: var(--panel, #1b1b2b);
+  color: var(--fg, #e8e6f0);
+  border: 1px solid var(--border, #2a2a3e);
+  border-radius: 10px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+  font-family: var(--font-mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace);
+  font-size: 13px;
+  line-height: 1;
+  user-select: none;
+  -webkit-user-select: none;
+  opacity: 0.92;
+  transition: opacity 0.12s ease;
+}
+#cpos-timer:hover { opacity: 1; }
+#cpos-timer[data-dragging="1"] { opacity: 1; cursor: grabbing; }
+
+#cpos-timer .cpos-timer-grip {
+  cursor: grab;
+  color: var(--dim, #8a86a3);
+  font-size: 14px;
+  padding: 0 2px;
+  letter-spacing: -1px;
+  touch-action: none;
+}
+#cpos-timer[data-dragging="1"] .cpos-timer-grip { cursor: grabbing; }
+
+#cpos-timer .cpos-timer-time {
+  min-width: 52px;
+  text-align: center;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.5px;
+  color: var(--fg, #e8e6f0);
+}
+#cpos-timer[data-running="1"] .cpos-timer-time { color: var(--accent, #b794ff); }
+
+#cpos-timer .cpos-timer-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  margin: 0;
+  border: 1px solid var(--border, #2a2a3e);
+  border-radius: 6px;
+  background: var(--panel-2, #20202e);
+  color: var(--fg, #e8e6f0);
+  cursor: pointer;
+  line-height: 0;
+  transition: background 0.12s ease, color 0.12s ease, border-color 0.12s ease;
+}
+#cpos-timer .cpos-timer-btn:hover {
+  border-color: var(--accent, #b794ff);
+  color: var(--accent, #b794ff);
+}
+#cpos-timer .cpos-timer-play:hover { color: var(--ok, #7ee787); border-color: var(--ok, #7ee787); }
+#cpos-timer .cpos-timer-reset:hover { color: var(--bad, #ff7a93); border-color: var(--bad, #ff7a93); }
+#cpos-timer .cpos-timer-btn:focus-visible {
+  outline: 2px solid var(--accent, #b794ff);
+  outline-offset: 1px;
+}
+#cpos-timer .cpos-timer-btn svg { display: block; }

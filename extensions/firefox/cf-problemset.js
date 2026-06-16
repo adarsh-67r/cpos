@@ -18,7 +18,11 @@
   const FEATURE = "problemsetTools";
   const STATUS_KEY = "cpos.cf.status";   // { handle, ts, solved:[keys], attempted:[keys] }
   const STATUS_TTL = 10 * 60 * 1000;     // 10 min — submissions change often
+  const STATS_KEY = "cpos.problemset.stats"; // { ts, counts:{ "id-IDX": solvedCount } }
+  const STATS_TTL = 6 * 60 * 60 * 1000;  // 6 h — solvedCount drifts slowly
+  const HIDE_KEY = "cpos.problemset.hideSolved"; // bool — persisted toggle pref
   const ROW_ATTR = "data-cpos-cf-row";
+  const COUNT_CELL = "cpos-cf-count-cell"; // injected solvedCount column cells/header
 
   const esc = (s) => String(s == null ? "" : s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
   function el(tag, cls, html) { const e = document.createElement(tag); if (cls) e.className = cls; if (html != null) e.innerHTML = html; return e; }
@@ -73,6 +77,41 @@
     return statusSets;
   }
 
+  // ── per-problem submission count (solvedCount) from problemset.problems ──────
+  // problemset.problems returns { problems[], problemStatistics[] }; the latter
+  // gives solvedCount per (contestId, index). Cached long since it drifts slowly.
+  let statsMap = null; // Map "id-IDX" -> solvedCount
+  async function loadStats() {
+    if (statsMap) return statsMap;
+    const stored = await C.get([STATS_KEY]);
+    const rec = stored[STATS_KEY];
+    if (rec && rec.counts && (Date.now() - (rec.ts || 0) < STATS_TTL)) {
+      statsMap = new Map(Object.entries(rec.counts));
+      return statsMap;
+    }
+    try {
+      const result = await cfApi("problemset.problems", "");
+      const m = new Map();
+      for (const ps of (result.problemStatistics || [])) {
+        if (ps.contestId == null || !ps.index) continue;
+        m.set(ps.contestId + "-" + String(ps.index).toUpperCase(), ps.solvedCount || 0);
+      }
+      const counts = {}; m.forEach((v, k) => { counts[k] = v; });
+      await C.set({ [STATS_KEY]: { ts: Date.now(), counts } });
+      statsMap = m;
+    } catch (e) {
+      statsMap = rec && rec.counts ? new Map(Object.entries(rec.counts)) : new Map();
+    }
+    return statsMap;
+  }
+
+  function fmtCount(n) {
+    if (n == null) return "";
+    if (n >= 1000000) return (n / 1000000).toFixed(1).replace(/\.0$/, "") + "M";
+    if (n >= 1000) return (n / 1000).toFixed(1).replace(/\.0$/, "") + "k";
+    return String(n);
+  }
+
   // ── parse a problem key + rating out of a table row ─────────────────────────
   // Works for the problemset table and contest problem tables (both .problems).
   function rowKey(tr) {
@@ -122,9 +161,64 @@
   }
   function clearRows() {
     document.querySelectorAll("[" + ROW_ATTR + "]").forEach((tr) => {
-      tr.classList.remove("cpos-cf-solved", "cpos-cf-attempted");
+      tr.classList.remove("cpos-cf-solved", "cpos-cf-attempted", "cpos-cf-hidden");
       tr.removeAttribute(ROW_ATTR);
     });
+  }
+
+  // ── per-problem submission-count column ─────────────────────────────────────
+  // Adds a tidy "× solved" badge cell to each problems table (header + rows),
+  // robust to old (m1/m2/m3) and modern CF DOM by appending a new last cell.
+  function injectCounts(stats) {
+    if (!stats) return;
+    document.querySelectorAll("table.problems").forEach((table) => {
+      const headRow = [...table.querySelectorAll("tr")].find((tr) => tr.querySelector("th"));
+      if (headRow && !headRow.querySelector("." + COUNT_CELL)) {
+        const th = document.createElement("th");
+        th.className = COUNT_CELL;
+        th.title = "Number of users who solved the problem (CPOS)";
+        th.textContent = "× solved";
+        headRow.appendChild(th);
+      }
+      table.querySelectorAll("tr").forEach((tr) => {
+        if (tr.querySelector("th")) return;
+        const key = rowKey(tr);
+        if (!key) return;
+        let cell = tr.querySelector("." + COUNT_CELL);
+        const n = stats.get(key);
+        const html = n == null ? '<span class="cpos-cf-count dim">·</span>'
+          : '<span class="cpos-cf-count" title="' + n + ' solved">' + esc(fmtCount(n)) + "</span>";
+        if (!cell) { cell = document.createElement("td"); cell.className = COUNT_CELL; tr.appendChild(cell); }
+        if (cell.innerHTML !== html) cell.innerHTML = html;
+      });
+    });
+  }
+  function clearCounts() {
+    document.querySelectorAll("." + COUNT_CELL).forEach((e) => e.remove());
+  }
+
+  // ── hide-solved toggle ──────────────────────────────────────────────────────
+  let hideSolved = false;
+  async function loadHidePref() {
+    const stored = await C.get([HIDE_KEY]);
+    hideSolved = stored[HIDE_KEY] === true;
+    return hideSolved;
+  }
+  function applyHide() {
+    for (const tr of problemRows()) {
+      const solved = tr.classList.contains("cpos-cf-solved");
+      tr.classList.toggle("cpos-cf-hidden", hideSolved && solved);
+    }
+    const toggle = document.querySelector("#" + ROOT_ID + " .cpos-cf-hide-toggle");
+    if (toggle) {
+      toggle.classList.toggle("on", hideSolved);
+      toggle.setAttribute("aria-pressed", String(hideSolved));
+      const lbl = toggle.querySelector(".cpos-cf-hide-lbl");
+      if (lbl) lbl.textContent = hideSolved ? "Solved hidden" : "Hide solved";
+    }
+  }
+  function clearHide() {
+    document.querySelectorAll("tr.cpos-cf-hidden").forEach((tr) => tr.classList.remove("cpos-cf-hidden"));
   }
 
   // ── compact info strip ───────────────────────────────────────────────────────
@@ -157,6 +251,19 @@
         '<b style="color:var(--warn)">' + stats.attempted + "</b> attempted"));
       root.appendChild(el("span", "cpos-cf-stat",
         '<b>' + untouched + "</b> untouched"));
+
+      // Hide-solved toggle (only meaningful when we know what's solved).
+      const toggle = el("button", "cpos-cf-btn ghost cpos-cf-hide-toggle",
+        '<span class="cpos-cf-hide-dot"></span><span class="cpos-cf-hide-lbl">Hide solved</span>');
+      toggle.type = "button";
+      toggle.setAttribute("aria-pressed", "false");
+      toggle.addEventListener("click", async () => {
+        hideSolved = !hideSolved;
+        await C.set({ [HIDE_KEY]: hideSolved });
+        applyHide();
+      });
+      root.appendChild(toggle);
+
       root.appendChild(el("span", "cpos-cf-who", "@" + esc(handle)));
     } else {
       root.appendChild(el("span", "cpos-cf-lbl", "Sign in for solve-status coloring"));
@@ -191,10 +298,13 @@
   let observer = null;
   let lastSets = null, lastHandle = null;
 
+  let lastStats = null;
+
   async function buildAll() {
     if (!(onProblemset() || onContestList())) return;
     const handle = loggedInHandle();
     lastHandle = handle;
+    await loadHidePref();
     let sets = null, stats;
     if (handle) {
       sets = await loadStatus(handle);
@@ -207,10 +317,16 @@
     }
     buildStrip(stats, handle, sets);
 
+    // Submission counts (independent of login) + hide-solved (needs status).
+    loadStats().then((m) => { lastStats = m; injectCounts(m); }).catch(() => {});
+    if (sets) applyHide();
+
     if (!observer) {
       observer = new MutationObserver(() => {
         if (!document.getElementById(ROOT_ID)) return;
         if (lastSets) colorRows(lastSets);
+        if (lastStats) injectCounts(lastStats);
+        if (lastSets) applyHide();
       });
       const tbl = document.querySelector("table.problems");
       if (tbl) observer.observe(tbl, { childList: true, subtree: true });
@@ -222,6 +338,8 @@
     observer = null;
     document.getElementById(ROOT_ID)?.remove();
     clearRows();
+    clearCounts();
+    clearHide();
     clearRowTokens();
   }
 

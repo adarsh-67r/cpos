@@ -3,6 +3,8 @@
 <head>
 <meta charset="UTF-8" />
 <link rel="stylesheet" href="popup.css" />
+<link rel="stylesheet" href="contests.css" />
+<link rel="stylesheet" href="practice.css" />
 </head>
 <body data-theme="purple">
   <header class="hdr">
@@ -55,6 +57,51 @@
       <span class="rtxt"><b>Marker & notes</b><small>highlight & annotate statement text</small></span>
       <label class="sw"><input type="checkbox" data-feature-input="annotate" /><span></span></label>
     </div>
+    <div class="row toggle" data-feature="standingsTools">
+      <span class="ic">▦</span>
+      <span class="rtxt"><b>Standings tools</b><small>color rows by language; friends-only filter</small></span>
+      <label class="sw"><input type="checkbox" data-feature-input="standingsTools" /><span></span></label>
+    </div>
+    <div class="row toggle" data-feature="contestReminders">
+      <span class="ic">⏰</span>
+      <span class="rtxt"><b>Contest reminders</b><small>notify before upcoming CF contests</small></span>
+      <label class="sw"><input type="checkbox" data-feature-input="contestReminders" /><span></span></label>
+    </div>
+    <div class="row toggle" data-feature="dailyProblem">
+      <span class="ic">◐</span>
+      <span class="rtxt"><b>Daily problem & streak</b><small>a problem of the day for your rating</small></span>
+      <label class="sw"><input type="checkbox" data-feature-input="dailyProblem" /><span></span></label>
+    </div>
+    <div class="row toggle" data-feature="favorites">
+      <span class="ic">★</span>
+      <span class="rtxt"><b>Favorites</b><small>bookmark problems with a star</small></span>
+      <label class="sw"><input type="checkbox" data-feature-input="favorites" /><span></span></label>
+    </div>
+    <div class="row toggle" data-feature="problemTimer">
+      <span class="ic">⏱</span>
+      <span class="rtxt"><b>Problem timer</b><small>per-problem stopwatch that auto-resumes</small></span>
+      <label class="sw"><input type="checkbox" data-feature-input="problemTimer" /><span></span></label>
+    </div>
+    <div class="row toggle" data-feature="profileCompare">
+      <span class="ic">⚔</span>
+      <span class="rtxt"><b>Profile compare (VS)</b><small>side-by-side stats & rating overlay</small></span>
+      <label class="sw"><input type="checkbox" data-feature-input="profileCompare" /><span></span></label>
+    </div>
+    <button class="row toggle" id="cpos-open-ladder" type="button">
+      <span class="ic">▥</span>
+      <span class="rtxt"><b>Practice ladders</b><small>rating-bucketed CF problem sets · opens a tab</small></span>
+      <span class="ic">›</span>
+    </button>
+  </section>
+
+  <section class="card">
+    <div class="card-h">Contests</div>
+    <div id="cpos-contests-section"></div>
+  </section>
+
+  <section class="card">
+    <div class="card-h">Practice</div>
+    <div id="cpos-practice-section"></div>
   </section>
 
   <section class="card">
@@ -86,6 +133,9 @@
   </footer>
 
   <script src="themes.js"></script>
+  <script src="cpos-config.js"></script>
   <script src="popup.js"></script>
+  <script src="contests-ui.js"></script>
+  <script src="practice-ui.js"></script>
 </body>
 </html>
