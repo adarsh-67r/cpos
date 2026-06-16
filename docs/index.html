@@ -326,12 +326,27 @@
           <h2>See the companion in action.</h2>
           <p>A practice and on-page tooling layer over Codeforces &amp; CSES — profile analytics, an in-browser editor, profile compare, problemset solve-status, contest reminders, problem tools, and full site themes. Read-only and local-first; every feature toggles from the popup.</p>
         </div>
-        <div class="companion-gallery" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(360px,1fr));gap:18px;margin-top:8px">
-          <figure style="margin:0;border:1px solid var(--line);border-radius:14px;overflow:hidden;background:var(--surface);box-shadow:0 10px 30px var(--shadow)"><img src="shots/companion-popup.png" loading="lazy" decoding="async" alt="CPOS companion popup — toggle every feature in one place" style="display:block;width:100%;height:auto"></figure>
-          <figure style="margin:0;border:1px solid var(--line);border-radius:14px;overflow:hidden;background:var(--surface);box-shadow:0 10px 30px var(--shadow)"><img src="shots/companion-analytics.png" loading="lazy" decoding="async" alt="Profile analytics — heatmap, streaks, solved-by-rating, tags and verdicts" style="display:block;width:100%;height:auto"></figure>
-          <figure style="margin:0;border:1px solid var(--line);border-radius:14px;overflow:hidden;background:var(--surface);box-shadow:0 10px 30px var(--shadow)"><img src="shots/companion-editor.png" loading="lazy" decoding="async" alt="In-browser editor — run against samples and submit in place" style="display:block;width:100%;height:auto"></figure>
-          <figure style="margin:0;border:1px solid var(--line);border-radius:14px;overflow:hidden;background:var(--surface);box-shadow:0 10px 30px var(--shadow)"><img src="shots/companion-modernize.png" loading="lazy" decoding="async" alt="Modernize — a sleek font and calmer spacing for Codeforces, with solve-status row coloring and live solve counts" style="display:block;width:100%;height:auto"></figure>
-          <figure style="margin:0;border:1px solid var(--line);border-radius:14px;overflow:hidden;background:var(--surface);box-shadow:0 10px 30px var(--shadow)"><img src="shots/companion-compare.png" loading="lazy" decoding="async" alt="Profile compare — side-by-side stats with a rating overlay" style="display:block;width:100%;height:auto"></figure>
+        <div class="companion-gallery">
+          <figure class="companion-card">
+            <img src="shots/companion-popup.png" loading="lazy" decoding="async" alt="CPOS companion popup with a toggle for every feature">
+            <figcaption><strong>One popup, every tool</strong><span>Toggle analytics, the editor, themes, reminders and practice tools — all from one place.</span></figcaption>
+          </figure>
+          <figure class="companion-card">
+            <img src="shots/companion-editor.png" loading="lazy" decoding="async" alt="In-browser editor on a Codeforces problem page">
+            <figcaption><strong>In-browser editor</strong><span>Run against the samples with a per-test diff and custom stdin, then submit in place.</span></figcaption>
+          </figure>
+          <figure class="companion-card">
+            <img src="shots/companion-analytics.png" loading="lazy" decoding="async" alt="CPOS profile analytics dashboard on a Codeforces profile">
+            <figcaption><strong>Profile analytics</strong><span>Activity heatmap, streaks, solved-by-rating, tags and verdicts — on the profile page.</span></figcaption>
+          </figure>
+          <figure class="companion-card">
+            <img src="shots/companion-compare.png" loading="lazy" decoding="async" alt="CPOS profile compare with a rating-history overlay">
+            <figcaption><strong>Profile compare</strong><span>Stack handles side by side with an overlaid rating history.</span></figcaption>
+          </figure>
+          <figure class="companion-card">
+            <img src="shots/companion-modernize.png" loading="lazy" decoding="async" alt="Codeforces problemset modernized with solve-status row coloring">
+            <figcaption><strong>Modernize</strong><span>A sleek font and calmer spacing for Codeforces, with solve-status row coloring.</span></figcaption>
+          </figure>
         </div>
       </div>
     </section>

@@ -161,6 +161,14 @@ def make_slide(spec):
     return canvas
 
 
+def make_clean(big):
+    """Clean website-gallery shot: crop just the framed screenshot panel out of
+    the 2x marketing slide (drops the baked headline/pills/footer — the website
+    supplies those as real text). Crops just inside the rounded frame border so
+    the tile is pure frame-fill + screenshot, no canvas-bg corners."""
+    return big.crop((1102, 158, 2400, 1440))
+
+
 SLIDES = [
     dict(name="popup", eyebrow="One hub",
          headline=["Every tool,", "one popup"],
@@ -195,12 +203,11 @@ STORE_DIRS = [os.path.join(ROOT, "extensions/chrome/store"),
 SHOTS_DIR = os.path.join(ROOT, "docs/shots")
 
 for i, spec in enumerate(SLIDES, 1):
-    big = make_slide(spec)
-    # docs/shots: 2x
-    big.save(os.path.join(SHOTS_DIR, f"companion-{spec['name']}.png"))
-    # store: 1x
-    small = big.resize((1280, 800), Image.LANCZOS)
+    # store: full marketing slide (text baked in), 1280x800
+    small = make_slide(spec).resize((1280, 800), Image.LANCZOS)
     for sd in STORE_DIRS:
         small.save(os.path.join(sd, f"screenshot-{i}.png"))
+    # website: clean framed screenshot (the page supplies captions as real text)
+    make_clean(make_slide(spec)).save(os.path.join(SHOTS_DIR, f"companion-{spec['name']}.png"))
     print(f"slide {i}: {spec['name']}")
 print("done")

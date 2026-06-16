@@ -1218,6 +1218,49 @@ code {
   background: var(--bg-raised);
 }
 
+.companion-gallery {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(330px, 1fr));
+  gap: 20px;
+  margin-top: 8px;
+}
+
+.companion-card {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow: 0 10px 30px var(--shadow);
+}
+
+.companion-card img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-bottom: 1px solid var(--line);
+}
+
+.companion-card figcaption {
+  padding: 16px 18px 18px;
+}
+
+.companion-card figcaption strong {
+  display: block;
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: 1.02rem;
+  margin-bottom: 5px;
+}
+
+.companion-card figcaption span {
+  color: var(--muted);
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
 .foot-grid {
   display: grid;
   grid-template-columns: minmax(0, 1.5fr) minmax(0, 0.9fr);
