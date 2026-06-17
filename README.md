@@ -130,7 +130,7 @@ The companion captures samples and autofills the judge submit form — that's th
 
 **In-browser editor**
 
-- LeetCode-style editor on problem pages: run against the samples with per-test diff and custom stdin
+- CodeMirror-powered editor on problem pages: run against the samples with per-test diff and custom stdin
 - Current-line highlight, bracket matching/auto-close, auto-indent, find & replace
 - Font-size and line-wrap controls, a maximize/zen layout, and multiple editor color schemes
 - Submit reuses the companion's existing flow
@@ -149,6 +149,7 @@ The companion captures samples and autofills the judge submit form — that's th
 - **Rating predictions** — predicted rating deltas on contest standings
 - **Contest reminders** — desktop notifications before upcoming Codeforces contests, with a configurable lead time (needs the notifications permission)
 - **Problem tools** — rating badge, tag-hider / training mode (reveal all or one-by-one), one-click copy of sample input, and similar-problem links
+- **Problem focus** — an always-available focus toggle on Codeforces problem pages that hides the right rail and expands the statement for split-screen solving
 - **Problemset tools** — solve-status row coloring, a hide-solved toggle, and per-problem submission counts
 - **Standings tools** — colorize standings rows by language (with a legend) and a friends-only filter
 - **Marker & notes** — highlight statement text and attach notes, saved per problem (off by default)

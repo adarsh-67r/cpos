@@ -46,8 +46,9 @@ CAPTURE & SUBMIT
 • Optionally syncs CSES solved/attempted status when you choose to sync
 
 ON THE PROBLEM PAGE
-• In-browser editor — a LeetCode-style editor: run against the samples with a per-test diff and custom stdin, then submit in place (running compiles on the local CPOS runner; editing works on its own)
+• In-browser editor — a CodeMirror-powered editor: run against the samples with a per-test diff and custom stdin, then submit in place (running compiles on the local CPOS runner; editing works on its own)
 • Code & LaTeX styling for statements, editorials and comments
+• Problem focus — hide the Codeforces right rail and expand the statement for split-screen solving
 • Problem tools — rating badge, tag-hider / training mode, one-click sample copy, similar problems, and a per-problem timer
 
 PRACTICE & ANALYTICS
@@ -89,7 +90,7 @@ CPOS runs locally on the user's machine (terminal app and VS Code extension). Ca
 
 ### Host permission: `https://codeforces.com/*`
 ```
-Reads public problem and sample data from Codeforces pages the user opens, and autofills the submit form when the user submits from CPOS while logged into Codeforces in this browser. The optional on-page tools (profile analytics, profile compare, rating predictions, problemset/standings helpers) read only public Codeforces pages and the public Codeforces API; they add charts and styling in place and send nothing to external servers.
+Reads public problem and sample data from Codeforces pages the user opens, and autofills the submit form when the user submits from CPOS while logged into Codeforces in this browser. The optional on-page tools (profile analytics, profile compare, rating predictions, problem focus, problemset/standings helpers) read only public Codeforces pages and the public Codeforces API; they add charts and styling in place and send nothing to CPOS-operated or developer servers.
 ```
 
 ### Host permission: `https://cses.fi/*`
@@ -114,7 +115,7 @@ Chrome may suspend the extension's background worker when idle. CPOS uses a loca
 
 ### Permission: `storage`
 ```
-Stores the user's own settings locally in chrome.storage.local: which features are toggled on, the chosen theme/palette, favorites, problem-timer state, daily-problem streak, and contest-reminder preferences. This data never leaves the device and is not transmitted anywhere.
+Stores the user's own settings locally in chrome.storage.local: feature toggles, theme/palette, in-browser editor drafts and preferences, favorites, problem-timer state, problem focus preference, daily-problem streak, marker notes/highlights, profile-compare handles, friends list, contest-reminder preferences, and short-lived public-data caches. This data never leaves the device except when the user explicitly runs/submits code to their own localhost CPOS app.
 ```
 
 ### Permission: `notifications`
@@ -130,7 +131,7 @@ When asked whether you collect or use user data:
 
 - **No**, the extension does not sell or transfer user data to third parties for unrelated purposes.
 - **No** remote collection — data stays on the user's device (localhost CPOS only).
-- Check **No personal data collected** / equivalent if the form allows, or disclose only: *problem metadata and source code transmitted locally to CPOS on 127.0.0.1 when the user uses the extension*.
+- Check **No personal data collected** / equivalent if the form allows, or disclose only: *problem metadata and source code transmitted locally to CPOS on 127.0.0.1 when the user uses capture/run/submit; settings and drafts stored locally in Chrome extension storage*.
 
 ---
 

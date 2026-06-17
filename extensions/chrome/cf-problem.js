@@ -11,6 +11,7 @@
 //     <pre> and the modern per-line .test-example-line format), never breaking
 //     CF's own copier.
 //   · a lightweight "similar problems" mini-list (same primary tag, ±100 rating).
+//   · a focus-mode toggle that expands the statement and hides the right rail.
 // Read-only: fetches the public CF API, augments the native Problem tags widget
 // when it exists, and adds small per-block copy buttons. Never touches
 // capture/submit. Toggle from the CPOS popup (feature "problemTools").
@@ -21,7 +22,7 @@
   if (!C) return;
 
   const FEATURE = "problemTools";
-  const PREF_KEY = "cpos.cf.problemPrefs";        // { tagsHidden, ratingHidden }
+  const PREF_KEY = "cpos.cf.problemPrefs";        // { tagsHidden, ratingHidden, focusMode }
   const CACHE_KEY = "cpos.cf.problemset";         // { ts, problems: { "id-index": {rating,tags,name} } }
   const CACHE_TTL = 12 * 60 * 60 * 1000;          // 12h — problemset rarely changes
 
@@ -103,7 +104,11 @@
   async function getPrefs() {
     const stored = await C.get([PREF_KEY]);
     const p = stored[PREF_KEY] || {};
-    return { tagsHidden: p.tagsHidden !== false, ratingHidden: p.ratingHidden === true };
+    return {
+      tagsHidden: p.tagsHidden !== false,
+      ratingHidden: p.ratingHidden === true,
+      focusMode: p.focusMode === true
+    };
   }
   async function setPrefs(patch) {
     const cur = await getPrefs();
@@ -178,8 +183,12 @@
 
   // ── the tools strip (rating + tags + reveal controls + similar) ─────────────
   function problemTagsBox() {
+    return sideboxByCaption(/problem\s*tags/i);
+  }
+
+  function sideboxByCaption(pattern) {
     const boxes = [...document.querySelectorAll(".roundbox.sidebox, .roundbox")];
-    return boxes.find((box) => /problem\s*tags/i.test(box.querySelector(".caption")?.textContent || "")) || null;
+    return boxes.find((box) => pattern.test(box.querySelector(".caption")?.textContent || "")) || null;
   }
 
   function nativeTagBoxes() {
@@ -303,12 +312,13 @@
   }
 
   function fallbackAnchor() {
-    return document.querySelector("#sidebar") ||
+    return sideboxByCaption(/contest\s*materials/i) ||
+      document.querySelector("#sidebar") ||
       document.querySelector(".sidebar") ||
       document.querySelector("#pageContent");
   }
 
-  function build(entry, prefs, ps) {
+  function buildTools(entry, prefs, ps) {
     let root = document.getElementById(ROOT_ID);
     if (root) root.remove();
 
@@ -330,13 +340,54 @@
       root.appendChild(tagsWrap);
 
       const anchor = fallbackAnchor();
-      if (anchor && anchor.firstChild) anchor.insertBefore(root, anchor.firstChild);
+      if (anchor?.matches?.(".roundbox")) anchor.parentNode.insertBefore(root, anchor);
+      else if (anchor && anchor.firstChild) anchor.insertBefore(root, anchor.firstChild);
       else (document.querySelector("#pageContent") || document.body).prepend(root);
       applyTheme(root);
     }
 
     // Hide CF's own native tags while training mode keeps ours hidden.
     setNativeTagsHidden(prefs.tagsHidden);
+  }
+
+  function statementHeader() {
+    return document.querySelector(".problem-statement .header") ||
+      document.querySelector(".problem-statement") ||
+      document.querySelector("#pageContent");
+  }
+
+  function renderFocusToggle(on) {
+    const anchor = statementHeader();
+    if (!anchor) return;
+    document.querySelectorAll(".cpos-cf-focus-anchor").forEach((node) => {
+      if (node !== anchor) node.classList.remove("cpos-cf-focus-anchor");
+    });
+    anchor.classList.add("cpos-cf-focus-anchor");
+    let btn = document.getElementById("cpos-cf-focus-toggle");
+    if (!btn) {
+      btn = el("button", "cpos-cf-focus-toggle");
+      btn.id = "cpos-cf-focus-toggle";
+      btn.type = "button";
+      btn.addEventListener("click", async (ev) => {
+        ev.preventDefault();
+        ev.stopPropagation();
+        const cur = await getPrefs();
+        await setPrefs({ focusMode: !cur.focusMode });
+        sync();
+      });
+      anchor.appendChild(btn);
+    } else if (btn.parentElement !== anchor) {
+      anchor.appendChild(btn);
+    }
+    btn.textContent = on ? "-" : "+";
+    btn.title = on ? "Exit focus mode" : "Focus problem";
+    btn.setAttribute("aria-label", btn.title);
+    btn.classList.toggle("on", !!on);
+    applyTheme(btn);
+  }
+
+  function applyFocusMode(on) {
+    document.documentElement.classList.toggle("cpos-cf-focus", !!on);
   }
 
   function setNativeTagsHidden(hidden) {
@@ -348,7 +399,9 @@
   async function rerender() {
     const prefs = await getPrefs();
     if (!document.body) return;
-    build(lastEntry, prefs, lastPs);
+    if (await C.feature(FEATURE)) buildTools(lastEntry, prefs, lastPs);
+    renderFocusToggle(prefs.focusMode);
+    applyFocusMode(prefs.focusMode);
   }
 
   // ── lifecycle ────────────────────────────────────────────────────────────────
@@ -360,7 +413,7 @@
     const ps = await loadProblemset();
     lastPs = ps;
     lastEntry = ps.byKey.get(id.key) || null;
-    build(lastEntry, prefs, ps);
+    buildTools(lastEntry, prefs, ps);
     addCopyButtons();
     // Watch for late-rendered sample blocks (CF sometimes hydrates them).
     if (!observer) {
@@ -372,7 +425,7 @@
     }
   }
 
-  function remove() {
+  function removeTools() {
     observer?.disconnect();
     observer = null;
     document.getElementById(ROOT_ID)?.remove();
@@ -382,9 +435,14 @@
   }
 
   async function sync() {
+    const id = problemId();
+    if (!id) return;
+    const prefs = await getPrefs();
+    renderFocusToggle(prefs.focusMode);
+    applyFocusMode(prefs.focusMode);
     const on = await C.feature(FEATURE);
     if (on) buildAll().catch((e) => console.debug("CPOS problemTools:", e));
-    else remove();
+    else removeTools();
   }
 
   C.onChange((changes) => {
@@ -394,6 +452,8 @@
       if (root) applyTheme(root);
       const widget = document.getElementById("cpos-cf-tags-widget");
       if (widget) applyTheme(widget);
+      const focus = document.getElementById("cpos-cf-focus-toggle");
+      if (focus) applyTheme(focus);
       document.querySelectorAll(".cpos-cf-copy").forEach((b) => applyTheme(b));
     }
   });

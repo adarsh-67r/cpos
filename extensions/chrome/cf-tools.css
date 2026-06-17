@@ -6,6 +6,7 @@
 
 #cpos-cf-tools,
 #cpos-cf-tags-widget,
+#cpos-cf-focus-toggle,
 .cpos-cf-copy {
   /* fallbacks; the active theme overrides these as inline custom props */
   --bg: #f7f7f8; --panel: #ffffff; --panel-2: #f0f1f3; --fg: #1f2328;
@@ -17,7 +18,9 @@
 #cpos-cf-tools {
   display: flex; align-items: center; flex-wrap: wrap; gap: 8px 10px;
   margin: 10px 0; padding: 9px 12px;
-  background: var(--panel); border: 1px solid var(--border); border-radius: 12px;
+  background: color-mix(in srgb, var(--panel) 94%, transparent);
+  border: 1px solid color-mix(in srgb, var(--border) 72%, transparent);
+  border-radius: 10px;
   font-family: ui-sans-serif, -apple-system, "Segoe UI", Roboto, sans-serif;
   font-size: 12px; color: var(--fg); line-height: 1.4;
   position: relative;
@@ -36,7 +39,9 @@
   display: flex; align-items: center; gap: 7px;
 }
 #cpos-cf-tools .cpos-cf-head .badge {
-  font-size: 10px; font-weight: 700; color: var(--accent-on); background: var(--accent);
+  font-size: 10px; font-weight: 750; color: var(--fg);
+  background: color-mix(in srgb, var(--panel-2) 82%, transparent);
+  border: 1px solid color-mix(in srgb, var(--border) 75%, transparent);
   border-radius: 5px; padding: 2px 7px; letter-spacing: 0.06em;
 }
 #cpos-cf-tools .cpos-cf-group {
@@ -72,17 +77,26 @@
 #cpos-cf-tools .cpos-cf-btn,
 #cpos-cf-tags-widget .cpos-cf-btn {
   font: inherit; font-size: 11.5px; font-weight: 600; cursor: pointer !important;
-  color: var(--accent-on) !important; background: var(--accent) !important;
-  border: 1px solid var(--accent) !important; border-radius: 7px !important; padding: 3px 10px !important;
+  color: var(--fg) !important;
+  background: color-mix(in srgb, var(--panel-2) 84%, transparent) !important;
+  border: 1px solid color-mix(in srgb, var(--border) 82%, transparent) !important;
+  border-radius: 7px !important; padding: 3px 10px !important;
 }
 #cpos-cf-tools .cpos-cf-btn:hover,
-#cpos-cf-tags-widget .cpos-cf-btn:hover { background: var(--accent-dim) !important; border-color: var(--accent-dim) !important; }
+#cpos-cf-tags-widget .cpos-cf-btn:hover {
+  background: color-mix(in srgb, var(--panel-2) 70%, var(--fg) 7%) !important;
+  border-color: color-mix(in srgb, var(--border) 55%, var(--fg) 16%) !important;
+}
 #cpos-cf-tools .cpos-cf-btn.ghost,
 #cpos-cf-tags-widget .cpos-cf-btn.ghost {
-  color: var(--accent) !important; background: transparent !important; border-color: var(--accent-dim) !important;
+  color: var(--dim) !important; background: transparent !important;
+  border-color: color-mix(in srgb, var(--border) 82%, transparent) !important;
 }
 #cpos-cf-tools .cpos-cf-btn.ghost:hover,
-#cpos-cf-tags-widget .cpos-cf-btn.ghost:hover { background: var(--panel-2) !important; }
+#cpos-cf-tags-widget .cpos-cf-btn.ghost:hover {
+  color: var(--fg) !important;
+  background: color-mix(in srgb, var(--panel-2) 72%, transparent) !important;
+}
 #cpos-cf-tools .cpos-cf-btn:disabled,
 #cpos-cf-tags-widget .cpos-cf-btn:disabled { opacity: 0.45; cursor: default !important; }
 
@@ -135,6 +149,108 @@
 #cpos-cf-tags-widget .cpos-cf-sim-item .r { font-weight: 800; font-variant-numeric: tabular-nums; }
 #cpos-cf-tools .cpos-cf-sim-item .n,
 #cpos-cf-tags-widget .cpos-cf-sim-item .n { color: var(--dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* ── problem focus toggle ────────────────────────────────────────────────── */
+.cpos-cf-focus-anchor {
+  position: relative !important;
+}
+#cpos-cf-focus-toggle {
+  position: absolute; top: 10px; right: 12px; z-index: 20;
+  width: 24px; height: 24px; display: inline-flex; align-items: center; justify-content: center;
+  box-sizing: border-box; cursor: pointer !important; appearance: none; -webkit-appearance: none;
+  font: 650 17px/1 ui-sans-serif, -apple-system, "Segoe UI", Roboto, sans-serif;
+  color: var(--dim) !important;
+  background: color-mix(in srgb, var(--panel) 72%, transparent) !important;
+  border: 1px solid color-mix(in srgb, var(--border) 76%, transparent) !important;
+  border-radius: 6px !important;
+  box-shadow: none !important;
+}
+#cpos-cf-focus-toggle:hover {
+  color: var(--fg) !important;
+  background: color-mix(in srgb, var(--panel-2) 80%, transparent) !important;
+  border-color: color-mix(in srgb, var(--border) 55%, var(--fg) 14%) !important;
+}
+#cpos-cf-focus-toggle.on {
+  color: var(--fg) !important;
+  background: color-mix(in srgb, var(--panel-2) 86%, transparent) !important;
+  border-color: color-mix(in srgb, var(--border) 60%, var(--fg) 16%) !important;
+}
+#cpos-cf-focus-toggle:focus {
+  outline: none !important;
+}
+#cpos-cf-focus-toggle:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--fg) 18%, transparent) !important;
+  outline-offset: 2px !important;
+}
+
+html.cpos-cf-focus body #sidebar,
+html.cpos-cf-focus body .sidebar,
+html.cpos-cf-focus body .right-sidebar,
+html.cpos-cf-focus body #pageContent > .right,
+html.cpos-cf-focus body .content-with-sidebar > .right,
+html.cpos-cf-focus body .content-with-sidebar > .sidebar,
+html.cpos-cf-focus body .content-with-sidebar > aside,
+html.cpos-cf-focus body .datatable + .sidebox,
+html.cpos-cf-focus body .problemindexholder + .sidebox {
+  display: none !important;
+}
+html.cpos-cf-focus,
+html.cpos-cf-focus body {
+  overflow-x: hidden !important;
+}
+html.cpos-cf-focus {
+  overflow-y: hidden !important;
+  height: 100% !important;
+}
+html.cpos-cf-focus body {
+  --cpos-focus-gutter: clamp(16px, 3vw, 40px);
+  overflow-y: auto !important;
+  height: 100vh !important;
+  min-height: 0 !important;
+  scrollbar-gutter: stable !important;
+}
+html.cpos-cf-focus body #body,
+html.cpos-cf-focus body .main,
+html.cpos-cf-focus body .container {
+  min-width: 0 !important;
+  width: 100% !important;
+  max-width: none !important;
+  height: auto !important;
+  max-height: none !important;
+  overflow: visible !important;
+  box-sizing: border-box !important;
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+  padding-left: var(--cpos-focus-gutter) !important;
+  padding-right: var(--cpos-focus-gutter) !important;
+}
+html.cpos-cf-focus body #pageContent,
+html.cpos-cf-focus body .content-with-sidebar,
+html.cpos-cf-focus body .content-with-sidebar > .content,
+html.cpos-cf-focus body #pageContent > .content,
+html.cpos-cf-focus body .problem-statement {
+  width: 100% !important;
+  max-width: 100% !important;
+  min-width: 0 !important;
+  height: auto !important;
+  max-height: none !important;
+  overflow: visible !important;
+  box-sizing: border-box !important;
+}
+html.cpos-cf-focus body .content-with-sidebar,
+html.cpos-cf-focus body .content-with-sidebar > .content,
+html.cpos-cf-focus body #pageContent > .content {
+  float: none !important;
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+}
+html.cpos-cf-focus body .problem-statement {
+  padding-left: clamp(12px, 1.8vw, 24px) !important;
+  padding-right: clamp(12px, 1.8vw, 24px) !important;
+  overflow-wrap: anywhere !important;
+}
 
 /* ── copy-sample button (per input block) ─────────────────────────────────── */
 .cpos-cf-copy {

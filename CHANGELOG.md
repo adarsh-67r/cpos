@@ -6,10 +6,37 @@ All notable changes to CPOS are documented here. Components are versioned indepe
 | --- | --- | --- |
 | Terminal app | 0.1.8 | `Cargo.toml` |
 | VS Code extension | 0.3.31 | `extensions/vscode/package.json` |
-| Browser companion (Chrome) | 0.10.0 | `extensions/chrome/manifest.json` |
+| Browser companion (Chrome) | 0.10.2 | `extensions/chrome/manifest.json` |
 | Browser companion (Firefox) | 0.2.0 | `extensions/firefox/manifest.json` |
 
 Format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
+
+---
+
+## Browser companion (Chrome) — 0.10.2 - 2026-06-17
+
+### Added
+- **Problem focus mode.** Codeforces problem pages now have an always-available focus toggle that hides the right rail and expands the statement, tuned for split-screen solving. It is independent from the optional Problem tools feature.
+
+### Changed
+- **Quieter Problem tools styling.** The fallback sidebar card and controls now use neutral, low-contrast styling instead of loud accent fills.
+- **Problem tools placement.** When Codeforces lacks the native Problem tags widget, CPOS places its fallback card above Contest materials instead of at the top of the sidebar.
+- **Chrome privacy and store docs updated.** The privacy policy now accurately describes local-only storage for settings, editor drafts, timers, favorites, reminders, marker notes/highlights, focus preferences, and public-data caches.
+
+### Fixed
+- Focus mode now avoids double scrollbars and keeps left/right problem gutters balanced in split-screen browser windows.
+
+---
+
+## Browser companion (Chrome) — 0.10.1 - 2026-06-17
+
+### Fixed
+- **Codeforces theming polish.** Fixed dark-theme regressions across navbars, side widgets, cookies/notifications, problem tables, and profile analytics.
+- **Profile analytics layout.** Reworked analytics into a denser grid with filled chart bars and better use of vertical space.
+- **Problem pages.** Fixed disappearing/down-shifted problem content, MathJax color in dark themes, sample-copy overlap, and tag-widget rendering.
+- **Rating compare.** Fixed rating-history overlay time ordering so each handle is plotted against contest dates correctly.
+- **In-browser editor.** Switched the editor surface to the bundled CodeMirror build for proper caret alignment, syntax colors, completion basics, and IDE-like editing behavior.
+- **Release packaging.** Built and attached the `0.10.1` Chrome upload zip to the GitHub release.
 
 ---
 
