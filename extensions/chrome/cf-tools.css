@@ -8,9 +8,9 @@
 #cpos-cf-tags-widget,
 .cpos-cf-copy {
   /* fallbacks; the active theme overrides these as inline custom props */
-  --bg: #14141f; --panel: #1b1b2b; --panel-2: #20202e; --fg: #e8e6f0;
-  --dim: #8a86a3; --border: #2a2a3e; --accent: #b794ff; --accent-dim: #7c5cbf;
-  --accent-on: #14141f; --ok: #7ee787; --bad: #ff7a93; --warn: #f0b860; --cf: #7aa2f7;
+  --bg: #f7f7f8; --panel: #ffffff; --panel-2: #f0f1f3; --fg: #1f2328;
+  --dim: #6b7280; --border: #d5d7dc; --accent: #6b7280; --accent-dim: #4b5563;
+  --accent-on: #ffffff; --ok: #1a7f37; --bad: #cf222e; --warn: #9a6700; --cf: #44546a;
 }
 
 /* ── the tools strip ──────────────────────────────────────────────────────── */
@@ -197,9 +197,9 @@ table.problems td.cpos-cf-count-cell .cpos-cf-count.dim { color: inherit; opacit
    --cpos-lang-* on :root by cf-standings.js. Coexists with carrot.js columns.
    ════════════════════════════════════════════════════════════════════════════ */
 #cpos-standings-tools {
-  --bg: #14141f; --panel: #1b1b2b; --panel-2: #20202e; --fg: #e8e6f0;
-  --dim: #8a86a3; --border: #2a2a3e; --accent: #b794ff; --accent-dim: #7c5cbf;
-  --accent-on: #14141f; --ok: #7ee787; --bad: #ff7a93; --warn: #f0b860; --cf: #7aa2f7;
+  --bg: #f7f7f8; --panel: #ffffff; --panel-2: #f0f1f3; --fg: #1f2328;
+  --dim: #6b7280; --border: #d5d7dc; --accent: #6b7280; --accent-dim: #4b5563;
+  --accent-on: #ffffff; --ok: #1a7f37; --bad: #cf222e; --warn: #9a6700; --cf: #44546a;
   display: flex; align-items: center; flex-wrap: wrap; gap: 8px 10px;
   margin: 10px 0; padding: 9px 12px;
   background: var(--panel); border: 1px solid var(--border); border-radius: 12px;

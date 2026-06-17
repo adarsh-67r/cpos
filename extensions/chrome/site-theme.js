@@ -45,7 +45,7 @@
       #cpos-ide-panel pre, #cpos-ide-panel code {
         border-color: var(--cpos-border, #2a2a3e) !important;
       }
-      .cpos-analytics a, .cpos-analytics a:visited { color: var(--accent, #b794ff) !important; }
+      .cpos-analytics a, .cpos-analytics a:visited { color: var(--accent, #6b7280) !important; }
       .cpos-analytics pre, .cpos-analytics code { background: transparent !important; }
     `;
   }

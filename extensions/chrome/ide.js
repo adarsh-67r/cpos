@@ -1,7 +1,7 @@
 // CPOS in-browser editor — an IDE-style slide-in panel on CF/CSES problem pages.
 // Resizable, pushes the page (no overlap), multiple editor colour schemes, a
-// live syntax-highlight overlay (shared tokenizer), a Run console that checks
-// your solution against the page's sample tests via the local CPOS runner, and
+// a syntax-coloured editable code surface, a Run console that checks your
+// solution against the page's sample tests via the local CPOS runner, and
 // one-click Submit. SUBMISSION REUSES the existing background "cpos-cf-submit"
 // injector — it never reimplements or alters capture/submit logic.
 //
@@ -23,7 +23,7 @@
     ["cpp", "C++"], ["python", "Python 3"], ["pypy", "PyPy 3"], ["java", "Java"],
     ["kotlin", "Kotlin"], ["rust", "Rust"], ["go", "Go"], ["csharp", "C#"], ["javascript", "JavaScript"]
   ];
-  const HL_LANG = { cpp: "cpp", pypy: "py", python: "py", java: "java" };
+  const HL_LANG = { cpp: "cpp", pypy: "py", python: "py", java: "java", javascript: "js" };
   // Languages whose blocks open with ":" (extra auto-indent after a line ending in ":").
   const COLON_INDENT = { python: true, pypy: true };
   const STARTERS = {
@@ -75,7 +75,7 @@
   async function applyChrome(node) {
     if (!T || !C) return;
     const theme = T.get(await C.activeThemeId());
-    const map = { "--cpos-bg": "--bg", "--cpos-panel": "--panel", "--cpos-panel2": "--panel-2", "--cpos-fg": "--fg", "--cpos-dim": "--dim", "--cpos-border": "--border", "--cpos-accent": "--accent" };
+    const map = { "--cpos-bg": "--bg", "--cpos-panel": "--panel", "--cpos-panel-2": "--panel-2", "--cpos-fg": "--fg", "--cpos-dim": "--dim", "--cpos-border": "--border", "--cpos-accent": "--accent" };
     for (const [out, src] of Object.entries(map)) node.style.setProperty(out, theme[src]);
   }
   function applyEditorTheme(root, id) {
@@ -88,15 +88,43 @@
     for (const [k, val] of Object.entries(v)) root.style.setProperty(k, val);
   }
 
-  // ---- editor (textarea + overlay + gutter) -------------------------------
-  // The editor is a transparent <textarea> stacked over a highlighted <pre>,
-  // with a line-number gutter and a current-line band. This stays the proven
-  // architecture; everything below augments it without replacing it.
+  // ---- editor (contenteditable code surface + gutter) ----------------------
+  // One visible editable layer owns both text and colours. That keeps the caret
+  // in the same DOM the user sees, avoiding textarea/highlight overlay drift.
   const OPEN_BRACKETS = { "(": ")", "[": "]", "{": "}" };
   const CLOSE_BRACKETS = { ")": "(", "]": "[", "}": "{" };
   const QUOTES = { '"': true, "'": true, "`": true };
 
   function mountEditor(container, initial, lang, onChange, onCursor) {
+    if (self.CPOS_CM && typeof self.CPOS_CM.createEditor === "function") {
+      const wrap = document.createElement("div");
+      wrap.className = "cpos-ed cpos-ed-cm";
+      container.appendChild(wrap);
+      const cm = self.CPOS_CM.createEditor(wrap, {
+        value: initial || "",
+        lang,
+        wrap: false,
+        fontSize: 15,
+        onChange,
+        onCursor
+      });
+      return {
+        el: cm.el,
+        getValue: cm.getValue,
+        setValue: cm.setValue,
+        setLang: cm.setLang,
+        focus: cm.focus,
+        setFontSize: cm.setFontSize,
+        setWrap: (on) => { wrap.classList.toggle("wrap", !!on); cm.setWrap(on); },
+        select: cm.select,
+        replaceRange: cm.replaceRange,
+        cursorPos: cm.cursorPos,
+        selectedText: cm.selectedText,
+        scrollToCaret: () => {},
+        destroy: cm.destroy
+      };
+    }
+
     const wrap = document.createElement("div");
     wrap.className = "cpos-ed";
     const gutter = document.createElement("div");
@@ -105,14 +133,15 @@
     scroll.className = "cpos-ed-scroll";
     const lineHi = document.createElement("div");
     lineHi.className = "cpos-ed-line";
-    const pre = document.createElement("pre");
-    pre.className = "cpos-ed-hl";
-    const ta = document.createElement("textarea");
+    const ta = document.createElement("div");
     ta.className = "cpos-ed-ta";
+    ta.contentEditable = "true";
+    ta.setAttribute("role", "textbox");
+    ta.setAttribute("aria-multiline", "true");
     ta.spellcheck = false;
-    ta.value = initial || "";
+    ta.autocomplete = "off";
+    ta.autocapitalize = "off";
     scroll.appendChild(lineHi);
-    scroll.appendChild(pre);
     scroll.appendChild(ta);
     wrap.appendChild(gutter);
     wrap.appendChild(scroll);
@@ -120,7 +149,10 @@
 
     let curLang = lang;
     let wrapOn = false;
-    const escape = (s) => s.replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]));
+    let value = initial || "";
+    let lastSel = { start: 0, end: 0 };
+    const escape = (s) => (HL && HL.esc ? HL.esc(s) : String(s).replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c])));
+    const normalizeText = (s) => String(s || "").replace(/\u00a0/g, " ").replace(/\r\n?/g, "\n");
     function editorMetrics() {
       const cs = getComputedStyle(ta);
       const fs = parseFloat(cs.fontSize) || 14;
@@ -130,65 +162,119 @@
         padTop: parseFloat(cs.paddingTop) || 0
       };
     }
+    function containsSelection() {
+      const sel = getSelection();
+      return !!sel && sel.rangeCount > 0 && ta.contains(sel.anchorNode) && ta.contains(sel.focusNode);
+    }
+    function offsetFor(node, offset) {
+      if (!ta.contains(node) && node !== ta) return lastSel.start;
+      const r = document.createRange();
+      r.selectNodeContents(ta);
+      try { r.setEnd(node, offset); }
+      catch { return lastSel.start; }
+      const currentLen = normalizeText(ta.textContent).length;
+      return Math.max(0, Math.min(currentLen, normalizeText(r.toString()).length));
+    }
+    function selectionOffsets() {
+      const sel = getSelection();
+      if (!sel || sel.rangeCount === 0 || !containsSelection()) return lastSel;
+      const start = offsetFor(sel.anchorNode, sel.anchorOffset);
+      const end = offsetFor(sel.focusNode, sel.focusOffset);
+      lastSel = { start: Math.min(start, end), end: Math.max(start, end) };
+      return lastSel;
+    }
+    function locateOffset(offset) {
+      offset = Math.max(0, Math.min(value.length, offset));
+      const walker = document.createTreeWalker(ta, NodeFilter.SHOW_TEXT);
+      let node, seen = 0, last = null;
+      while ((node = walker.nextNode())) {
+        last = node;
+        const len = node.nodeValue.length;
+        if (seen + len >= offset) return { node, offset: offset - seen };
+        seen += len;
+      }
+      return last ? { node: last, offset: last.nodeValue.length } : { node: ta, offset: 0 };
+    }
+    function setSelectionOffsets(start, end = start) {
+      lastSel = {
+        start: Math.max(0, Math.min(value.length, start)),
+        end: Math.max(0, Math.min(value.length, end))
+      };
+      const sel = getSelection();
+      if (!sel) return;
+      const a = locateOffset(lastSel.start);
+      const b = locateOffset(lastSel.end);
+      const r = document.createRange();
+      r.setStart(a.node, a.offset);
+      r.setEnd(b.node, b.offset);
+      sel.removeAllRanges();
+      sel.addRange(r);
+    }
+    function highlightedHtml() {
+      if (!value) return "<br>";
+      const html = HL ? HL.highlight(value, HL_LANG[curLang] || curLang || "cpp") : escape(value);
+      return html || "<br>";
+    }
 
-    function render() {
-      const code = ta.value;
-      pre.innerHTML = HL ? HL.highlight(code + "\n", HL_LANG[curLang] || "cpp") : escape(code + "\n");
-      const lines = code.split("\n").length;
+    function render(sel = lastSel) {
+      ta.innerHTML = highlightedHtml();
+      const lines = value.split("\n").length;
       let g = "";
       for (let i = 1; i <= lines; i++) g += i + "\n";
       gutter.textContent = g;
+      if (document.activeElement === ta || containsSelection()) setSelectionOffsets(sel.start, sel.end);
     }
     function syncScroll() {
-      if (wrapOn) { pre.style.transform = `translateY(${-ta.scrollTop}px)`; }
-      else { pre.style.transform = `translate(${-ta.scrollLeft}px, ${-ta.scrollTop}px)`; }
       gutter.style.transform = `translateY(${-ta.scrollTop}px)`;
       positionLine();
     }
     // Current-line band: measured from line metrics, kept in sync with scroll.
     function positionLine() {
       const { lh, padTop } = editorMetrics();
-      const before = ta.value.slice(0, ta.selectionStart);
+      const pos = selectionOffsets().start;
+      const before = value.slice(0, pos);
       // Logical-line row (the band is hidden in wrap mode, where it's ambiguous).
       const row = before.split("\n").length - 1;
       lineHi.style.height = lh + "px";
       lineHi.style.transform = `translateY(${padTop + row * lh - ta.scrollTop}px)`;
     }
     function cursor() {
-      const upto = ta.value.slice(0, ta.selectionStart);
+      const pos = selectionOffsets().start;
+      const upto = value.slice(0, pos);
       const line = upto.split("\n").length;
       const col = upto.length - upto.lastIndexOf("\n");
-      onCursor && onCursor(line, col, ta.value);
+      onCursor && onCursor(line, col, value);
       positionLine();
     }
 
-    function emit() { render(); onChange(ta.value); cursor(); }
+    function emit(sel = lastSel) { render(sel); onChange(value); cursor(); }
     function replaceRange(start, end, text, caret) {
-      ta.setRangeText(text, start, end, "end");
-      if (caret != null) ta.selectionStart = ta.selectionEnd = caret;
-      emit();
+      value = value.slice(0, start) + text + value.slice(end);
+      const pos = caret != null ? caret : start + text.length;
+      lastSel = { start: pos, end: pos };
+      emit(lastSel);
     }
 
     // ---- indentation helpers ----
     function lineStartOf(pos) {
-      const i = ta.value.lastIndexOf("\n", pos - 1);
+      const i = value.lastIndexOf("\n", pos - 1);
       return i + 1;
     }
     function indentOfLine(pos) {
       const start = lineStartOf(pos);
-      const m = ta.value.slice(start).match(/^[ \t]*/);
+      const m = value.slice(start).match(/^[ \t]*/);
       return m ? m[0] : "";
     }
 
     function handleEnter(e) {
-      const s = ta.selectionStart, en = ta.selectionEnd;
-      const before = ta.value.slice(0, s);
+      const { start: s, end: en } = selectionOffsets();
+      const before = value.slice(0, s);
       const lineStart = before.lastIndexOf("\n") + 1;
       const curLine = before.slice(lineStart);
       let indent = (curLine.match(/^[ \t]*/) || [""])[0];
       const trimmed = curLine.trimEnd();
       const lastCh = trimmed.slice(-1);
-      const nextCh = ta.value.slice(en, en + 1);
+      const nextCh = value.slice(en, en + 1);
       let extra = "";
       if (lastCh === "{" || (COLON_INDENT[curLang] && lastCh === ":")) extra = "    ";
       // Smart pair: caret sits between {} → open a body and place close on its own line.
@@ -206,10 +292,10 @@
     }
 
     function handleBackspace(e) {
-      const s = ta.selectionStart, en = ta.selectionEnd;
+      const { start: s, end: en } = selectionOffsets();
       if (s !== en) return false;
-      const prev = ta.value.slice(s - 1, s);
-      const next = ta.value.slice(s, s + 1);
+      const prev = value.slice(s - 1, s);
+      const next = value.slice(s, s + 1);
       // Delete an empty auto-inserted pair as a unit.
       if ((OPEN_BRACKETS[prev] && next === OPEN_BRACKETS[prev]) || (QUOTES[prev] && next === prev)) {
         e.preventDefault();
@@ -217,8 +303,8 @@
         return true;
       }
       // Dedent: if only whitespace precedes the caret on this line, remove up to 4.
-      const lineStart = ta.value.lastIndexOf("\n", s - 1) + 1;
-      const seg = ta.value.slice(lineStart, s);
+      const lineStart = value.lastIndexOf("\n", s - 1) + 1;
+      const seg = value.slice(lineStart, s);
       if (seg.length && /^[ \t]+$/.test(seg)) {
         e.preventDefault();
         const remove = Math.min(4, ((seg.length - 1) % 4) + 1);
@@ -230,23 +316,23 @@
 
     function handleTab(e) {
       e.preventDefault();
-      const s = ta.selectionStart, en = ta.selectionEnd;
-      if (s !== en && ta.value.slice(s, en).includes("\n")) {
+      const { start: s, end: en } = selectionOffsets();
+      if (s !== en && value.slice(s, en).includes("\n")) {
         // Block (de)indent across selected lines.
-        const startLine = ta.value.lastIndexOf("\n", s - 1) + 1;
-        const block = ta.value.slice(startLine, en);
+        const startLine = value.lastIndexOf("\n", s - 1) + 1;
+        const block = value.slice(startLine, en);
         let out;
         if (e.shiftKey) out = block.replace(/^( {1,4}|\t)/gm, "");
         else out = block.replace(/^/gm, "    ");
         const delta = out.length - block.length;
-        ta.setRangeText(out, startLine, en, "select");
-        ta.selectionStart = startLine; ta.selectionEnd = en + delta;
-        emit();
+        value = value.slice(0, startLine) + out + value.slice(en);
+        lastSel = { start: startLine, end: en + delta };
+        emit(lastSel);
         return;
       }
       if (e.shiftKey) {
-        const lineStart = ta.value.lastIndexOf("\n", s - 1) + 1;
-        const seg = ta.value.slice(lineStart, lineStart + 4);
+        const lineStart = value.lastIndexOf("\n", s - 1) + 1;
+        const seg = value.slice(lineStart, lineStart + 4);
         const m = seg.match(/^( {1,4}|\t)/);
         if (m) replaceRange(lineStart, lineStart + m[0].length, "", Math.max(lineStart, s - m[0].length));
         return;
@@ -255,12 +341,12 @@
     }
 
     function handleChar(e, ch) {
-      const s = ta.selectionStart, en = ta.selectionEnd;
-      const next = ta.value.slice(en, en + 1);
+      const { start: s, end: en } = selectionOffsets();
+      const next = value.slice(en, en + 1);
       // Type-over a matching close bracket / quote.
       if ((CLOSE_BRACKETS[ch] || QUOTES[ch]) && next === ch && s === en) {
         e.preventDefault();
-        ta.selectionStart = ta.selectionEnd = s + 1;
+        setSelectionOffsets(s + 1);
         cursor();
         return true;
       }
@@ -268,10 +354,10 @@
       if (s !== en && (OPEN_BRACKETS[ch] || QUOTES[ch])) {
         e.preventDefault();
         const close = OPEN_BRACKETS[ch] || ch;
-        const sel = ta.value.slice(s, en);
-        ta.setRangeText(ch + sel + close, s, en, "select");
-        ta.selectionStart = s + 1; ta.selectionEnd = en + 1;
-        emit();
+        const selected = value.slice(s, en);
+        value = value.slice(0, s) + ch + selected + close + value.slice(en);
+        lastSel = { start: s + 1, end: en + 1 };
+        emit(lastSel);
         return true;
       }
       // Auto-close: only when followed by whitespace/closer/EOL (avoids noise mid-word).
@@ -281,7 +367,7 @@
         return true;
       }
       if (QUOTES[ch] && s === en) {
-        const prev = ta.value.slice(s - 1, s);
+        const prev = value.slice(s - 1, s);
         // Don't auto-close right after a word char (e.g. apostrophes, suffixes).
         if (next === "" || /[\s)\]};,]/.test(next)) {
           if (!/\w/.test(prev) || ch !== "'") {
@@ -294,11 +380,22 @@
       return false;
     }
 
-    ta.addEventListener("input", () => { render(); onChange(ta.value); cursor(); });
+    ta.addEventListener("input", () => {
+      const sel = selectionOffsets();
+      value = normalizeText(ta.textContent);
+      lastSel = { start: Math.min(sel.start, value.length), end: Math.min(sel.end, value.length) };
+      emit(lastSel);
+    });
+    ta.addEventListener("paste", (e) => {
+      e.preventDefault();
+      const text = normalizeText(e.clipboardData?.getData("text/plain") || "");
+      const { start, end } = selectionOffsets();
+      replaceRange(start, end, text, start + text.length);
+    });
     ta.addEventListener("scroll", syncScroll);
     ta.addEventListener("keyup", cursor);
     ta.addEventListener("click", cursor);
-    ta.addEventListener("select", cursor);
+    ta.addEventListener("mouseup", cursor);
     ta.addEventListener("keydown", (e) => {
       if (e.ctrlKey || e.metaKey || e.altKey) return; // leave shortcuts to the panel
       if (e.key === "Tab") return handleTab(e);
@@ -310,30 +407,33 @@
 
     return {
       el: ta,
-      getValue: () => ta.value,
-      setValue: (val) => { ta.value = val; render(); syncScroll(); cursor(); },
+      getValue: () => value,
+      setValue: (val) => { value = normalizeText(val); lastSel = { start: 0, end: 0 }; render(lastSel); syncScroll(); cursor(); },
       setLang: (l) => { curLang = l; render(); },
       focus: () => ta.focus(),
       setFontSize: (px) => {
         wrap.style.setProperty("--ed-fs", px + "px");
-        // Round the line box to a whole pixel so the textarea caret and the
-        // highlight overlay land on the same grid (fractional line-heights
-        // round differently between a textarea and a <pre>).
+        // Round the line box to a whole pixel so the browser caret lands on a
+        // stable grid at every zoom/font size.
         wrap.style.setProperty("--ed-lh", Math.round(px * 1.55) + "px");
         render(); syncScroll();
       },
       setWrap: (on) => { wrapOn = on; wrap.classList.toggle("wrap", on); render(); syncScroll(); },
       // For find & replace.
-      select: (start, end) => { ta.focus(); ta.selectionStart = start; ta.selectionEnd = end; scrollToCaret(); cursor(); },
+      select: (start, end) => { ta.focus(); setSelectionOffsets(start, end); scrollToCaret(); cursor(); },
       replaceRange,
-      cursorPos: () => ta.selectionStart,
+      cursorPos: () => selectionOffsets().start,
+      selectedText: () => {
+        const { start, end } = selectionOffsets();
+        return value.slice(start, end);
+      },
       scrollToCaret
     };
 
     function scrollToCaret() {
       // Best-effort: scroll the line of the caret into view.
       const { lh, padTop } = editorMetrics();
-      const row = ta.value.slice(0, ta.selectionStart).split("\n").length - 1;
+      const row = value.slice(0, selectionOffsets().start).split("\n").length - 1;
       const y = padTop + row * lh;
       if (y < ta.scrollTop) ta.scrollTop = y;
       else if (y + lh > ta.scrollTop + ta.clientHeight) ta.scrollTop = y + lh - ta.clientHeight + lh;
@@ -379,7 +479,7 @@
     const lang = conf["cpos.ide.lang"] || "cpp";
     const edThemeId = conf["cpos.ide.theme"] || "vscode-dark";
     const width = Math.max(360, Math.min(conf["cpos.ide.width"] || 640, Math.round(window.innerWidth * 0.85)));
-    const fontSize = Math.max(10, Math.min(conf[FONT_KEY] || 14, 24));
+    const fontSize = Math.max(10, Math.min(conf[FONT_KEY] || 15, 24));
     const wrapOn = !!conf[WRAP_KEY];
 
     launch = document.createElement("button");
@@ -551,7 +651,7 @@
   function openFind() {
     findBar.hidden = false;
     const { q } = findInputs();
-    const sel = editor.el.value.slice(editor.el.selectionStart, editor.el.selectionEnd);
+    const sel = editor.selectedText();
     if (sel && !sel.includes("\n")) q.value = sel;
     q.focus(); q.select();
     findIdx = -1;
@@ -857,6 +957,7 @@
   // ---- lifecycle ----------------------------------------------------------
   function teardown() {
     pushPage(0);
+    try { editor?.destroy?.(); } catch {}
     document.getElementById("cpos-ide-panel")?.remove();
     document.getElementById("cpos-ide-launch")?.remove();
     panel = editor = msgEl = launch = consoleEl = statusEl = findBar = customWrap = null;
@@ -870,8 +971,12 @@
 
   if (C) {
     C.onChange((changes) => {
-      if (changes[C.KEYS.FEATURES]) sync();
-      else if (panel) { applyChrome(panel); if (launch) applyChrome(launch); }
+      const repaint = () => {
+        if (panel) applyChrome(panel);
+        if (launch) applyChrome(launch);
+      };
+      if (changes[C.KEYS.FEATURES]) sync().then(repaint);
+      else repaint();
     });
   }
   if (onSubmitPage) maybeCompleteSubmit();

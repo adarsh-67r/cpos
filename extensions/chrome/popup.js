@@ -55,6 +55,10 @@
       customAccent: raw["cpos.ui.customAccent"] || DEFAULTS["cpos.ui.customAccent"],
       features: Object.assign({}, DEFAULTS["cpos.features"], raw["cpos.features"] || {})
     };
+    if (!state.features.siteTheme && state.uiTheme !== T.DEFAULT_THEME) {
+      state.uiTheme = T.DEFAULT_THEME;
+      await set({ "cpos.ui.theme": state.uiTheme, "cpos.siteThemeId": state.uiTheme });
+    }
     // Keep get("custom") resolving to the user's chosen accent in the popup too.
     T.registerCustom(state.customAccent);
   }
@@ -99,16 +103,17 @@
   }
 
   function renderSwatches() {
-    // One picker drives everything. "Default" turns the site recolour off (native
-    // CF); any palette/custom turns it on. The popup + injected tools always use
-    // the chosen palette so they stay themed even when the site is left native.
+    // One picker drives everything. "Default" turns the site recolour off and
+    // resets CPOS chrome to the neutral palette; any palette/custom turns site
+    // recolour on and uses that same palette everywhere.
     const wrap = document.getElementById("themeSwatches");
     if (!wrap) return;
     const siteOn = !!state.features.siteTheme;
     wrap.innerHTML = "";
     wrap.appendChild(defaultSwatchEl(!siteOn, async () => {
+      state.uiTheme = T.DEFAULT_THEME;
       state.features.siteTheme = false;
-      await set({ "cpos.features": state.features });
+      await set({ "cpos.ui.theme": state.uiTheme, "cpos.siteThemeId": state.uiTheme, "cpos.features": state.features });
       applyUiTheme();
       renderSwatches();
     }));

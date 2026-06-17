@@ -73,20 +73,20 @@
       "--cf": "#cfcfcf"
     },
     light: {
-      name: "Light",
-      "--bg": "#f6f6fb",
+      name: "Neutral",
+      "--bg": "#f7f7f8",
       "--panel": "#ffffff",
-      "--panel-2": "#eeeef4",
-      "--fg": "#1c1c28",
-      "--dim": "#6a6a80",
-      "--border": "#d8d8e2",
-      "--accent": "#6d4bd0",
-      "--accent-dim": "#9a7ee0",
+      "--panel-2": "#f0f1f3",
+      "--fg": "#1f2328",
+      "--dim": "#6b7280",
+      "--border": "#d5d7dc",
+      "--accent": "#6b7280",
+      "--accent-dim": "#4b5563",
       "--accent-on": "#ffffff",
       "--ok": "#1a7f37",
       "--bad": "#cf222e",
       "--warn": "#9a6700",
-      "--cf": "#3b5bdb"
+      "--cf": "#44546a"
     },
     // Flat teal/slate dark palette (no gradients), tuned for CF dark-mode contrast.
     ocean: {

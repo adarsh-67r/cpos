@@ -12,7 +12,7 @@
   writing-mode: vertical-rl; letter-spacing: 0.1em;
   transition: background 0.12s ease, color 0.12s ease, padding 0.12s ease;
 }
-#cpos-ide-launch:hover { background: var(--cpos-accent, #b794ff); color: var(--cpos-bg, #14141f); border-color: var(--cpos-accent, #b794ff); padding-right: 9px; }
+#cpos-ide-launch:hover { background: var(--cpos-accent, #6b7280); color: var(--cpos-bg, #f7f7f8); border-color: var(--cpos-accent, #6b7280); padding-right: 9px; }
 
 #cpos-ide-panel {
   position: fixed; top: 0; right: 0; height: 100vh; width: 640px;
@@ -52,7 +52,7 @@
   cursor: col-resize; z-index: 2; background: transparent;
   transition: background 0.12s ease;
 }
-.cpos-ide-grip:hover { background: color-mix(in srgb, var(--cpos-accent, #b794ff) 60%, transparent); }
+.cpos-ide-grip:hover { background: color-mix(in srgb, var(--cpos-accent, #6b7280) 60%, transparent); }
 
 /* Titlebar — reads like a real IDE toolbar. */
 .cpos-ide-head {
@@ -74,8 +74,8 @@
   padding: 5px 9px; font: inherit; font-size: 12px; font-weight: 600; cursor: pointer;
   max-width: 130px; transition: border-color 0.12s ease, background 0.12s ease;
 }
-.cpos-ide-head select:hover { border-color: color-mix(in srgb, var(--cpos-accent, #b794ff) 50%, var(--cpos-border, #2a2a3e)); }
-.cpos-ide-head select:focus { outline: none; border-color: var(--cpos-accent, #b794ff); }
+.cpos-ide-head select:hover { border-color: color-mix(in srgb, var(--cpos-accent, #6b7280) 50%, var(--cpos-border, #2a2a3e)); }
+.cpos-ide-head select:focus { outline: none; border-color: var(--cpos-accent, #6b7280); }
 .cpos-ide-head .ic {
   display: inline-flex; align-items: center; justify-content: center;
   width: 30px; height: 30px; padding: 0; font-size: 14px; line-height: 1;
@@ -85,9 +85,9 @@
 }
 .cpos-ide-head .ic:hover { background: var(--cpos-panel-2, #232334); color: var(--cpos-fg, #e8e6f0); }
 .cpos-ide-head .ic.active {
-  background: color-mix(in srgb, var(--cpos-accent, #b794ff) 16%, transparent);
-  border-color: color-mix(in srgb, var(--cpos-accent, #b794ff) 55%, transparent);
-  color: var(--cpos-accent, #b794ff);
+  background: color-mix(in srgb, var(--cpos-accent, #6b7280) 16%, transparent);
+  border-color: color-mix(in srgb, var(--cpos-accent, #6b7280) 55%, transparent);
+  color: var(--cpos-accent, #6b7280);
 }
 .cpos-ide-head .x {
   display: inline-flex; align-items: center; justify-content: center;
@@ -111,7 +111,7 @@
   padding: 5px 8px; font: 12px ui-monospace, Consolas, monospace; min-width: 0; flex: 1 1 90px;
   transition: border-color 0.12s ease;
 }
-.cpos-ide-find input:focus { outline: none; border-color: var(--cpos-accent, #b794ff); }
+.cpos-ide-find input:focus { outline: none; border-color: var(--cpos-accent, #6b7280); }
 .cpos-ide-find .fcount { font: 11px ui-monospace, Consolas, monospace; color: var(--cpos-dim, #8a86a3); flex: 0 0 auto; min-width: 36px; text-align: center; }
 .cpos-ide-find button {
   display: inline-flex; align-items: center; justify-content: center;
@@ -121,20 +121,19 @@
   font: 600 11px inherit; cursor: pointer; flex: 0 0 auto;
   transition: background 0.12s ease, border-color 0.12s ease, color 0.12s ease;
 }
-.cpos-ide-find button:hover { background: var(--cpos-bg, #14141f); border-color: color-mix(in srgb, var(--cpos-accent, #b794ff) 50%, var(--cpos-border, #2a2a3e)); }
+.cpos-ide-find button:hover { background: var(--cpos-bg, #f7f7f8); border-color: color-mix(in srgb, var(--cpos-accent, #6b7280) 50%, var(--cpos-border, #2a2a3e)); }
 .cpos-ide-find #cpos-find-x:hover { background: color-mix(in srgb, #f85149 22%, transparent); border-color: color-mix(in srgb, #f85149 45%, var(--cpos-border, #2a2a3e)); color: #f85149; }
 
 .cpos-ide-editor { flex: 1 1 auto; min-height: 0; display: flex; }
 .cpos-ide-mount { flex: 1 1 auto; min-height: 0; display: flex; }
 
-/* overlay editor surface — themed by --ed-*; font size driven by --ed-fs */
+/* editable code surface — themed by --ed-*; font size driven by --ed-fs */
 .cpos-ed {
-  --ed-fs: 14px;
-  /* Integer line box so the textarea caret and the highlight overlay stay on
-     the same grid (fractional line-heights round differently between the two).
+  --ed-fs: 15px;
+  /* Integer line box so the code caret stays on a stable pixel grid.
      Kept in sync with --ed-fs by setFontSize() = round(fs * 1.55). */
-  --ed-lh: 22px;
-  --ed-font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --ed-lh: 23px;
+  --ed-font-family: "SFMono-Regular", Menlo, Monaco, Consolas, "Liberation Mono", monospace;
   --ed-font: var(--ed-fs)/var(--ed-lh) var(--ed-font-family);
   --ed-pad: 12px;
   flex: 1 1 auto; display: flex; min-height: 0;
@@ -142,6 +141,40 @@
 }
 .cpos-ed,
 .cpos-ed * { box-sizing: border-box; }
+.cpos-ed-cm {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+}
+.cpos-ed-cm .cm-editor {
+  height: 100%;
+  width: 100%;
+  background: var(--ed-bg, #1e1e1e);
+  color: var(--ed-fg, #d4d4d4);
+}
+.cpos-ed-cm .cm-scroller {
+  min-height: 0;
+}
+.cpos-ed-cm .cm-content {
+  font-weight: 500;
+}
+.cpos-ed-cm .cm-line {
+  letter-spacing: 0;
+}
+.cpos-ed-cm .cm-tooltip-autocomplete {
+  font-family: ui-sans-serif, -apple-system, "Segoe UI", Roboto, sans-serif;
+  font-size: 12px;
+}
+.cpos-ed-cm .cm-completionIcon {
+  opacity: 0.75;
+}
+.cpos-ed-gutter,
+.cpos-ed-ta {
+  font-variant-ligatures: none;
+  font-feature-settings: "liga" 0, "calt" 0;
+  letter-spacing: 0;
+  tab-size: 4;
+}
 .cpos-ed-gutter {
   flex: 0 0 auto; width: 48px; overflow: hidden;
   padding: var(--ed-pad) 10px var(--ed-pad) 0;
@@ -156,29 +189,25 @@
   box-shadow: inset 2px 0 0 color-mix(in srgb, var(--ed-caret, #aeafad) 35%, transparent);
   pointer-events: none; z-index: 0; will-change: transform;
 }
-.cpos-ed-hl {
-  position: absolute; top: 0; left: 0; margin: 0; padding: var(--ed-pad) 14px;
-  font: var(--ed-font); line-height: var(--ed-lh); white-space: pre; pointer-events: none; z-index: 1;
-  color: var(--ed-fg, #d4d4d4); will-change: transform; tab-size: 4;
-}
 .cpos-ed-ta {
   position: absolute; inset: 0; width: 100%; height: 100%; padding: var(--ed-pad) 14px;
   display: block; margin: 0;
   font: var(--ed-font); line-height: var(--ed-lh); white-space: pre; overflow: auto; border: none; outline: none; resize: none;
-  background: transparent; color: transparent; caret-color: var(--ed-caret, #aeafad); tab-size: 4; z-index: 2;
+  background: transparent; color: var(--ed-fg, #d4d4d4); caret-color: var(--ed-caret, #aeafad); z-index: 1;
+  font-weight: 500; min-width: max-content; user-select: text; -webkit-user-select: text;
+  overflow-wrap: normal; word-break: normal;
 }
 /* line-wrap mode */
-.cpos-ed.wrap .cpos-ed-hl { white-space: pre-wrap; word-break: break-word; right: 0; }
 .cpos-ed.wrap .cpos-ed-ta { white-space: pre-wrap; word-break: break-word; overflow-x: hidden; }
 .cpos-ed.wrap .cpos-ed-line { display: none; }
 .cpos-ed-ta::selection { background: var(--ed-sel, #264f7855); }
-.cpos-ed-hl .hl-kw { color: var(--ed-kw, #569cd6); font-weight: 600; }
-.cpos-ed-hl .hl-type { color: var(--ed-type, #4ec9b0); }
-.cpos-ed-hl .hl-str { color: var(--ed-str, #ce9178); }
-.cpos-ed-hl .hl-num { color: var(--ed-num, #b5cea8); }
-.cpos-ed-hl .hl-com { color: var(--ed-com, #6a9955); font-style: italic; }
-.cpos-ed-hl .hl-pre { color: var(--ed-pre, #c586c0); }
-.cpos-ed-hl .hl-fn { color: var(--ed-fn, #dcdcaa); }
+.cpos-ed-ta .hl-kw { color: var(--ed-kw, #569cd6); font-weight: 700; }
+.cpos-ed-ta .hl-type { color: var(--ed-type, #4ec9b0); font-weight: 600; }
+.cpos-ed-ta .hl-str { color: var(--ed-str, #ce9178); }
+.cpos-ed-ta .hl-num { color: var(--ed-num, #b5cea8); }
+.cpos-ed-ta .hl-com { color: var(--ed-com, #6a9955); font-style: italic; }
+.cpos-ed-ta .hl-pre { color: var(--ed-pre, #c586c0); font-weight: 600; }
+.cpos-ed-ta .hl-fn { color: var(--ed-fn, #dcdcaa); }
 
 /* run console */
 .cpos-ide-console {
@@ -238,7 +267,7 @@
   border: 1px solid var(--cpos-border, #2a2a3e); border-radius: 5px;
   padding: 6px 8px; font: 11.5px ui-monospace, Consolas, monospace;
 }
-.cpos-con-custom textarea:focus { outline: none; border-color: var(--cpos-accent, #b794ff); }
+.cpos-con-custom textarea:focus { outline: none; border-color: var(--cpos-accent, #6b7280); }
 .cpos-con-custom #cpos-custom-out { margin-top: 7px; }
 
 /* status bar — proper editor status strip */
@@ -253,8 +282,8 @@
 .cpos-ide-status #cpos-ide-langtag {
   text-transform: uppercase; letter-spacing: 0.06em; font-size: 10px;
   padding: 2px 8px; border-radius: 5px;
-  color: var(--cpos-accent, #b794ff);
-  background: color-mix(in srgb, var(--cpos-accent, #b794ff) 14%, transparent);
+  color: var(--cpos-accent, #6b7280);
+  background: color-mix(in srgb, var(--cpos-accent, #6b7280) 14%, transparent);
 }
 
 /* footer — refined button hierarchy (neutral / success / primary) */
@@ -267,7 +296,7 @@
   padding: 7px 13px; font: inherit; font-size: 12px; font-weight: 600; cursor: pointer;
   transition: background 0.12s ease, border-color 0.12s ease, color 0.12s ease;
 }
-.cpos-ide-foot button:hover { background: var(--cpos-bg, #14141f); border-color: color-mix(in srgb, var(--cpos-accent, #b794ff) 45%, var(--cpos-border, #2a2a3e)); }
+.cpos-ide-foot button:hover { background: var(--cpos-bg, #f7f7f8); border-color: color-mix(in srgb, var(--cpos-accent, #6b7280) 45%, var(--cpos-border, #2a2a3e)); }
 .cpos-ide-foot button:active { transform: translateY(1px); }
 /* Run — subtle success accent */
 .cpos-ide-foot #cpos-ide-run {
@@ -277,7 +306,7 @@
 .cpos-ide-foot #cpos-ide-run:hover { background: color-mix(in srgb, #3fb950 14%, transparent); border-color: color-mix(in srgb, #3fb950 60%, transparent); }
 /* Submit — primary in accent */
 .cpos-ide-foot button.primary {
-  background: var(--cpos-accent, #b794ff); color: var(--cpos-bg, #14141f);
-  border-color: var(--cpos-accent, #b794ff); font-weight: 700; padding: 7px 16px;
+  background: var(--cpos-accent, #6b7280); color: var(--cpos-bg, #f7f7f8);
+  border-color: var(--cpos-accent, #6b7280); font-weight: 700; padding: 7px 16px;
 }
-.cpos-ide-foot button.primary:hover { background: color-mix(in srgb, var(--cpos-accent, #b794ff) 85%, #fff); border-color: color-mix(in srgb, var(--cpos-accent, #b794ff) 85%, #fff); }
+.cpos-ide-foot button.primary:hover { background: color-mix(in srgb, var(--cpos-accent, #6b7280) 85%, #fff); border-color: color-mix(in srgb, var(--cpos-accent, #6b7280) 85%, #fff); }
