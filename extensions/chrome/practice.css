@@ -203,22 +203,30 @@
   gap: 5px;
   margin-left: 12px;
   vertical-align: middle;
-  font-family: var(--font-sans, system-ui, sans-serif);
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--fg);
-  background: var(--panel);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 3px 9px;
-  cursor: pointer;
+  font-family: var(--font-sans, system-ui, sans-serif) !important;
+  font-size: 12px !important;
+  font-weight: 600 !important;
+  line-height: 1.2 !important;
+  color: var(--fg) !important;
+  background: var(--panel-2) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: 8px !important;
+  padding: 4px 10px !important;
+  cursor: pointer !important;
+  box-shadow: none !important;
 }
-#cpos-fav-btn:hover { border-color: var(--accent-dim); background: var(--panel-2); }
+#cpos-fav-btn:hover {
+  border-color: var(--accent-dim) !important;
+  background: color-mix(in srgb, var(--panel-2) 78%, var(--fg) 8%) !important;
+}
 #cpos-fav-btn:focus { outline: none; }
 #cpos-fav-btn:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
+  outline: 2px solid var(--accent) !important;
+  outline-offset: 2px !important;
 }
 #cpos-fav-btn .cpos-fav-star { color: var(--dim); font-size: 14px; line-height: 1; }
-#cpos-fav-btn.cpos-fav-on { border-color: var(--accent); color: var(--accent); }
+#cpos-fav-btn.cpos-fav-on {
+  border-color: var(--accent) !important;
+  color: var(--accent) !important;
+}
 #cpos-fav-btn.cpos-fav-on .cpos-fav-star { color: var(--warn); }

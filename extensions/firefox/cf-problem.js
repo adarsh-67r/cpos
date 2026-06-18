@@ -11,9 +11,10 @@
 //     <pre> and the modern per-line .test-example-line format), never breaking
 //     CF's own copier.
 //   · a lightweight "similar problems" mini-list (same primary tag, ±100 rating).
-// Read-only: fetches the public CF API, injects ONE strip under #cpos-cf-tools
-// and small per-block copy buttons. Never touches capture/submit. Toggle from
-// the CPOS popup (feature "problemTools").
+//   · a focus-mode toggle that expands the statement and hides the right rail.
+// Read-only: fetches the public CF API, augments the native Problem tags widget
+// when it exists, and adds small per-block copy buttons. Never touches
+// capture/submit. Toggle from the CPOS popup (feature "problemTools").
 (function () {
   const ROOT_ID = "cpos-cf-tools";
   const T = self.CPOS_THEMES;
@@ -21,7 +22,7 @@
   if (!C) return;
 
   const FEATURE = "problemTools";
-  const PREF_KEY = "cpos.cf.problemPrefs";        // { tagsHidden, ratingHidden }
+  const PREF_KEY = "cpos.cf.problemPrefs";        // { tagsHidden, ratingHidden, focusMode }
   const CACHE_KEY = "cpos.cf.problemset";         // { ts, problems: { "id-index": {rating,tags,name} } }
   const CACHE_TTL = 12 * 60 * 60 * 1000;          // 12h — problemset rarely changes
 
@@ -103,7 +104,11 @@
   async function getPrefs() {
     const stored = await C.get([PREF_KEY]);
     const p = stored[PREF_KEY] || {};
-    return { tagsHidden: p.tagsHidden !== false, ratingHidden: p.ratingHidden === true };
+    return {
+      tagsHidden: p.tagsHidden !== false,
+      ratingHidden: p.ratingHidden === true,
+      focusMode: p.focusMode === true
+    };
   }
   async function setPrefs(patch) {
     const cur = await getPrefs();
@@ -111,7 +116,10 @@
   }
 
   // ── theme ───────────────────────────────────────────────────────────────────
-  async function applyTheme(node) { if (!T || !C || !node) return; T.applyTheme(node, await C.activeThemeId()); }
+  async function applyTheme(node) {
+    if (!T || !C || !node) return;
+    T.applyTheme(node, await (C.activePageThemeId ? C.activePageThemeId() : C.activeThemeId()));
+  }
 
   // ── copy-sample-input buttons ───────────────────────────────────────────────
   // Modern CF renders inputs as a stack of <div class="test-example-line"> rows;
@@ -134,7 +142,12 @@
   function addCopyButtons() {
     const inputs = document.querySelectorAll(".sample-test .input");
     inputs.forEach((inputDiv) => {
-      if (inputDiv.querySelector(".cpos-cf-copy")) return;
+      const existing = inputDiv.querySelector(".cpos-cf-copy");
+      if (inputDiv.querySelector(".input-output-copier")) {
+        existing?.remove();
+        return;
+      }
+      if (existing) return;
       const btn = el("button", "cpos-cf-copy", "Copy");
       btn.type = "button";
       btn.title = "Copy sample input (CPOS)";
@@ -169,15 +182,18 @@
   }
 
   // ── the tools strip (rating + tags + reveal controls + similar) ─────────────
-  function nativeTagBoxes() {
-    return [...document.querySelectorAll(".tag-box")];
+  function problemTagsBox() {
+    return sideboxByCaption(/problem\s*tags/i);
   }
 
-  function titleAnchor() {
-    return document.querySelector(".problem-statement .header .title") ||
-      document.querySelector(".problem-statement .title") ||
-      document.querySelector(".problem-statement") ||
-      document.querySelector("#pageContent");
+  function sideboxByCaption(pattern) {
+    const boxes = [...document.querySelectorAll(".roundbox.sidebox, .roundbox")];
+    return boxes.find((box) => pattern.test(box.querySelector(".caption")?.textContent || "")) || null;
+  }
+
+  function nativeTagBoxes() {
+    const box = problemTagsBox();
+    return [...(box || document).querySelectorAll(".tag-box")];
   }
 
   function similarHtml(ps, entry) {
@@ -200,77 +216,178 @@
       '<div class="cpos-cf-sim-list">' + items + "</div></div>";
   }
 
-  function build(entry, prefs, ps) {
+  function button(cls, text, fn) {
+    const b = el("button", cls, text);
+    b.type = "button";
+    b.addEventListener("click", fn);
+    return b;
+  }
+
+  function renderTagControls(target, tags, prefs, fallback, ps, entry, showRevealedChips = true) {
+    target.textContent = "";
+    const chips = el("span", "cpos-cf-chips");
+    const renderChips = (shown) => {
+      chips.innerHTML = tags.slice(0, shown).map((t) => '<span class="cpos-cf-chip">' + esc(t) + "</span>").join("");
+    };
+
+    if (!tags.length) {
+      target.appendChild(el("span", "cpos-cf-lbl", "No tags available"));
+      return;
+    }
+
+    if (prefs.tagsHidden) {
+      let shown = 0;
+      const status = el("span", "cpos-cf-lbl", fallback ? "Tags hidden" : "Hidden for practice");
+      const reveal = button("cpos-cf-btn", "Show all tags (" + tags.length + ")", async () => {
+        await setPrefs({ tagsHidden: false });
+        rerender();
+      });
+      const one = button("cpos-cf-btn ghost", "Show one tag", () => {
+        if (shown >= tags.length) return;
+        shown++;
+        renderChips(shown);
+        if (shown >= tags.length) one.disabled = true;
+      });
+      target.appendChild(status);
+      target.appendChild(reveal);
+      target.appendChild(one);
+      target.appendChild(chips);
+      return;
+    }
+
+    if (showRevealedChips) renderChips(tags.length);
+    const hide = button("cpos-cf-btn ghost", "Hide tags for practice", async () => {
+      await setPrefs({ tagsHidden: true });
+      rerender();
+    });
+    if (showRevealedChips) target.appendChild(chips);
+    else target.appendChild(el("span", "cpos-cf-lbl", "Tags shown"));
+    target.appendChild(hide);
+
+    const sim = similarHtml(ps, entry);
+    if (sim) target.appendChild(el("div", "cpos-cf-sim-wrap", sim));
+  }
+
+  function renderRatingControls(target, rating, prefs) {
+    target.textContent = "";
+    target.appendChild(el("span", "cpos-cf-group-label", "Rating"));
+    if (rating == null) {
+      target.appendChild(el("span", "cpos-cf-badge dim", "n/a"));
+      return;
+    }
+    if (prefs.ratingHidden) {
+      const b = button("cpos-cf-badge hidden", "★ Show rating", async () => {
+        await setPrefs({ ratingHidden: false });
+        rerender();
+      });
+      target.appendChild(b);
+      return;
+    }
+    const badge = el("span", "cpos-cf-badge", "★ " + rating);
+    badge.style.color = ratingColor(rating);
+    badge.style.borderColor = ratingColor(rating);
+    target.appendChild(badge);
+  }
+
+  function renderProblemTagsWidget(entry, prefs, ps) {
+    const box = problemTagsBox();
+    if (!box) return false;
+    let panel = box.querySelector("#cpos-cf-tags-widget");
+    if (!panel) {
+      panel = el("div", "cpos-cf-tags-widget");
+      panel.id = "cpos-cf-tags-widget";
+      const caption = box.querySelector(".caption");
+      if (caption && caption.parentNode === box) caption.insertAdjacentElement("afterend", panel);
+      else box.prepend(panel);
+    }
+    panel.textContent = "";
+    const ratingRow = el("div", "cpos-cf-minirow cpos-cf-rating-row");
+    renderRatingControls(ratingRow, entry ? entry.rating : null, prefs);
+    panel.appendChild(ratingRow);
+    const tagRow = el("div", "cpos-cf-minirow cpos-cf-tag-row");
+    renderTagControls(tagRow, entry ? entry.tags : [], prefs, false, ps, entry, nativeTagBoxes().length === 0);
+    panel.appendChild(tagRow);
+    applyTheme(panel);
+    return true;
+  }
+
+  function fallbackAnchor() {
+    return sideboxByCaption(/contest\s*materials/i) ||
+      document.querySelector("#sidebar") ||
+      document.querySelector(".sidebar") ||
+      document.querySelector("#pageContent");
+  }
+
+  function buildTools(entry, prefs, ps) {
     let root = document.getElementById(ROOT_ID);
     if (root) root.remove();
-    root = el("div", "cpos-cf-tools");
-    root.id = ROOT_ID;
 
     const rating = entry ? entry.rating : null;
     const tags = entry ? entry.tags : [];
 
-    // ── rating badge (optionally hidden) ──
-    const ratingWrap = el("span", "cpos-cf-rating");
-    if (rating == null) {
-      ratingWrap.innerHTML = '<span class="cpos-cf-badge dim">rating: n/a</span>';
-    } else if (prefs.ratingHidden) {
-      const b = el("button", "cpos-cf-badge hidden", "★ Reveal rating");
-      b.type = "button";
-      b.addEventListener("click", async () => { await setPrefs({ ratingHidden: false }); rerender(); });
-      ratingWrap.appendChild(b);
-    } else {
-      ratingWrap.innerHTML = '<span class="cpos-cf-badge" style="color:' + ratingColor(rating) +
-        ';border-color:' + ratingColor(rating) + '">★ ' + rating + "</span>";
+    const tagsInSidebar = renderProblemTagsWidget(entry, prefs, ps);
+    if (!tagsInSidebar) {
+      root = el("div", "cpos-cf-tools cpos-cf-tools-side");
+      root.id = ROOT_ID;
+
+      const head = el("div", "cpos-cf-head", '<span class="badge">CPOS</span><span class="cpos-cf-lbl">Problem tools</span>');
+      const ratingRow = el("div", "cpos-cf-minirow cpos-cf-rating-row");
+      renderRatingControls(ratingRow, rating, prefs);
+      const tagsWrap = el("div", "cpos-cf-minirow cpos-cf-tags");
+      renderTagControls(tagsWrap, tags, prefs, true, ps, entry);
+      root.appendChild(head);
+      root.appendChild(ratingRow);
+      root.appendChild(tagsWrap);
+
+      const anchor = fallbackAnchor();
+      if (anchor?.matches?.(".roundbox")) anchor.parentNode.insertBefore(root, anchor);
+      else if (anchor && anchor.firstChild) anchor.insertBefore(root, anchor.firstChild);
+      else (document.querySelector("#pageContent") || document.body).prepend(root);
+      applyTheme(root);
     }
-
-    // ── tag controls ──
-    const tagsWrap = el("span", "cpos-cf-tags");
-    if (!tags.length) {
-      tagsWrap.innerHTML = '<span class="cpos-cf-lbl">No tags</span>';
-    } else if (prefs.tagsHidden) {
-      const reveal = el("button", "cpos-cf-btn", "Reveal tags (" + tags.length + ")");
-      reveal.type = "button";
-      reveal.addEventListener("click", async () => { await setPrefs({ tagsHidden: false }); rerender(); });
-      const one = el("button", "cpos-cf-btn ghost", "Reveal one");
-      one.type = "button";
-      // reveal-one-by-one: keep persisted pref hidden, just unveil next chip inline
-      let shown = 0;
-      const chipBox = el("span", "cpos-cf-chips");
-      const renderOne = () => {
-        chipBox.innerHTML = tags.slice(0, shown).map((t) => '<span class="cpos-cf-chip">' + esc(t) + "</span>").join("");
-        if (shown >= tags.length) one.disabled = true;
-      };
-      one.addEventListener("click", () => { if (shown < tags.length) { shown++; renderOne(); } });
-      tagsWrap.appendChild(reveal);
-      tagsWrap.appendChild(one);
-      tagsWrap.appendChild(chipBox);
-    } else {
-      const hide = el("button", "cpos-cf-btn ghost", "Hide tags");
-      hide.type = "button";
-      hide.addEventListener("click", async () => { await setPrefs({ tagsHidden: true }); rerender(); });
-      const chips = tags.map((t) => '<span class="cpos-cf-chip">' + esc(t) + "</span>").join("");
-      tagsWrap.innerHTML = '<span class="cpos-cf-chips">' + chips + "</span>";
-      tagsWrap.appendChild(hide);
-    }
-
-    const head = el("span", "cpos-cf-head", '<span class="badge">CPOS</span>');
-    root.appendChild(head);
-    root.appendChild(ratingWrap);
-    root.appendChild(tagsWrap);
-
-    // ── similar problems (only when tags are revealed, to keep training honest) ──
-    if (!prefs.tagsHidden) {
-      const sim = similarHtml(ps, entry);
-      if (sim) root.appendChild(el("div", "cpos-cf-sim-wrap", sim));
-    }
-
-    const anchor = titleAnchor();
-    if (anchor && anchor.parentNode) anchor.parentNode.insertBefore(root, anchor.nextSibling);
-    else (document.querySelector("#pageContent") || document.body).prepend(root);
-    applyTheme(root);
 
     // Hide CF's own native tags while training mode keeps ours hidden.
     setNativeTagsHidden(prefs.tagsHidden);
+  }
+
+  function statementHeader() {
+    return document.querySelector(".problem-statement .header") ||
+      document.querySelector(".problem-statement") ||
+      document.querySelector("#pageContent");
+  }
+
+  function renderFocusToggle(on) {
+    const anchor = statementHeader();
+    if (!anchor) return;
+    document.querySelectorAll(".cpos-cf-focus-anchor").forEach((node) => {
+      if (node !== anchor) node.classList.remove("cpos-cf-focus-anchor");
+    });
+    anchor.classList.add("cpos-cf-focus-anchor");
+    let btn = document.getElementById("cpos-cf-focus-toggle");
+    if (!btn) {
+      btn = el("button", "cpos-cf-focus-toggle");
+      btn.id = "cpos-cf-focus-toggle";
+      btn.type = "button";
+      btn.addEventListener("click", async (ev) => {
+        ev.preventDefault();
+        ev.stopPropagation();
+        const cur = await getPrefs();
+        await setPrefs({ focusMode: !cur.focusMode });
+        sync();
+      });
+      anchor.appendChild(btn);
+    } else if (btn.parentElement !== anchor) {
+      anchor.appendChild(btn);
+    }
+    btn.textContent = on ? "-" : "+";
+    btn.title = on ? "Exit focus mode" : "Focus problem";
+    btn.setAttribute("aria-label", btn.title);
+    btn.classList.toggle("on", !!on);
+    applyTheme(btn);
+  }
+
+  function applyFocusMode(on) {
+    document.documentElement.classList.toggle("cpos-cf-focus", !!on);
   }
 
   function setNativeTagsHidden(hidden) {
@@ -282,7 +399,9 @@
   async function rerender() {
     const prefs = await getPrefs();
     if (!document.body) return;
-    build(lastEntry, prefs, lastPs);
+    if (await C.feature(FEATURE)) buildTools(lastEntry, prefs, lastPs);
+    renderFocusToggle(prefs.focusMode);
+    applyFocusMode(prefs.focusMode);
   }
 
   // ── lifecycle ────────────────────────────────────────────────────────────────
@@ -294,30 +413,36 @@
     const ps = await loadProblemset();
     lastPs = ps;
     lastEntry = ps.byKey.get(id.key) || null;
-    build(lastEntry, prefs, ps);
+    buildTools(lastEntry, prefs, ps);
     addCopyButtons();
     // Watch for late-rendered sample blocks (CF sometimes hydrates them).
     if (!observer) {
       observer = new MutationObserver(() => {
-        if (!document.getElementById(ROOT_ID)) return;
+        if (!document.getElementById(ROOT_ID) && !document.getElementById("cpos-cf-tags-widget")) return;
         addCopyButtons();
       });
       observer.observe(document.body, { childList: true, subtree: true });
     }
   }
 
-  function remove() {
+  function removeTools() {
     observer?.disconnect();
     observer = null;
     document.getElementById(ROOT_ID)?.remove();
+    document.getElementById("cpos-cf-tags-widget")?.remove();
     removeCopyButtons();
     setNativeTagsHidden(false);
   }
 
   async function sync() {
+    const id = problemId();
+    if (!id) return;
+    const prefs = await getPrefs();
+    renderFocusToggle(prefs.focusMode);
+    applyFocusMode(prefs.focusMode);
     const on = await C.feature(FEATURE);
     if (on) buildAll().catch((e) => console.debug("CPOS problemTools:", e));
-    else remove();
+    else removeTools();
   }
 
   C.onChange((changes) => {
@@ -325,6 +450,10 @@
     else {
       const root = document.getElementById(ROOT_ID);
       if (root) applyTheme(root);
+      const widget = document.getElementById("cpos-cf-tags-widget");
+      if (widget) applyTheme(widget);
+      const focus = document.getElementById("cpos-cf-focus-toggle");
+      if (focus) applyTheme(focus);
       document.querySelectorAll(".cpos-cf-copy").forEach((b) => applyTheme(b));
     }
   });

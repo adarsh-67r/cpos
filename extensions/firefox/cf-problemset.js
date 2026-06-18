@@ -4,13 +4,11 @@
 //   · SOLVE-STATUS row coloring — solved / attempted-unsolved / untouched, from
 //     the logged-in handle (scraped from the page header) + user.status (cached).
 //     Uses --ok / --warn tokens as a subtle row tint; CF's own styling is kept.
-//   · a compact CPOS info strip (#cpos-cf-tools) with solved/attempted counts and
-//     a minimal rating-distribution sparkline for the visible rows.
+//   · per-problem solved-count column.
 // Read-only: fetches the public CF API. Never touches capture/submit. Degrades
 // gracefully when not logged in or the API is unreachable. Toggle from the CPOS
 // popup (feature "problemsetTools").
 (function () {
-  const ROOT_ID = "cpos-cf-tools";
   const T = self.CPOS_THEMES;
   const C = self.CPOS;
   if (!C) return;
@@ -20,13 +18,10 @@
   const STATUS_TTL = 10 * 60 * 1000;     // 10 min — submissions change often
   const STATS_KEY = "cpos.problemset.stats"; // { ts, counts:{ "id-IDX": solvedCount } }
   const STATS_TTL = 6 * 60 * 60 * 1000;  // 6 h — solvedCount drifts slowly
-  const HIDE_KEY = "cpos.problemset.hideSolved"; // bool — persisted toggle pref
   const ROW_ATTR = "data-cpos-cf-row";
   const COUNT_CELL = "cpos-cf-count-cell"; // injected solvedCount column cells/header
 
   const esc = (s) => String(s == null ? "" : s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
-  function el(tag, cls, html) { const e = document.createElement(tag); if (cls) e.className = cls; if (html != null) e.innerHTML = html; return e; }
-
   function onProblemset() { return /^\/problemset(\/|$)/.test(location.pathname); }
   function onContestList() { return /^\/(?:contest|gym)\/\d+(\/|$)?$/.test(location.pathname); }
 
@@ -124,13 +119,6 @@
     if (!m) return null;
     return m[1] + "-" + decodeURIComponent(m[2]).toUpperCase();
   }
-  function rowRating(tr) {
-    // Problemset rows expose rating via a span title or the difficulty cell.
-    const span = tr.querySelector("span[title][style*='cursor']") || tr.querySelector(".ProblemRating");
-    if (span) { const v = parseInt(span.getAttribute("title") || span.textContent, 10); if (!isNaN(v)) return v; }
-    return null;
-  }
-
   function problemRows() {
     // CF problemset + contest problem lists both use table.problems.
     const tables = document.querySelectorAll("table.problems");
@@ -145,23 +133,20 @@
   // ── apply / clear row tints ─────────────────────────────────────────────────
   function colorRows(sets) {
     let solved = 0, attempted = 0, total = 0;
-    const ratings = [];
     for (const tr of problemRows()) {
       const key = rowKey(tr);
       if (!key) continue;
       total++;
-      const r = rowRating(tr);
-      if (r != null) ratings.push(r);
       tr.setAttribute(ROW_ATTR, "1");
       tr.classList.remove("cpos-cf-solved", "cpos-cf-attempted");
       if (sets.solved.has(key)) { tr.classList.add("cpos-cf-solved"); solved++; }
       else if (sets.attempted.has(key)) { tr.classList.add("cpos-cf-attempted"); attempted++; }
     }
-    return { solved, attempted, total, ratings };
+    return { solved, attempted, total };
   }
   function clearRows() {
     document.querySelectorAll("[" + ROW_ATTR + "]").forEach((tr) => {
-      tr.classList.remove("cpos-cf-solved", "cpos-cf-attempted", "cpos-cf-hidden");
+      tr.classList.remove("cpos-cf-solved", "cpos-cf-attempted");
       tr.removeAttribute(ROW_ATTR);
     });
   }
@@ -197,136 +182,47 @@
     document.querySelectorAll("." + COUNT_CELL).forEach((e) => e.remove());
   }
 
-  // ── hide-solved toggle ──────────────────────────────────────────────────────
-  let hideSolved = false;
-  async function loadHidePref() {
-    const stored = await C.get([HIDE_KEY]);
-    hideSolved = stored[HIDE_KEY] === true;
-    return hideSolved;
-  }
-  function applyHide() {
-    for (const tr of problemRows()) {
-      const solved = tr.classList.contains("cpos-cf-solved");
-      tr.classList.toggle("cpos-cf-hidden", hideSolved && solved);
-    }
-    const toggle = document.querySelector("#" + ROOT_ID + " .cpos-cf-hide-toggle");
-    if (toggle) {
-      toggle.classList.toggle("on", hideSolved);
-      toggle.setAttribute("aria-pressed", String(hideSolved));
-      const lbl = toggle.querySelector(".cpos-cf-hide-lbl");
-      if (lbl) lbl.textContent = hideSolved ? "Solved hidden" : "Hide solved";
-    }
-  }
-  function clearHide() {
-    document.querySelectorAll("tr.cpos-cf-hidden").forEach((tr) => tr.classList.remove("cpos-cf-hidden"));
-  }
-
-  // ── compact info strip ───────────────────────────────────────────────────────
-  function sparkline(ratings) {
-    if (!ratings.length) return "";
-    const buckets = {};
-    for (const r of ratings) { const b = Math.floor(r / 100) * 100; buckets[b] = (buckets[b] || 0) + 1; }
-    const keys = Object.keys(buckets).map(Number).sort((a, b) => a - b);
-    const max = Math.max(...keys.map((k) => buckets[k]), 1);
-    const bars = keys.map((k) =>
-      '<span class="cpos-cf-spark-bar" title="' + k + ": " + buckets[k] + ' shown" style="height:' +
-      Math.max(8, Math.round((buckets[k] / max) * 100)) + '%"></span>').join("");
-    return '<span class="cpos-cf-spark" title="rating distribution of shown problems">' + bars + "</span>";
-  }
-
-  function buildStrip(stats, handle, sets) {
-    let root = document.getElementById(ROOT_ID);
-    if (root) root.remove();
-    root = el("div", "cpos-cf-tools strip");
-    root.id = ROOT_ID;
-
-    const head = el("span", "cpos-cf-head", '<span class="badge">CPOS</span>');
-    root.appendChild(head);
-
-    if (handle && sets) {
-      const untouched = Math.max(0, stats.total - stats.solved - stats.attempted);
-      root.appendChild(el("span", "cpos-cf-stat",
-        '<b style="color:var(--ok)">' + stats.solved + "</b> solved"));
-      root.appendChild(el("span", "cpos-cf-stat",
-        '<b style="color:var(--warn)">' + stats.attempted + "</b> attempted"));
-      root.appendChild(el("span", "cpos-cf-stat",
-        '<b>' + untouched + "</b> untouched"));
-
-      // Hide-solved toggle (only meaningful when we know what's solved).
-      const toggle = el("button", "cpos-cf-btn ghost cpos-cf-hide-toggle",
-        '<span class="cpos-cf-hide-dot"></span><span class="cpos-cf-hide-lbl">Hide solved</span>');
-      toggle.type = "button";
-      toggle.setAttribute("aria-pressed", "false");
-      toggle.addEventListener("click", async () => {
-        hideSolved = !hideSolved;
-        await C.set({ [HIDE_KEY]: hideSolved });
-        applyHide();
-      });
-      root.appendChild(toggle);
-
-      root.appendChild(el("span", "cpos-cf-who", "@" + esc(handle)));
-    } else {
-      root.appendChild(el("span", "cpos-cf-lbl", "Sign in for solve-status coloring"));
-    }
-    const spark = sparkline(stats.ratings);
-    if (spark) root.appendChild(el("span", "cpos-cf-spark-wrap", spark));
-
-    // Insert above the first problems table.
-    const table = document.querySelector("table.problems");
-    const anchor = table ? (table.closest(".datatable") || table) : null;
-    if (anchor && anchor.parentNode) anchor.parentNode.insertBefore(root, anchor);
-    else (document.querySelector("#pageContent") || document.body).prepend(root);
-    applyTheme(root);
-  }
-
   async function applyTheme(node) {
     if (!T || !C) return;
-    const id = await C.activeThemeId();
+    const id = await (C.activePageThemeId ? C.activePageThemeId() : C.activeThemeId());
     if (node) T.applyTheme(node, id);
     // Mirror --ok/--warn onto :root so the row tints (not descendants of the
     // strip) track the active palette. CSS reads --cpos-row-ok / --cpos-row-warn.
     const tokens = T.get(id);
     document.documentElement.style.setProperty("--cpos-row-ok", tokens["--ok"]);
     document.documentElement.style.setProperty("--cpos-row-warn", tokens["--warn"]);
+    document.documentElement.style.setProperty("--cpos-row-bg", tokens["--panel"]);
   }
   function clearRowTokens() {
     document.documentElement.style.removeProperty("--cpos-row-ok");
     document.documentElement.style.removeProperty("--cpos-row-warn");
+    document.documentElement.style.removeProperty("--cpos-row-bg");
   }
 
   // ── lifecycle ────────────────────────────────────────────────────────────────
   let observer = null;
-  let lastSets = null, lastHandle = null;
+  let lastSets = null;
 
   let lastStats = null;
 
   async function buildAll() {
     if (!(onProblemset() || onContestList())) return;
     const handle = loggedInHandle();
-    lastHandle = handle;
-    await loadHidePref();
-    let sets = null, stats;
+    let sets = null;
     if (handle) {
       sets = await loadStatus(handle);
       lastSets = sets;
-      stats = colorRows(sets);
-    } else {
-      // Still color nothing, but compute the rating distribution for the strip.
-      stats = { solved: 0, attempted: 0, total: 0, ratings: [] };
-      for (const tr of problemRows()) { const r = rowRating(tr); if (r != null) stats.ratings.push(r); stats.total++; }
+      colorRows(sets);
     }
-    buildStrip(stats, handle, sets);
+    await applyTheme();
 
-    // Submission counts (independent of login) + hide-solved (needs status).
+    // Submission counts are independent of login.
     loadStats().then((m) => { lastStats = m; injectCounts(m); }).catch(() => {});
-    if (sets) applyHide();
 
     if (!observer) {
       observer = new MutationObserver(() => {
-        if (!document.getElementById(ROOT_ID)) return;
         if (lastSets) colorRows(lastSets);
         if (lastStats) injectCounts(lastStats);
-        if (lastSets) applyHide();
       });
       const tbl = document.querySelector("table.problems");
       if (tbl) observer.observe(tbl, { childList: true, subtree: true });
@@ -336,10 +232,8 @@
   function remove() {
     observer?.disconnect();
     observer = null;
-    document.getElementById(ROOT_ID)?.remove();
     clearRows();
     clearCounts();
-    clearHide();
     clearRowTokens();
   }
 
@@ -351,7 +245,7 @@
 
   C.onChange((changes) => {
     if (changes[C.KEYS.FEATURES]) sync();
-    else { const root = document.getElementById(ROOT_ID); if (root) applyTheme(root); }
+    else applyTheme();
   });
   if (document.body) sync();
   else document.addEventListener("DOMContentLoaded", () => sync());

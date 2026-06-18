@@ -4,9 +4,9 @@
    (tokens written by CPOS_THEMES.applyTheme); no gradients; responsive. */
 #cpos-compare {
   /* fallbacks; the active theme overrides these as inline custom props */
-  --bg: #14141f; --panel: #1b1b2b; --panel-2: #20202e; --fg: #e8e6f0;
-  --dim: #8a86a3; --border: #2a2a3e; --accent: #b794ff; --accent-dim: #7c5cbf;
-  --accent-on: #14141f; --ok: #7ee787; --bad: #ff7a93; --warn: #f0b860; --cf: #7aa2f7;
+  --bg: #f7f7f8; --panel: #ffffff; --panel-2: #f0f1f3; --fg: #1f2328;
+  --dim: #6b7280; --border: #d5d7dc; --accent: #6b7280; --accent-dim: #4b5563;
+  --accent-on: #ffffff; --ok: #1a7f37; --bad: #cf222e; --warn: #9a6700; --cf: #44546a;
   margin: 14px 0;
   padding: 14px;
   background: var(--panel);
@@ -34,18 +34,18 @@
 #cpos-compare .cpos-cmp-form { display: flex; gap: 8px; margin-bottom: 8px; flex-wrap: wrap; }
 #cpos-compare .cpos-cmp-input {
   flex: 1 1 220px; min-width: 0;
-  background: var(--panel-2); color: var(--fg);
-  border: 1px solid var(--border); border-radius: 8px;
-  padding: 7px 10px; font-size: 13px; font-family: inherit;
+  background: var(--panel-2) !important; color: var(--fg) !important;
+  border: 1px solid var(--border) !important; border-radius: 8px !important;
+  padding: 7px 10px !important; font-size: 13px; font-family: inherit;
 }
 #cpos-compare .cpos-cmp-input::placeholder { color: var(--dim); }
-#cpos-compare .cpos-cmp-input:focus { outline: none; border-color: var(--accent); }
+#cpos-compare .cpos-cmp-input:focus { outline: none; border-color: var(--accent) !important; box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 25%, transparent) !important; }
 #cpos-compare .cpos-cmp-add {
-  background: var(--accent); color: var(--accent-on);
-  border: none; border-radius: 8px; padding: 7px 14px;
-  font-weight: 700; font-size: 13px; cursor: pointer; font-family: inherit;
+  background: var(--accent) !important; color: var(--accent-on) !important;
+  border: none !important; border-radius: 8px !important; padding: 7px 14px !important;
+  font-weight: 700 !important; font-size: 13px; cursor: pointer !important; font-family: inherit;
 }
-#cpos-compare .cpos-cmp-add:hover { background: var(--accent-dim); }
+#cpos-compare .cpos-cmp-add:hover { background: var(--accent-dim) !important; }
 
 #cpos-compare .cpos-cmp-chips { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
 #cpos-compare .cpos-cmp-hint { color: var(--dim); font-size: 12px; }
@@ -55,10 +55,10 @@
   padding: 3px 6px 3px 10px; font-size: 12px; font-weight: 600;
 }
 #cpos-compare .cpos-cmp-x {
-  background: none; border: none; color: var(--dim); cursor: pointer;
-  font-size: 14px; line-height: 1; padding: 0 2px; border-radius: 50%;
+  background: none !important; border: none !important; color: var(--dim) !important;
+  cursor: pointer !important; font-size: 14px; line-height: 1; padding: 0 2px; border-radius: 50%;
 }
-#cpos-compare .cpos-cmp-x:hover { color: var(--bad); }
+#cpos-compare .cpos-cmp-x:hover { color: var(--bad) !important; }
 
 /* ── sections ─────────────────────────────────────────────────────────────── */
 #cpos-compare .cpos-cmp-section { margin-top: 14px; }
@@ -71,6 +71,19 @@
   color: var(--dim); font-size: 12px; padding: 6px 0;
 }
 #cpos-compare .cpos-cmp-note { margin-top: 6px; }
+
+/* hint shown when no competitor handles have been added yet */
+#cpos-compare .cpos-cmp-prompt {
+  margin-top: 4px;
+  padding: 14px 16px;
+  background: var(--panel-2);
+  border: 1px dashed var(--border);
+  border-radius: 10px;
+  color: var(--dim);
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+#cpos-compare .cpos-cmp-prompt b { color: var(--accent); font-weight: 700; }
 
 /* ── stat table ───────────────────────────────────────────────────────────── */
 #cpos-compare .cpos-cmp-tablewrap { overflow-x: auto; }

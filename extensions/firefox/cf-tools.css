@@ -5,75 +5,252 @@
    gradients. Row tints use the active theme's --ok / --warn tokens. */
 
 #cpos-cf-tools,
+#cpos-cf-tags-widget,
+#cpos-cf-focus-toggle,
 .cpos-cf-copy {
   /* fallbacks; the active theme overrides these as inline custom props */
-  --bg: #14141f; --panel: #1b1b2b; --panel-2: #20202e; --fg: #e8e6f0;
-  --dim: #8a86a3; --border: #2a2a3e; --accent: #b794ff; --accent-dim: #7c5cbf;
-  --accent-on: #14141f; --ok: #7ee787; --bad: #ff7a93; --warn: #f0b860; --cf: #7aa2f7;
+  --bg: #f7f7f8; --panel: #ffffff; --panel-2: #f0f1f3; --fg: #1f2328;
+  --dim: #6b7280; --border: #d5d7dc; --accent: #6b7280; --accent-dim: #4b5563;
+  --accent-on: #ffffff; --ok: #1a7f37; --bad: #cf222e; --warn: #9a6700; --cf: #44546a;
 }
 
 /* ── the tools strip ──────────────────────────────────────────────────────── */
 #cpos-cf-tools {
   display: flex; align-items: center; flex-wrap: wrap; gap: 8px 10px;
   margin: 10px 0; padding: 9px 12px;
-  background: var(--panel); border: 1px solid var(--border); border-radius: 12px;
+  background: color-mix(in srgb, var(--panel) 94%, transparent);
+  border: 1px solid color-mix(in srgb, var(--border) 72%, transparent);
+  border-radius: 10px;
   font-family: ui-sans-serif, -apple-system, "Segoe UI", Roboto, sans-serif;
   font-size: 12px; color: var(--fg); line-height: 1.4;
+  position: relative;
+}
+#cpos-cf-tools.cpos-cf-tools-side {
+  align-items: stretch;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0 0 10px;
 }
 #cpos-cf-tools * { box-sizing: border-box; }
+#cpos-cf-tags-widget,
+#cpos-cf-tags-widget * { box-sizing: border-box; }
 
+#cpos-cf-tools .cpos-cf-head {
+  display: flex; align-items: center; gap: 7px;
+}
 #cpos-cf-tools .cpos-cf-head .badge {
-  font-size: 10px; font-weight: 700; color: var(--accent-on); background: var(--accent);
+  font-size: 10px; font-weight: 750; color: var(--fg);
+  background: color-mix(in srgb, var(--panel-2) 82%, transparent);
+  border: 1px solid color-mix(in srgb, var(--border) 75%, transparent);
   border-radius: 5px; padding: 2px 7px; letter-spacing: 0.06em;
 }
-#cpos-cf-tools .cpos-cf-lbl { color: var(--dim); font-size: 11px; }
+#cpos-cf-tools .cpos-cf-group {
+  display: inline-flex; align-items: center; flex-wrap: wrap; gap: 6px;
+  padding: 2px 0;
+}
+#cpos-cf-tools .cpos-cf-group-label,
+#cpos-cf-tags-widget .cpos-cf-group-label {
+  color: var(--dim); font-size: 10px; font-weight: 800;
+  letter-spacing: 0.08em; text-transform: uppercase;
+}
+#cpos-cf-tools .cpos-cf-lbl,
+#cpos-cf-tags-widget .cpos-cf-lbl { color: var(--dim); font-size: 11px; }
 
 /* rating badge */
-#cpos-cf-tools .cpos-cf-badge {
+#cpos-cf-tools .cpos-cf-badge,
+#cpos-cf-tags-widget .cpos-cf-badge {
   display: inline-flex; align-items: center; gap: 4px;
   font-weight: 800; font-size: 12.5px; font-variant-numeric: tabular-nums;
   padding: 2px 9px; border-radius: 999px;
   border: 1px solid var(--border); background: var(--panel-2); color: var(--fg);
 }
-#cpos-cf-tools .cpos-cf-badge.dim { color: var(--dim); }
-#cpos-cf-tools .cpos-cf-badge.hidden {
+#cpos-cf-tools .cpos-cf-badge.dim,
+#cpos-cf-tags-widget .cpos-cf-badge.dim { color: var(--dim); }
+#cpos-cf-tools .cpos-cf-badge.hidden,
+#cpos-cf-tags-widget .cpos-cf-badge.hidden {
   cursor: pointer; color: var(--accent); border-color: var(--accent-dim); background: transparent;
 }
-#cpos-cf-tools .cpos-cf-badge.hidden:hover { background: var(--panel-2); }
+#cpos-cf-tools .cpos-cf-badge.hidden:hover,
+#cpos-cf-tags-widget .cpos-cf-badge.hidden:hover { background: var(--panel-2); }
 
-/* generic buttons in the strip */
-#cpos-cf-tools .cpos-cf-btn {
-  font: inherit; font-size: 11.5px; font-weight: 600; cursor: pointer;
-  color: var(--accent-on); background: var(--accent);
-  border: 1px solid var(--accent); border-radius: 7px; padding: 3px 10px;
+/* generic buttons in the strip — !important beats cfColorControls global rule */
+#cpos-cf-tools .cpos-cf-btn,
+#cpos-cf-tags-widget .cpos-cf-btn {
+  font: inherit; font-size: 11.5px; font-weight: 600; cursor: pointer !important;
+  color: var(--fg) !important;
+  background: color-mix(in srgb, var(--panel-2) 84%, transparent) !important;
+  border: 1px solid color-mix(in srgb, var(--border) 82%, transparent) !important;
+  border-radius: 7px !important; padding: 3px 10px !important;
 }
-#cpos-cf-tools .cpos-cf-btn:hover { background: var(--accent-dim); border-color: var(--accent-dim); }
-#cpos-cf-tools .cpos-cf-btn.ghost {
-  color: var(--accent); background: transparent; border-color: var(--accent-dim);
+#cpos-cf-tools .cpos-cf-btn:hover,
+#cpos-cf-tags-widget .cpos-cf-btn:hover {
+  background: color-mix(in srgb, var(--panel-2) 70%, var(--fg) 7%) !important;
+  border-color: color-mix(in srgb, var(--border) 55%, var(--fg) 16%) !important;
 }
-#cpos-cf-tools .cpos-cf-btn.ghost:hover { background: var(--panel-2); }
-#cpos-cf-tools .cpos-cf-btn:disabled { opacity: 0.45; cursor: default; }
+#cpos-cf-tools .cpos-cf-btn.ghost,
+#cpos-cf-tags-widget .cpos-cf-btn.ghost {
+  color: var(--dim) !important; background: transparent !important;
+  border-color: color-mix(in srgb, var(--border) 82%, transparent) !important;
+}
+#cpos-cf-tools .cpos-cf-btn.ghost:hover,
+#cpos-cf-tags-widget .cpos-cf-btn.ghost:hover {
+  color: var(--fg) !important;
+  background: color-mix(in srgb, var(--panel-2) 72%, transparent) !important;
+}
+#cpos-cf-tools .cpos-cf-btn:disabled,
+#cpos-cf-tags-widget .cpos-cf-btn:disabled { opacity: 0.45; cursor: default !important; }
 
 /* tag chips */
-#cpos-cf-tools .cpos-cf-tags { display: inline-flex; align-items: center; flex-wrap: wrap; gap: 6px; }
-#cpos-cf-tools .cpos-cf-chips { display: inline-flex; flex-wrap: wrap; gap: 5px; }
-#cpos-cf-tools .cpos-cf-chip {
+#cpos-cf-tools .cpos-cf-minirow,
+#cpos-cf-tags-widget .cpos-cf-minirow,
+#cpos-cf-tools .cpos-cf-tags,
+#cpos-cf-tags-widget {
+  display: flex; align-items: center; flex-wrap: wrap; gap: 6px;
+}
+#cpos-cf-tags-widget {
+  flex-direction: column; align-items: stretch;
+  margin: 10px 12px 6px;
+  padding: 8px 0 4px;
+  border-bottom: 1px solid var(--border);
+  font-family: ui-sans-serif, -apple-system, "Segoe UI", Roboto, sans-serif;
+  font-size: 12px; color: var(--fg); line-height: 1.4;
+}
+#cpos-cf-tags-widget .cpos-cf-minirow {
+  align-items: center;
+}
+#cpos-cf-tags-widget .cpos-cf-rating-row {
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--border);
+}
+#cpos-cf-tools .cpos-cf-chips,
+#cpos-cf-tags-widget .cpos-cf-chips { display: inline-flex; flex-wrap: wrap; gap: 5px; }
+#cpos-cf-tools .cpos-cf-chip,
+#cpos-cf-tags-widget .cpos-cf-chip {
   font-size: 11px; color: var(--fg); background: var(--panel-2);
   border: 1px solid var(--border); border-radius: 999px; padding: 1px 8px;
 }
 
 /* similar problems mini-list */
-#cpos-cf-tools .cpos-cf-sim-wrap { flex-basis: 100%; }
-#cpos-cf-tools .cpos-cf-sim { border-top: 1px solid var(--border); padding-top: 7px; margin-top: 2px; }
-#cpos-cf-tools .cpos-cf-sim-list { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 5px; }
-#cpos-cf-tools .cpos-cf-sim-item {
+#cpos-cf-tools .cpos-cf-sim-wrap,
+#cpos-cf-tags-widget .cpos-cf-sim-wrap { flex-basis: 100%; width: 100%; }
+#cpos-cf-tools .cpos-cf-sim,
+#cpos-cf-tags-widget .cpos-cf-sim { border-top: 1px solid var(--border); padding-top: 7px; margin-top: 2px; }
+#cpos-cf-tools .cpos-cf-sim-list,
+#cpos-cf-tags-widget .cpos-cf-sim-list { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 5px; }
+#cpos-cf-tools .cpos-cf-sim-item,
+#cpos-cf-tags-widget .cpos-cf-sim-item {
   display: inline-flex; align-items: center; gap: 6px; text-decoration: none;
   font-size: 11px; color: var(--fg); background: var(--panel-2);
   border: 1px solid var(--border); border-radius: 7px; padding: 2px 9px; max-width: 240px;
 }
-#cpos-cf-tools .cpos-cf-sim-item:hover { border-color: var(--accent-dim); }
-#cpos-cf-tools .cpos-cf-sim-item .r { font-weight: 800; font-variant-numeric: tabular-nums; }
-#cpos-cf-tools .cpos-cf-sim-item .n { color: var(--dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#cpos-cf-tools .cpos-cf-sim-item:hover,
+#cpos-cf-tags-widget .cpos-cf-sim-item:hover { border-color: var(--accent-dim); }
+#cpos-cf-tools .cpos-cf-sim-item .r,
+#cpos-cf-tags-widget .cpos-cf-sim-item .r { font-weight: 800; font-variant-numeric: tabular-nums; }
+#cpos-cf-tools .cpos-cf-sim-item .n,
+#cpos-cf-tags-widget .cpos-cf-sim-item .n { color: var(--dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* ── problem focus toggle ────────────────────────────────────────────────── */
+.cpos-cf-focus-anchor {
+  position: relative !important;
+}
+#cpos-cf-focus-toggle {
+  position: absolute; top: 10px; right: 12px; z-index: 20;
+  width: 24px; height: 24px; display: inline-flex; align-items: center; justify-content: center;
+  box-sizing: border-box; cursor: pointer !important; appearance: none; -webkit-appearance: none;
+  font: 650 17px/1 ui-sans-serif, -apple-system, "Segoe UI", Roboto, sans-serif;
+  color: var(--dim) !important;
+  background: color-mix(in srgb, var(--panel) 72%, transparent) !important;
+  border: 1px solid color-mix(in srgb, var(--border) 76%, transparent) !important;
+  border-radius: 6px !important;
+  box-shadow: none !important;
+}
+#cpos-cf-focus-toggle:hover {
+  color: var(--fg) !important;
+  background: color-mix(in srgb, var(--panel-2) 80%, transparent) !important;
+  border-color: color-mix(in srgb, var(--border) 55%, var(--fg) 14%) !important;
+}
+#cpos-cf-focus-toggle.on {
+  color: var(--fg) !important;
+  background: color-mix(in srgb, var(--panel-2) 86%, transparent) !important;
+  border-color: color-mix(in srgb, var(--border) 60%, var(--fg) 16%) !important;
+}
+#cpos-cf-focus-toggle:focus {
+  outline: none !important;
+}
+#cpos-cf-focus-toggle:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--fg) 18%, transparent) !important;
+  outline-offset: 2px !important;
+}
+
+html.cpos-cf-focus body #sidebar,
+html.cpos-cf-focus body .sidebar,
+html.cpos-cf-focus body .right-sidebar,
+html.cpos-cf-focus body #pageContent > .right,
+html.cpos-cf-focus body .content-with-sidebar > .right,
+html.cpos-cf-focus body .content-with-sidebar > .sidebar,
+html.cpos-cf-focus body .content-with-sidebar > aside,
+html.cpos-cf-focus body .datatable + .sidebox,
+html.cpos-cf-focus body .problemindexholder + .sidebox {
+  display: none !important;
+}
+html.cpos-cf-focus,
+html.cpos-cf-focus body {
+  overflow-x: hidden !important;
+}
+html.cpos-cf-focus {
+  overflow-y: hidden !important;
+  height: 100% !important;
+}
+html.cpos-cf-focus body {
+  --cpos-focus-gutter: clamp(16px, 3vw, 40px);
+  overflow-y: auto !important;
+  height: 100vh !important;
+  min-height: 0 !important;
+  scrollbar-gutter: stable !important;
+}
+html.cpos-cf-focus body #body,
+html.cpos-cf-focus body .main,
+html.cpos-cf-focus body .container {
+  min-width: 0 !important;
+  width: 100% !important;
+  max-width: none !important;
+  height: auto !important;
+  max-height: none !important;
+  overflow: visible !important;
+  box-sizing: border-box !important;
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+  padding-left: var(--cpos-focus-gutter) !important;
+  padding-right: var(--cpos-focus-gutter) !important;
+}
+html.cpos-cf-focus body #pageContent,
+html.cpos-cf-focus body .content-with-sidebar,
+html.cpos-cf-focus body .content-with-sidebar > .content,
+html.cpos-cf-focus body #pageContent > .content,
+html.cpos-cf-focus body .problem-statement {
+  width: 100% !important;
+  max-width: 100% !important;
+  min-width: 0 !important;
+  height: auto !important;
+  max-height: none !important;
+  overflow: visible !important;
+  box-sizing: border-box !important;
+}
+html.cpos-cf-focus body .content-with-sidebar,
+html.cpos-cf-focus body .content-with-sidebar > .content,
+html.cpos-cf-focus body #pageContent > .content {
+  float: none !important;
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+}
+html.cpos-cf-focus body .problem-statement {
+  padding-left: clamp(12px, 1.8vw, 24px) !important;
+  padding-right: clamp(12px, 1.8vw, 24px) !important;
+  overflow-wrap: anywhere !important;
+}
 
 /* ── copy-sample button (per input block) ─────────────────────────────────── */
 .cpos-cf-copy {
@@ -93,46 +270,26 @@
 .sample-test .input .input-output-copier ~ .cpos-cf-copy,
 .sample-test .input:has(.input-output-copier) .cpos-cf-copy { top: 30px; }
 
-/* ── problemset info strip extras ─────────────────────────────────────────── */
-#cpos-cf-tools .cpos-cf-stat { color: var(--dim); font-size: 11.5px; }
-#cpos-cf-tools .cpos-cf-stat b { font-size: 13px; font-weight: 800; color: var(--fg); font-variant-numeric: tabular-nums; margin-right: 3px; }
-#cpos-cf-tools .cpos-cf-who { color: var(--accent); font-weight: 700; font-size: 11px; margin-left: auto; }
-#cpos-cf-tools .cpos-cf-spark-wrap { display: inline-flex; align-items: flex-end; }
-#cpos-cf-tools .cpos-cf-spark {
-  display: inline-flex; align-items: flex-end; gap: 2px; height: 22px;
-}
-#cpos-cf-tools .cpos-cf-spark-bar { width: 5px; min-height: 2px; background: var(--cf); border-radius: 2px 2px 0 0; }
-
 /* ── solve-status row tints (subtle; preserves CF's own row styling) ──────────
    The rows aren't descendants of #cpos-cf-tools, so the tint tokens are written
    by cf-problemset.js onto :root as --cpos-row-ok / --cpos-row-warn (resolved
    from the active theme). Fallbacks keep it sane before JS runs. */
-table.problems tr.cpos-cf-solved > td {
-  background-color: color-mix(in srgb, var(--cpos-row-ok, #3fb950) 14%, transparent) !important;
+html body table.problems > tbody > tr.cpos-cf-solved > td,
+html body table.problems tr.cpos-cf-solved > td {
+  background: color-mix(in srgb, var(--cpos-row-ok, #3fb950) 12%, var(--cpos-row-bg, #161b22)) !important;
 }
-table.problems tr.cpos-cf-solved > td:first-child {
-  box-shadow: inset 3px 0 0 var(--cpos-row-ok, #3fb950);
+html body table.problems > tbody > tr.cpos-cf-solved > td:first-child,
+html body table.problems tr.cpos-cf-solved > td:first-child {
+  box-shadow: inset 2px 0 0 color-mix(in srgb, var(--cpos-row-ok, #3fb950) 70%, transparent);
 }
-table.problems tr.cpos-cf-attempted > td {
-  background-color: color-mix(in srgb, var(--cpos-row-warn, #d29922) 14%, transparent) !important;
+html body table.problems > tbody > tr.cpos-cf-attempted > td,
+html body table.problems tr.cpos-cf-attempted > td {
+  background: color-mix(in srgb, var(--cpos-row-warn, #d29922) 12%, var(--cpos-row-bg, #161b22)) !important;
 }
-table.problems tr.cpos-cf-attempted > td:first-child {
-  box-shadow: inset 3px 0 0 var(--cpos-row-warn, #d29922);
+html body table.problems > tbody > tr.cpos-cf-attempted > td:first-child,
+html body table.problems tr.cpos-cf-attempted > td:first-child {
+  box-shadow: inset 2px 0 0 color-mix(in srgb, var(--cpos-row-warn, #d29922) 70%, transparent);
 }
-
-/* ── hide-solved toggle (in the problemset strip) ──────────────────────────── */
-#cpos-cf-tools .cpos-cf-hide-toggle {
-  display: inline-flex; align-items: center; gap: 6px;
-}
-#cpos-cf-tools .cpos-cf-hide-dot {
-  width: 9px; height: 9px; border-radius: 50%;
-  border: 1px solid var(--accent-dim); background: transparent;
-}
-#cpos-cf-tools .cpos-cf-hide-toggle.on { background: var(--accent); color: var(--accent-on); border-color: var(--accent); }
-#cpos-cf-tools .cpos-cf-hide-toggle.on .cpos-cf-hide-dot { background: var(--accent-on); border-color: var(--accent-on); }
-
-/* Rows hidden by the hide-solved toggle. */
-table.problems tr.cpos-cf-hidden { display: none !important; }
 
 /* ── per-problem submission-count column ───────────────────────────────────── */
 table.problems th.cpos-cf-count-cell {
@@ -156,9 +313,9 @@ table.problems td.cpos-cf-count-cell .cpos-cf-count.dim { color: inherit; opacit
    --cpos-lang-* on :root by cf-standings.js. Coexists with carrot.js columns.
    ════════════════════════════════════════════════════════════════════════════ */
 #cpos-standings-tools {
-  --bg: #14141f; --panel: #1b1b2b; --panel-2: #20202e; --fg: #e8e6f0;
-  --dim: #8a86a3; --border: #2a2a3e; --accent: #b794ff; --accent-dim: #7c5cbf;
-  --accent-on: #14141f; --ok: #7ee787; --bad: #ff7a93; --warn: #f0b860; --cf: #7aa2f7;
+  --bg: #f7f7f8; --panel: #ffffff; --panel-2: #f0f1f3; --fg: #1f2328;
+  --dim: #6b7280; --border: #d5d7dc; --accent: #6b7280; --accent-dim: #4b5563;
+  --accent-on: #ffffff; --ok: #1a7f37; --bad: #cf222e; --warn: #9a6700; --cf: #44546a;
   display: flex; align-items: center; flex-wrap: wrap; gap: 8px 10px;
   margin: 10px 0; padding: 9px 12px;
   background: var(--panel); border: 1px solid var(--border); border-radius: 12px;
@@ -174,17 +331,17 @@ table.problems td.cpos-cf-count-cell .cpos-cf-count.dim { color: inherit; opacit
 #cpos-standings-tools .cpos-st-friends-count { color: var(--dim); font-size: 11px; }
 
 #cpos-standings-tools .cpos-st-btn {
-  font: inherit; font-size: 11.5px; font-weight: 600; cursor: pointer;
-  color: var(--accent-on); background: var(--accent);
-  border: 1px solid var(--accent); border-radius: 7px; padding: 3px 10px;
+  font: inherit; font-size: 11.5px; font-weight: 600; cursor: pointer !important;
+  color: var(--accent-on) !important; background: var(--accent) !important;
+  border: 1px solid var(--accent) !important; border-radius: 7px !important; padding: 3px 10px !important;
 }
-#cpos-standings-tools .cpos-st-btn:hover { background: var(--accent-dim); border-color: var(--accent-dim); }
+#cpos-standings-tools .cpos-st-btn:hover { background: var(--accent-dim) !important; border-color: var(--accent-dim) !important; }
 #cpos-standings-tools .cpos-st-btn.ghost {
-  color: var(--accent); background: transparent; border-color: var(--accent-dim);
+  color: var(--accent) !important; background: transparent !important; border-color: var(--accent-dim) !important;
 }
-#cpos-standings-tools .cpos-st-btn.ghost:hover { background: var(--panel-2); }
+#cpos-standings-tools .cpos-st-btn.ghost:hover { background: var(--panel-2) !important; }
 #cpos-standings-tools .cpos-st-friends-toggle.on {
-  color: var(--accent-on); background: var(--accent); border-color: var(--accent);
+  color: var(--accent-on) !important; background: var(--accent) !important; border-color: var(--accent) !important;
 }
 
 /* legend */

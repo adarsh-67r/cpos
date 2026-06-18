@@ -92,7 +92,8 @@
     const streak = data[K_STREAK] || { current: 0, longest: 0 };
     const favs = data[K_FAV] || [];
 
-    let html = '<div class="card-h">Practice</div>';
+    // The popup card already renders the "Practice" header — don't repeat it.
+    let html = '';
 
     // Daily problem
     if (!dailyOn) {

@@ -115,11 +115,8 @@
       .menu-list-container, .second-level-menu, .second-level-menu-list, .menu-list {
         letter-spacing: 0.005em !important;
       }
-      .menu-list-container ul.menu-list > li > a,
-      .second-level-menu-list > li > a {
-        padding: ${s.space2} ${s.space3} !important;
-        border-radius: ${s.radiusSm} !important;
-        transition: background ${s.durFast} ${s.ease}, color ${s.durFast} ${s.ease};
+      .menu-list-container, .second-level-menu, .second-level-menu-list {
+        background-image: none !important;
       }
       .lang-chooser { padding: ${s.space1} ${s.space2} !important; }
       /* search / enter bars in the header */
@@ -152,7 +149,8 @@
         background: none !important;
       }
       /* legacy skin corner images attached via background on body wrappers */
-      #body, .compact-problemset, .datatable {
+      #body, #header, .compact-problemset, .datatable,
+      .menu-list-container, .second-level-menu, .second-level-menu-list, .menu-list {
         background-image: none !important;
       }
       .roundbox .caption.titled,
@@ -216,7 +214,12 @@
     return `
       /* ---- Problem statement + sample tests ----------------------------- */
       #pageContent { padding-top: ${s.space2} !important; }
-      .problem-statement { padding: ${s.space1} ${s.space1} !important; }
+      .problem-statement {
+        padding: ${s.space5} ${s.space6} !important;
+        border: 1px solid ${s.hairline} !important;
+        border-radius: ${s.radius} !important;
+        overflow: hidden !important;
+      }
       .problem-statement .header { margin-bottom: ${s.space4} !important; }
       .problem-statement .section-title { margin-top: ${s.space4} !important; }
       .ttypography { line-height: ${s.lhProse} !important; }
@@ -271,6 +274,24 @@
       .topic .title { font-size: ${s.fsH2} !important; }
       .comment-form textarea { min-height: 120px !important; }
       .avatar img, .user-avatar img { border-radius: ${s.radiusSm} !important; }
+
+      /* ---- Content images: tasteful rounded corners --------------------- */
+      /* User-posted screenshots / announcement images / avatars inside prose
+         and statement/blog/comment/profile containers. Scoped to reasonably-
+         sized content images: excludes flag/verdict/rating icons and anything
+         tiny via min-width/min-height, so small UI glyphs stay square. */
+      .ttypography img, .problem-statement img, .topic img, .comment img,
+      #pageContent .userbox img, #sidebar img, .roundbox .ttypography img {
+        border-radius: ${s.radius} !important;
+      }
+      /* keep small icons / flags / verdict glyphs unrounded */
+      .lang-chooser img,
+      .ttypography img[width="16"], .ttypography img[height="16"],
+      .verdict img, img.verdict, .verdict-format img,
+      img[width="24"], img[height="24"],
+      img[width="16"], img[height="16"], img[width="12"], img[height="12"] {
+        border-radius: 0 !important;
+      }
     `;
   }
 
@@ -358,8 +379,17 @@
       #content, .content { max-width: 1080px !important; }
 
       /* ---- CSES: nav ---------------------------------------------------- */
-      .nav { letter-spacing: 0.005em !important; }
-      .nav a, .navlinks a { border-radius: ${s.radiusSm} !important; padding: ${s.space1} ${s.space2} !important; }
+      .nav {
+        letter-spacing: 0.005em !important;
+        padding: ${s.space2} ${s.space3} !important;
+        border-radius: ${s.radius} !important;
+        margin-bottom: ${s.space4} !important;
+      }
+      .nav a, .navlinks a {
+        border-radius: ${s.radiusSm} !important;
+        padding: ${s.space1} ${s.space2} !important;
+        display: inline-block !important;
+      }
 
       /* ---- CSES: task list + summary tables ----------------------------- */
       table.list, .summary-table, table {
@@ -373,6 +403,14 @@
 
       /* ---- CSES: statement / prose -------------------------------------- */
       .content { line-height: ${s.lhProse} !important; }
+      /* content images get tasteful rounded corners; tiny icons stay square */
+      .content img, #content img {
+        border-radius: ${s.radiusSm} !important;
+      }
+      .content img[width="16"], .content img[height="16"],
+      #content img[width="16"], #content img[height="16"] {
+        border-radius: 0 !important;
+      }
 
       /* ---- CSES: forms -------------------------------------------------- */
       a { text-decoration: none !important; }
@@ -432,16 +470,99 @@
     return `
       /* ---- Header + menus ----------------------------------------------- */
       #header, .menu-list-container, .lang-chooser, .second-level-menu,
-      .second-level-menu-list, .menu-list, #footer {
+      ul.second-level-menu-list, ul.menu-list, #footer {
         background: ${p.panel} !important; color: ${p.fg} !important;
         border-color: ${p.border} !important;
       }
-      #header a, .menu-list a, .second-level-menu-list a, .menu-list-container a,
+      .menu-list-container li, ul.menu-list li,
+      .second-level-menu li, ul.second-level-menu-list li {
+        background: transparent !important; color: ${p.fg} !important;
+        border-color: ${p.border} !important;
+      }
+      ul.second-level-menu-list li a { color: ${p.fg} !important; }
+      ul.second-level-menu-list li.current a, ul.second-level-menu-list li.selectedLava a { color: ${p.accent} !important; }
+      #header a, ul.menu-list a, ul.second-level-menu-list a, .menu-list-container a,
       #footer a { color: ${p.fg} !important; }
       .menu-list-container .menu-list > li > a:hover,
-      .second-level-menu-list > li > a:hover { background: ${p.hover} !important; color: ${p.accent} !important; }
-      .menu-list-container .current, .second-level-menu-list .current {
-        background: ${p.panel2} !important; color: ${p.accent} !important;
+      ul.second-level-menu-list > li > a:hover { background: ${p.hover} !important; color: ${p.accent} !important; }
+      .menu-list-container .current,
+      .menu-list-container .menu-list > li:hover,
+      ul.menu-list > li:hover,
+      .second-level-menu li:hover,
+      ul.second-level-menu-list li:hover {
+        background-color: ${p.hover} !important;
+      }
+      ul.second-level-menu-list li.current,
+      ul.second-level-menu-list li.selectedLava,
+      ul.second-level-menu-list li:hover,
+      ul.second-level-menu-list li a:hover,
+      .second-level-menu-list .backLava,
+      .second-level-menu-list .leftLava {
+        background-image: none !important;
+      }
+      ul.second-level-menu-list li.current,
+      ul.second-level-menu-list li.selectedLava {
+        background-color: ${p.hover} !important;
+      }
+      .second-level-menu-list .backLava,
+      .second-level-menu-list .leftLava {
+        background-color: transparent !important;
+      }
+      .menu-list-container .current,
+      .menu-list-container .current > a,
+      ul.second-level-menu-list .current,
+      ul.second-level-menu-list .current > a,
+      .second-level-menu .current, .second-level-menu .current > a {
+        color: ${p.accent} !important;
+      }
+
+      /* ---- Brand logo on dark panels ----------------------------------- */
+      /* The CF logo PNG has a baked-in white background — a backdrop can't fix it.
+         Classic dark-mode image trick: invert(1) flips white→near-black and
+         hue-rotate(180deg) approximately restores the brand colours so the logo
+         reads cleanly without a jarring white chip. */
+      #header a[href="/"], #header .logo > a {
+        display: inline-flex !important;
+        align-items: center !important;
+        background: transparent !important;
+        line-height: 0 !important;
+      }
+      #header a[href="/"] img, #header .logo > a img,
+      #header img[alt="Codeforces"] {
+        display: block !important;
+        filter: invert(1) hue-rotate(180deg) !important;
+        padding: 0 !important;
+        border-radius: ${STRUCT.radiusSm} !important;
+      }
+
+      /* ---- Notification / envelope widgets ----------------------------- */
+      /* CF's "You have +N! Wow!" envelope strip is login-gated; it has no own bg
+         and shows the body white — theme the likely containers. */
+      .notificationCount, .envelope, .personal-sidebar, #header .roundbox,
+      .notice.notification, .alert-popup, .userPanel, .userPanel a,
+      .top-links, a[href*="notifications"], .notification, .unread,
+      #header .notice, #header .notification, #header .unread,
+      #header div[style*="background"], #header span[style*="background"],
+      #cookieNotice, .cookieNotice, .cookie-notice, .cookies, .cookie,
+      .alert-info, .alert-success, .alert-warning {
+        background: ${p.panel} !important; color: ${p.fg} !important;
+        border-color: ${p.border} !important;
+      }
+      #header div[style*="background"] *,
+      #header span[style*="background"] * {
+        color: ${p.fg} !important;
+      }
+      #cookieNotice a, .cookieNotice a, .cookie-notice a,
+      .cookies a, .cookie a, .alert-info a, .alert-success a, .alert-warning a {
+        color: ${p.accent} !important;
+      }
+      #header div[style*="background"] a,
+      #header span[style*="background"] a {
+        color: ${p.accent} !important;
+      }
+
+      ul.second-level-menu-list {
+        color: ${p.fg} !important;
       }
     `;
   }
@@ -464,34 +585,84 @@
       .caption, .roundbox .caption, .header .title, .title, .section-title,
       h1, h2, h3, h4 { color: ${p.fg} !important; }
       .caption.titled { background: ${p.panel2} !important; }
+      .roundbox.minimized, .roundbox.minimized .caption,
+      .roundbox .toggle, .roundbox .roundbox-lt,
+      .roundbox .roundbox-rt, .roundbox .roundbox-lb,
+      .roundbox .roundbox-rb {
+        background-color: ${p.panel2} !important;
+        border-color: ${p.border} !important;
+        color: ${p.dim} !important;
+      }
     `;
   }
 
   function cfColorTables(p) {
     return `
       /* ---- Tables ------------------------------------------------------- */
-      table, .datatable table, table.problems, table.rtable, table.standings,
-      table.user-table, .status-frame-datatable {
-        background: transparent !important; border-color: ${p.border} !important;
+      /* CF leaves many data tables (gym, groups, edu, courses, problemset…) with
+         WHITE row backgrounds + a WHITE native row-hover that our old, class-
+         specific rules didn't cover — so untouched rows / the hovered row glared
+         white on dark themes. Reset every table surface generically (scoped to
+         direct table rows so page-layout tables aren't disturbed), then re-apply
+         themed zebra + hover everywhere. */
+      table, .datatable, .datatable table, table.problems, table.rtable,
+      table.standings, table.user-table, .status-frame-datatable, table.list {
+        background-color: transparent !important; border-color: ${p.border} !important;
         color: ${p.fg} !important;
       }
-      td, th, .datatable td, .datatable th,
-      table.problems td, table.problems th,
-      table.standings td, table.standings th,
-      table.rtable td, table.rtable th,
+      table td, table th,
+      .datatable td, .datatable th,
       .status-frame-datatable td, .status-frame-datatable th {
         border-color: ${p.border} !important; color: ${p.fg} !important;
-        background: transparent !important;
+        background-color: transparent !important;
       }
-      tr.dark td,
-      .datatable tr:nth-child(even) td,
-      table.problems tr:nth-child(even) td,
-      .status-frame-datatable tr:nth-child(even) td { background: ${p.stripe} !important; }
-      .datatable tr:hover td, table.problems tr:hover td,
-      table.standings tr:hover td, .status-frame-datatable tr:hover td { background: ${p.hover} !important; }
-      th, .datatable th, table.standings th { background: ${p.panel2} !important; }
+      /* reset row backgrounds (CF sets these on <tr>, which showed through the
+         transparent cells as solid white) */
+      table > tbody > tr, table > tr, .datatable tr, table.problems tr,
+      table.standings tr, .status-frame-datatable tr { background-color: transparent !important; }
+      /* Data cells need an explicit surface. Several CF pages, including the
+         problemset, repaint alternate rows after load and the old transparent
+         base let that white paint show through on dark themes. */
+      html body .datatable table > tbody > tr > td,
+      html body table.problems > tbody > tr > td,
+      html body table.rtable > tbody > tr > td,
+      html body table.standings > tbody > tr > td,
+      html body .status-frame-datatable > tbody > tr > td,
+      html body table.list > tbody > tr > td {
+        background: ${p.panel} !important;
+        color: ${p.fg} !important;
+        border-color: ${p.border} !important;
+      }
+      /* themed zebra — CF adds class "dark" to ALTERNATE <td> (not <tr>) via JS
+         (jQuery "tr:odd td".addClass("dark")); the light colour lives on
+         .roundbox .dark (#F5F5F5, problemset) and .datatable .dark (#f8f8f8, gym/
+         groups/edu). Target the td.dark class exactly — nth-child/tr rules miss it. */
+      .roundbox .dark, .datatable .dark, td.dark, tr.dark > td,
+      table.problems td.dark, .status-frame-datatable td.dark,
+      table > tbody > tr:nth-child(even) > td { background: ${p.stripe} !important; }
+      /* bulletproof: html body prefix guarantees we out-specify any CF rule */
+      html body .roundbox td.dark, html body .datatable td.dark,
+      html body table.problems td.dark, html body td.dark,
+      html body .roundbox .dark, html body .datatable .dark,
+      html body .datatable table > tbody > tr:nth-child(even) > td,
+      html body table.problems > tbody > tr:nth-child(even) > td,
+      html body table.rtable > tbody > tr:nth-child(even) > td,
+      html body table.standings > tbody > tr:nth-child(even) > td,
+      html body .status-frame-datatable > tbody > tr:nth-child(even) > td,
+      html body table.list > tbody > tr:nth-child(even) > td {
+        background: ${p.stripe} !important;
+      }
+      /* themed hover (generic — this is the rule that kills CF's white hover) */
+      table > tbody > tr:hover > td, table > tr:hover > td,
+      .datatable tr:hover > td, table.problems tr:hover > td,
+      table.standings tr:hover > td, .status-frame-datatable tr:hover > td,
+      table.list tr:hover > td { background: ${p.hover} !important; }
+      /* header cells */
+      th, .datatable th, table.problems th, table.standings th,
+      .status-frame-datatable th, table.list th { background: ${p.panel2} !important; }
       /* accepted/solved problemset row tint without clobbering tier colours */
-      .accepted-problem, tr.accepted-problem td { background: ${p.okDim} !important; }
+      .accepted-problem, tr.accepted-problem > td { background-color: ${p.okDim} !important; }
+
     `;
   }
 
@@ -499,6 +670,25 @@
     return `
       /* ---- Problem statement + sample tests ----------------------------- */
       .problem-statement .header, .problem-statement .property-title { color: ${p.fg} !important; }
+      .problem-statement .MathJax,
+      .problem-statement .MathJax *,
+      .problem-statement .MathJax_Display,
+      .problem-statement .MathJax_SVG,
+      .problem-statement .MathJax_SVG *,
+      .problem-statement .MathJax_SVG_Display,
+      .problem-statement .mjx-chtml,
+      .problem-statement .mjx-chtml *,
+      .problem-statement mjx-container,
+      .problem-statement mjx-container * {
+        color: ${p.fg} !important;
+      }
+      .problem-statement .MathJax_SVG svg,
+      .problem-statement .MathJax_SVG svg *,
+      .problem-statement mjx-container svg,
+      .problem-statement mjx-container svg * {
+        fill: ${p.fg} !important;
+        stroke: ${p.fg} !important;
+      }
       .sample-test .input, .sample-test .output {
         background: ${p.panel2} !important; border-color: ${p.border} !important;
       }
@@ -506,7 +696,10 @@
       .sample-test pre, .test-example-line {
         background: ${p.panel2} !important; color: ${p.fg} !important;
       }
-      .sample-test .input-output-copier { background: ${p.panel} !important; color: ${p.dim} !important; border-color: ${p.border} !important; }
+      .sample-test .input-output-copier {
+        background: ${p.panel} !important; color: ${p.dim} !important;
+        border-color: ${p.border} !important; box-shadow: none !important;
+      }
       .test-example-line-even { background: ${p.stripe} !important; }
     `;
   }
@@ -538,8 +731,18 @@
         background: ${p.accentDim} !important; color: ${p.accentOn} !important;
         border-color: ${p.accentDim} !important;
       }
+      button.close, button.toggle, .roundbox button.toggle,
+      .input-output-copier, .spoiler-title button {
+        background: ${p.panel2} !important; color: ${p.fg} !important;
+        border-color: ${p.border} !important;
+      }
       input[type="submit"]:hover, button:hover, .submit:hover, .button:hover {
         background: ${p.accent} !important; border-color: ${p.accent} !important;
+      }
+      button.close:hover, button.toggle:hover, .roundbox button.toggle:hover,
+      .input-output-copier:hover, .spoiler-title button:hover {
+        background: ${p.hover} !important; color: ${p.fg} !important;
+        border-color: ${p.border} !important;
       }
       .pagination .page-index a, .pagination .page-index span {
         background: ${p.panel2} !important; border-color: ${p.border} !important;
@@ -611,8 +814,10 @@
       input[type="submit"]:hover, button:hover {
         background: ${p.accent} !important; border-color: ${p.accent} !important;
       }
-      .task-score.full, .full { color: ${p.ok} !important; }
-      .task-score.zero, .zero { color: ${p.bad} !important; }
+      /* score states — scope to .task-score so we don't recolour unrelated
+         layout classes (CSES also uses bare .full on content wrappers). */
+      .task-score.full, td.full, span.full { color: ${p.ok} !important; }
+      .task-score.zero, td.zero, span.zero { color: ${p.bad} !important; }
       .controls a, .pager a {
         background: ${p.panel2} !important; border-color: ${p.border} !important;
         color: ${p.fg} !important;

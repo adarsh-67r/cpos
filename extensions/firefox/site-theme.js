@@ -31,7 +31,10 @@
       #cpos-ide-panel, #cpos-ide-panel *, #cpos-ide-launch,
       .cpos-analytics, .cpos-analytics *,
       .cpos-annotate, .cpos-annotate *,
-      #cpos-cf-tools, #cpos-cf-tools * { box-shadow: none; }
+      #cpos-cf-tools, #cpos-cf-tools *,
+      #cpos-standings-tools, #cpos-standings-tools *,
+      #cpos-compare, #cpos-compare *,
+      #cpos-analytics-root, #cpos-analytics-root * { box-shadow: none; }
 
       /* keep the IDE's transparent textarea + highlight overlay intact */
       #cpos-ide-panel .cpos-ed-ta {
@@ -42,13 +45,14 @@
       #cpos-ide-panel pre, #cpos-ide-panel code {
         border-color: var(--cpos-border, #2a2a3e) !important;
       }
-      .cpos-analytics a, .cpos-analytics a:visited { color: var(--accent, #b794ff) !important; }
+      .cpos-analytics a, .cpos-analytics a:visited { color: var(--accent, #6b7280) !important; }
       .cpos-analytics pre, .cpos-analytics code { background: transparent !important; }
     `;
   }
 
-  // Default until storage resolves (matches CPOS.DEFAULT_SITE_THEME).
-  let currentTheme = (T && T.get(C ? C.DEFAULT_SITE_THEME : "github")) || { name: "GitHub Dark" };
+  // Default until storage resolves. The site recolour now uses the SAME single
+  // chosen theme as the rest of CPOS (no separate site palette).
+  let currentTheme = (T && T.get(C ? C.DEFAULT_UI_THEME : "purple")) || { name: "Purple" };
 
   function siteCss() {
     if (!CORE) return "";
@@ -79,12 +83,15 @@
       remove();
       return;
     }
-    currentTheme = T.get(cfg.siteThemeId || C.DEFAULT_SITE_THEME);
+    currentTheme = T.get(cfg.uiTheme || C.DEFAULT_UI_THEME);
     apply();
   }
 
   if (C) {
-    // Re-apply on theme change (palette swap) AND on feature toggle (on/off).
+    // Apply the default theme immediately (sync) so the page is never unstyled
+    // during the async storage read — prevents the flash of light CF colours.
+    // sync() will swap to the user's chosen palette or remove if theme is off.
+    apply();
     C.onChange(() => sync());
     sync();
   }

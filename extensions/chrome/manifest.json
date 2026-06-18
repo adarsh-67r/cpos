@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "CPOS Companion",
-  "version": "0.10.2",
+  "version": "0.10.5",
   "description": "Codeforces & CSES companion: capture & submit, in-browser editor, profile analytics, themes, and practice tools. Local-first.",
   "icons": {
     "16": "icons/icon16.png",

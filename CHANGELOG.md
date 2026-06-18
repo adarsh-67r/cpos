@@ -6,10 +6,23 @@ All notable changes to CPOS are documented here. Components are versioned indepe
 | --- | --- | --- |
 | Terminal app | 0.1.8 | `Cargo.toml` |
 | VS Code extension | 0.3.31 | `extensions/vscode/package.json` |
-| Browser companion (Chrome) | 0.10.2 | `extensions/chrome/manifest.json` |
-| Browser companion (Firefox) | 0.2.0 | `extensions/firefox/manifest.json` |
+| Browser companion (Chrome) | 0.10.5 | `extensions/chrome/manifest.json` |
+| Browser companion (Firefox) | 0.10.5 | `extensions/firefox/manifest.json` |
 
 Format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
+
+---
+
+## Browser companions (Chrome + Firefox) — 0.10.5 - 2026-06-18
+
+### Changed
+- **Firefox feature parity.** Firefox now ships the same current feature implementation and bundled CodeMirror editor as Chrome, while retaining its Gecko-specific background integration.
+- **Retired practice ladders removed from Firefox.** The standalone ladder page and popup entry are gone, matching Chrome.
+- **Profile comparison chart.** Rating histories now connect actual contest observations directly, use readable axis ticks, and stop at each handle's last rated contest instead of drawing artificial plateaus.
+
+### Fixed
+- **Submission activity heatmap.** Narrow profile layouts now open at the newest weeks by default while remaining horizontally scrollable for older activity.
+- **Theme details.** Tightened native Codeforces menu, utility-control, sample-copy, and favorite-button styling.
 
 ---
 

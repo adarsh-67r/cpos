@@ -293,6 +293,13 @@
 
   // ── DOM scaffolding ─────────────────────────────────────────────────────────
   function panel(cls, title, bodyHtml) { return el("div", "cpos-panel " + cls, '<h4>' + esc(title) + "</h4>" + bodyHtml); }
+  function showLatestHeatmapWeek(panelNode) {
+    const scroller = panelNode && panelNode.querySelector(".cpos-heat-scroll");
+    if (!scroller) return;
+    const pinRight = () => { scroller.scrollLeft = scroller.scrollWidth; };
+    pinRight();
+    requestAnimationFrame(pinRight);
+  }
   function stat(value, label, color, sub) {
     return '<div class="cpos-stat"><b' + (color ? ' style="color:' + color + '"' : "") + ">" + esc(value) + "</b>" +
       '<span>' + esc(label) + "</span>" + (sub ? '<i class="cpos-stat-sub">' + esc(sub) + "</i>" : "") + "</div>";
@@ -395,11 +402,12 @@
     side("", "Rank progress", rankProgress(rating));
 
     // 3) Activity heatmap + streaks
-    main("span3", "Submission activity",
+    const activityPanel = main("span3", "Submission activity",
       heatmap(st.byDay) +
       '<div class="cpos-streaks">' +
       '<span><b>' + streak.current + "</b> day current streak</span>" +
       '<span><b>' + streak.longest + "</b> day longest streak</span></div>");
+    showLatestHeatmapWeek(activityPanel);
 
     // 4) Solved by rating histogram (bucketed to nearest 100, tier-colored)
     const ratingBuckets = {};

@@ -73,20 +73,20 @@
       "--cf": "#cfcfcf"
     },
     light: {
-      name: "Light",
-      "--bg": "#f6f6fb",
+      name: "Neutral",
+      "--bg": "#f7f7f8",
       "--panel": "#ffffff",
-      "--panel-2": "#eeeef4",
-      "--fg": "#1c1c28",
-      "--dim": "#6a6a80",
-      "--border": "#d8d8e2",
-      "--accent": "#6d4bd0",
-      "--accent-dim": "#9a7ee0",
+      "--panel-2": "#f0f1f3",
+      "--fg": "#1f2328",
+      "--dim": "#6b7280",
+      "--border": "#d5d7dc",
+      "--accent": "#6b7280",
+      "--accent-dim": "#4b5563",
       "--accent-on": "#ffffff",
       "--ok": "#1a7f37",
       "--bad": "#cf222e",
       "--warn": "#9a6700",
-      "--cf": "#3b5bdb"
+      "--cf": "#44546a"
     },
     // Flat teal/slate dark palette (no gradients), tuned for CF dark-mode contrast.
     ocean: {
@@ -143,7 +143,37 @@
       '"JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace'
   };
 
-  const DEFAULT_THEME = "purple";
+  const DEFAULT_THEME = "light";
+
+  // ── custom theme (built from a single accent the user picks) ────────────────
+  function clamp8(n) { return Math.max(0, Math.min(255, Math.round(n))); }
+  function parseHex(hex) {
+    const m = /^#?([0-9a-f]{6})$/i.exec(hex || "");
+    if (!m) return null;
+    const n = parseInt(m[1], 16);
+    return { r: (n >> 16) & 255, g: (n >> 8) & 255, b: n & 255 };
+  }
+  function toHex(r, g, b) { return "#" + ((1 << 24) + (clamp8(r) << 16) + (clamp8(g) << 8) + clamp8(b)).toString(16).slice(1); }
+  function mix(hex, amt) { const c = parseHex(hex); return c ? toHex(c.r + amt, c.g + amt, c.b + amt) : hex; }
+  function luminance(hex) { const c = parseHex(hex); return c ? (0.299 * c.r + 0.587 * c.g + 0.114 * c.b) / 255 : 0.5; }
+
+  // Derive a full flat dark palette from one accent colour. Base stays a neutral
+  // near-black so the accent reads on every surface; ink auto-contrasts.
+  function buildFromAccent(accent) {
+    const a = parseHex(accent) ? accent : "#b794ff";
+    const on = luminance(a) > 0.6 ? "#15151c" : "#ffffff";
+    return {
+      name: "Custom",
+      "--bg": "#101015", "--panel": "#17171f", "--panel-2": "#1f1f29",
+      "--fg": "#e9e8f0", "--dim": "#8b8a9c", "--border": "#2b2b39",
+      "--accent": a, "--accent-dim": mix(a, -46), "--accent-on": on,
+      "--ok": "#7ee787", "--bad": "#ff7a93", "--warn": "#f0b860", "--cf": a
+    };
+  }
+  // The live custom theme (re-registered from storage by callers). Defaults to
+  // the default accent until the user picks one.
+  THEMES.custom = buildFromAccent(THEMES.purple["--accent"]);
+  function registerCustom(accent) { THEMES.custom = buildFromAccent(accent); return THEMES.custom; }
 
   function get(id) {
     return THEMES[id] || THEMES[DEFAULT_THEME];
@@ -157,7 +187,9 @@
     }
   }
 
-  const api = { THEMES, DEFAULT_THEME, STRUCT_TOKENS, get, applyTheme, list: () => Object.keys(THEMES) };
+  // Preset ids only (excludes the special "custom" entry) — for swatch rows.
+  const PRESETS = ["purple", "github", "amber", "mono", "light", "ocean", "rose"];
+  const api = { THEMES, DEFAULT_THEME, STRUCT_TOKENS, get, applyTheme, registerCustom, buildFromAccent, presets: () => PRESETS.slice(), list: () => Object.keys(THEMES) };
 
   // Works both as a content-script global and (via importScripts-free) the popup.
   root.CPOS_THEMES = api;

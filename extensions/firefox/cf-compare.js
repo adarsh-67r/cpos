@@ -178,28 +178,53 @@
 
   // ── overlaid rating-history line chart (dependency-free SVG) ────────────────
   function ratingChart(data, colorOf) {
-    // Collect series: only handles with non-empty rating history.
+    const ratingTime = (r) => {
+      const t = Number(r.ratingUpdateTimeSeconds ?? r.contestTimeSeconds ?? 0);
+      return Number.isFinite(t) && t > 0 ? t : null;
+    };
+
+    // Collect actual contest/update events only. Codeforces ratings are a step
+    // series: the value changes at the rating update time, then remains current
+    // until the next rated contest.
     const series = data.map((d, i) => ({
       handle: d.handle, color: colorOf(i),
-      points: (Array.isArray(d.rating) ? d.rating : []).map((r) => ({ t: r.ratingUpdateTimeSeconds || 0, y: r.newRating }))
-        .filter((p) => p.y != null)
-    })).filter((s) => s.points.length);
+      events: (Array.isArray(d.rating) ? d.rating : [])
+        .map((r) => ({
+          t: ratingTime(r),
+          y: Number(r.newRating),
+          contestId: Number(r.contestId) || 0
+        }))
+        .filter((p) => p.t != null && Number.isFinite(p.y))
+        .sort((a, b) => (a.t - b.t) || (a.contestId - b.contestId))
+    })).filter((s) => s.events.length);
 
     if (!series.length) {
       return '<div class="cpos-cmp-empty">No rated contests among these handles — nothing to overlay.</div>';
     }
 
-    // Shared scales across all series.
+    // Shared scales across actual rated-contest observations only.
     let minT = Infinity, maxT = -Infinity, minY = Infinity, maxY = -Infinity;
-    for (const s of series) for (const p of s.points) {
+    for (const s of series) for (const p of s.events) {
       if (p.t < minT) minT = p.t; if (p.t > maxT) maxT = p.t;
       if (p.y < minY) minY = p.y; if (p.y > maxY) maxY = p.y;
     }
-    if (maxT === minT) maxT = minT + 1;
-    // pad Y to a clean-ish band
-    let padY = Math.max(50, Math.round((maxY - minY) * 0.08));
-    minY = Math.max(0, minY - padY); maxY = maxY + padY;
-    if (maxY === minY) maxY = minY + 1;
+    if (maxT === minT) {
+      minT -= 24 * 60 * 60;
+      maxT += 24 * 60 * 60;
+    }
+
+    // Use human-friendly rating ticks instead of arbitrary interpolated values.
+    const niceStep = (raw) => {
+      const power = Math.pow(10, Math.floor(Math.log10(Math.max(raw, 1))));
+      const scaled = raw / power;
+      const factor = scaled <= 1 ? 1 : scaled <= 2 ? 2 : scaled <= 2.5 ? 2.5 : scaled <= 5 ? 5 : 10;
+      return factor * power;
+    };
+    const spread = Math.max(1, maxY - minY);
+    const yStep = niceStep((spread * 1.12) / 5);
+    minY = Math.max(0, Math.floor((minY - spread * 0.06) / yStep) * yStep);
+    maxY = Math.ceil((maxY + spread * 0.06) / yStep) * yStep;
+    if (maxY === minY) maxY = minY + yStep;
 
     const W = 720, H = 280, mL = 44, mR = 12, mT = 12, mB = 26;
     const iw = W - mL - mR, ih = H - mT - mB;
@@ -218,31 +243,39 @@
         '" fill="' + RANKS[i][2] + '" opacity="0.08"></rect>';
     }
 
-    // Y axis ticks (~5).
+    // Y axis ticks.
     let yticks = "";
-    const tickN = 5;
-    for (let k = 0; k <= tickN; k++) {
-      const val = Math.round(minY + (k / tickN) * (maxY - minY));
+    for (let val = minY; val <= maxY + yStep / 2; val += yStep) {
       const y = sy(val);
       yticks += '<line x1="' + mL + '" y1="' + y.toFixed(1) + '" x2="' + (W - mR) + '" y2="' + y.toFixed(1) +
         '" stroke="var(--border)" stroke-width="1" opacity="0.5"></line>' +
-        '<text x="' + (mL - 6) + '" y="' + (y + 3).toFixed(1) + '" text-anchor="end" font-size="9" fill="var(--dim)">' + val + "</text>";
+        '<text x="' + (mL - 6) + '" y="' + (y + 3).toFixed(1) + '" text-anchor="end" font-size="9" fill="var(--dim)">' + nf(val) + "</text>";
     }
-    // X axis hints (first / last date).
+
+    // Evenly spaced time labels make the shared chronology readable.
     const fmtDate = (t) => { const d = new Date(t * 1000); return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0"); };
-    const xhints = '<text x="' + mL + '" y="' + (H - 8) + '" font-size="9" fill="var(--dim)">' + fmtDate(minT) + "</text>" +
-      '<text x="' + (W - mR) + '" y="' + (H - 8) + '" text-anchor="end" font-size="9" fill="var(--dim)">' + fmtDate(maxT) + "</text>";
+    let xhints = "";
+    const xTickN = 4;
+    for (let k = 0; k <= xTickN; k++) {
+      const t = minT + (k / xTickN) * (maxT - minT);
+      const x = sx(t);
+      const anchor = k === 0 ? "start" : k === xTickN ? "end" : "middle";
+      xhints += '<text x="' + x.toFixed(1) + '" y="' + (H - 8) + '" text-anchor="' + anchor +
+        '" font-size="9" fill="var(--dim)">' + fmtDate(t) + "</text>";
+    }
 
     const lines = series.map((s) => {
-      const pts = s.points.slice().sort((a, b) => a.t - b.t);
+      const pts = s.events;
       const d = pts.map((p, i) => (i ? "L" : "M") + sx(p.t).toFixed(1) + " " + sy(p.y).toFixed(1)).join(" ");
-      const dots = pts.length <= 60 ? pts.map((p) =>
-        '<circle cx="' + sx(p.t).toFixed(1) + '" cy="' + sy(p.y).toFixed(1) + '" r="1.8" fill="' + s.color + '"></circle>').join("") : "";
-      return '<path d="' + d + '" fill="none" stroke="' + s.color + '" stroke-width="1.8"></path>' + dots;
+      const dots = pts.map((p) =>
+        '<circle cx="' + sx(p.t).toFixed(1) + '" cy="' + sy(p.y).toFixed(1) + '" r="2" fill="' + s.color +
+        '"><title>' + esc(s.handle) + " · " + fmtDate(p.t) + " · " + nf(p.y) + "</title></circle>").join("");
+      return '<path d="' + d + '" fill="none" stroke="' + s.color +
+        '" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"></path>' + dots;
     }).join("");
 
     const legend = series.map((s) => {
-      const last = s.points[s.points.length - 1].y;
+      const last = s.events[s.events.length - 1].y;
       return '<span class="cpos-cmp-leg"><span class="dot" style="background:' + s.color + '"></span>' +
         '<b>' + esc(s.handle) + "</b><i>" + nf(last) + "</i></span>";
     }).join("");
@@ -256,7 +289,10 @@
   }
 
   // ── theme ────────────────────────────────────────────────────────────────
-  async function applyTheme(root) { if (!T || !C) return; T.applyTheme(root, await C.activeThemeId()); }
+  async function applyTheme(root) {
+    if (!T || !C) return;
+    T.applyTheme(root, await (C.activePageThemeId ? C.activePageThemeId() : C.activeThemeId()));
+  }
 
   // ── persistence of extra handles ───────────────────────────────────────────
   async function getExtraHandles() {
@@ -277,6 +313,17 @@
 
     const body = root.querySelector(".cpos-cmp-body");
     if (!body) return;
+
+    // With zero competitor handles a single-column table / single-line overlay
+    // would just duplicate CF's own rating graph and the CPOS analytics stats.
+    // Show only a friendly hint until at least one extra handle is added.
+    if (!extras.length) {
+      body.innerHTML =
+        '<div class="cpos-cmp-prompt">Add a handle to compare <b>@' + esc(me) +
+        "</b> against — you'll get a side-by-side stat table and an overlaid rating chart.</div>";
+      return;
+    }
+
     const token = ++rendering;
     body.innerHTML = '<div class="cpos-cmp-empty">Loading comparison…</div>';
 

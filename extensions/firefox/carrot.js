@@ -5,6 +5,27 @@
 (function () {
   const COL_CLASS = "cpos-delta-cell";
   const HEAD_CLASS = "cpos-delta-head";
+  const T = self.CPOS_THEMES;
+  const C = self.CPOS;
+
+  // Publish the predicted-delta colours as :root custom props derived from the
+  // active theme (the cells live inside CF's table, not a CPOS root, so we mirror
+  // tokens onto :root the same way cf-problemset/cf-standings do). Re-derived on
+  // theme change so the column tracks the chosen palette.
+  async function applyTheme() {
+    if (!T || !C) return;
+    const tk = T.get(await (C.activePageThemeId ? C.activePageThemeId() : C.activeThemeId()));
+    const root = document.documentElement.style;
+    root.setProperty("--cpos-delta-up", tk["--ok"]);
+    root.setProperty("--cpos-delta-down", tk["--bad"]);
+    root.setProperty("--cpos-delta-zero", tk["--dim"]);
+  }
+  function clearTheme() {
+    const root = document.documentElement.style;
+    root.removeProperty("--cpos-delta-up");
+    root.removeProperty("--cpos-delta-down");
+    root.removeProperty("--cpos-delta-zero");
+  }
 
   function contestId() {
     const m = location.pathname.match(/\/contest\/(\d+)\/standings/);
@@ -125,7 +146,9 @@
     const sign = d.delta > 0 ? "+" : "";
     span.textContent = sign + d.delta;
     span.style.fontWeight = "700";
-    span.style.color = d.delta > 0 ? "#3fb950" : d.delta < 0 ? "#f85149" : "#8a8a8a";
+    span.style.color = d.delta > 0 ? "var(--cpos-delta-up, #3fb950)"
+      : d.delta < 0 ? "var(--cpos-delta-down, #f85149)"
+      : "var(--cpos-delta-zero, #8a8a8a)";
     span.title = d.exact ? "official rating change" : "CPOS predicted Δ";
     return span;
   }
@@ -171,6 +194,7 @@
     if (!id) return;
     ran = true;
     try {
+      await applyTheme();
       const deltas = await getDeltas(id);
       annotate(deltas);
       // Re-annotate if CF re-renders the table (e.g. live refresh).
@@ -189,6 +213,7 @@
 
   function remove() {
     document.querySelectorAll("." + COL_CLASS + ",." + HEAD_CLASS).forEach((e) => e.remove());
+    clearTheme();
     ran = false;
   }
 
@@ -199,9 +224,17 @@
     else remove();
   }
 
-  chrome.storage.onChanged.addListener((changes, area) => {
-    if (area === "local" && changes["cpos.features"]) sync();
-  });
+  if (C) {
+    C.onChange((changes) => {
+      if (changes[C.KEYS.FEATURES]) sync();
+      // Theme change: re-derive the delta colours on :root if the column is up.
+      else if (ran) applyTheme();
+    });
+  } else {
+    chrome.storage.onChanged.addListener((changes, area) => {
+      if (area === "local" && changes["cpos.features"]) sync();
+    });
+  }
 
   sync();
 })();

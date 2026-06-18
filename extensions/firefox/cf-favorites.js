@@ -59,7 +59,7 @@
   // ── theme ───────────────────────────────────────────────────────────────────
   async function applyBtnTheme(node) {
     if (!T) return;
-    try { T.applyTheme(node, await C.activeThemeId()); } catch (e) { /* ignore */ }
+    try { T.applyTheme(node, await (C.activePageThemeId ? C.activePageThemeId() : C.activeThemeId())); } catch (e) { /* ignore */ }
   }
 
   async function isFav(id) {

@@ -115,6 +115,9 @@
       .menu-list-container, .second-level-menu, .second-level-menu-list, .menu-list {
         letter-spacing: 0.005em !important;
       }
+      .menu-list-container, .second-level-menu, .second-level-menu-list {
+        background-image: none !important;
+      }
       .lang-chooser { padding: ${s.space1} ${s.space2} !important; }
       /* search / enter bars in the header */
       #header .enterForm input, #header form input { border-radius: ${s.radiusSm} !important; }
@@ -146,7 +149,8 @@
         background: none !important;
       }
       /* legacy skin corner images attached via background on body wrappers */
-      #body, .compact-problemset, .datatable {
+      #body, #header, .compact-problemset, .datatable,
+      .menu-list-container, .second-level-menu, .second-level-menu-list, .menu-list {
         background-image: none !important;
       }
       .roundbox .caption.titled,
@@ -470,12 +474,24 @@
         background: ${p.panel} !important; color: ${p.fg} !important;
         border-color: ${p.border} !important;
       }
+      .menu-list-container li, ul.menu-list li,
+      .second-level-menu li, ul.second-level-menu-list li {
+        background: transparent !important; color: ${p.fg} !important;
+        border-color: ${p.border} !important;
+      }
       ul.second-level-menu-list li a { color: ${p.fg} !important; }
       ul.second-level-menu-list li.current a, ul.second-level-menu-list li.selectedLava a { color: ${p.accent} !important; }
       #header a, ul.menu-list a, ul.second-level-menu-list a, .menu-list-container a,
       #footer a { color: ${p.fg} !important; }
       .menu-list-container .menu-list > li > a:hover,
       ul.second-level-menu-list > li > a:hover { background: ${p.hover} !important; color: ${p.accent} !important; }
+      .menu-list-container .current,
+      .menu-list-container .menu-list > li:hover,
+      ul.menu-list > li:hover,
+      .second-level-menu li:hover,
+      ul.second-level-menu-list li:hover {
+        background-color: ${p.hover} !important;
+      }
       ul.second-level-menu-list li.current,
       ul.second-level-menu-list li.selectedLava,
       ul.second-level-menu-list li:hover,
@@ -569,6 +585,14 @@
       .caption, .roundbox .caption, .header .title, .title, .section-title,
       h1, h2, h3, h4 { color: ${p.fg} !important; }
       .caption.titled { background: ${p.panel2} !important; }
+      .roundbox.minimized, .roundbox.minimized .caption,
+      .roundbox .toggle, .roundbox .roundbox-lt,
+      .roundbox .roundbox-rt, .roundbox .roundbox-lb,
+      .roundbox .roundbox-rb {
+        background-color: ${p.panel2} !important;
+        border-color: ${p.border} !important;
+        color: ${p.dim} !important;
+      }
     `;
   }
 
@@ -672,7 +696,10 @@
       .sample-test pre, .test-example-line {
         background: ${p.panel2} !important; color: ${p.fg} !important;
       }
-      .sample-test .input-output-copier { background: ${p.panel} !important; color: ${p.dim} !important; border-color: ${p.border} !important; }
+      .sample-test .input-output-copier {
+        background: ${p.panel} !important; color: ${p.dim} !important;
+        border-color: ${p.border} !important; box-shadow: none !important;
+      }
       .test-example-line-even { background: ${p.stripe} !important; }
     `;
   }
@@ -704,8 +731,18 @@
         background: ${p.accentDim} !important; color: ${p.accentOn} !important;
         border-color: ${p.accentDim} !important;
       }
+      button.close, button.toggle, .roundbox button.toggle,
+      .input-output-copier, .spoiler-title button {
+        background: ${p.panel2} !important; color: ${p.fg} !important;
+        border-color: ${p.border} !important;
+      }
       input[type="submit"]:hover, button:hover, .submit:hover, .button:hover {
         background: ${p.accent} !important; border-color: ${p.accent} !important;
+      }
+      button.close:hover, button.toggle:hover, .roundbox button.toggle:hover,
+      .input-output-copier:hover, .spoiler-title button:hover {
+        background: ${p.hover} !important; color: ${p.fg} !important;
+        border-color: ${p.border} !important;
       }
       .pagination .page-index a, .pagination .page-index span {
         background: ${p.panel2} !important; border-color: ${p.border} !important;

@@ -54,6 +54,7 @@
   let marks = [];        // [{ id, color, note, start, end }]
   let nextId = 1;
   let built = false;
+  let lastRange = null;
 
   function storeKey() {
     return STORE_PREFIX + location.hostname + location.pathname;
@@ -294,9 +295,16 @@
     sep.className = "cpos-an-sep";
     bar.appendChild(sep);
 
+    const markBtn = document.createElement("button");
+    markBtn.className = "cpos-an-btn cpos-an-primary";
+    markBtn.type = "button";
+    markBtn.textContent = "Mark selection";
+    markBtn.addEventListener("click", applySelection);
+    bar.appendChild(markBtn);
+
     const hint = document.createElement("span");
     hint.className = "cpos-an-hint";
-    hint.textContent = "select text → highlight";
+    hint.textContent = "select text first";
     bar.appendChild(hint);
 
     applyThemeVars(bar);
@@ -310,8 +318,8 @@
   // ---- create a highlight from the current selection ----------------------
   function applySelection() {
     const sel = window.getSelection();
-    if (!sel || sel.isCollapsed || sel.rangeCount === 0) return;
-    const range = sel.getRangeAt(0);
+    const range = sel && !sel.isCollapsed && sel.rangeCount > 0 ? sel.getRangeAt(0) : lastRange;
+    if (!range) return;
     if (range.collapsed) return;
     const off = rangeToOffsets(range);
     if (!off) return;
@@ -327,6 +335,15 @@
     repaintAll();
     restyle();
     saveMarks();
+  }
+
+  function rememberSelection() {
+    if (!built) return;
+    const sel = window.getSelection();
+    if (!sel || sel.isCollapsed || sel.rangeCount === 0) return;
+    const range = sel.getRangeAt(0);
+    if (!scope || !scope.container || !scope.container.contains(range.commonAncestorContainer)) return;
+    lastRange = range.cloneRange();
   }
 
   // ---- popover (recolour / note / remove) ---------------------------------
@@ -466,11 +483,13 @@
     document.addEventListener("click", onClick, true);
     document.addEventListener("mouseover", onMouseOver, true);
     document.addEventListener("mouseout", onMouseOut, true);
+    document.addEventListener("selectionchange", rememberSelection);
   }
   function unbindEvents() {
     document.removeEventListener("click", onClick, true);
     document.removeEventListener("mouseover", onMouseOver, true);
     document.removeEventListener("mouseout", onMouseOut, true);
+    document.removeEventListener("selectionchange", rememberSelection);
   }
 
   // ---- build / teardown ---------------------------------------------------
@@ -498,6 +517,7 @@
     removeBar();
     removeAllSpans();
     marks = [];
+    lastRange = null;
   }
 
   // ---- lifecycle ----------------------------------------------------------

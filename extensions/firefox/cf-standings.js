@@ -294,7 +294,7 @@
   // everything flat (solid color-mix tints in CSS, no gradients).
   async function applyTheme(node) {
     if (!T || !C) return;
-    const id = await C.activeThemeId();
+    const id = await (C.activePageThemeId ? C.activePageThemeId() : C.activeThemeId());
     if (node) T.applyTheme(node, id);
     const tk = T.get(id);
     const root = document.documentElement.style;
