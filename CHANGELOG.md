@@ -6,10 +6,21 @@ All notable changes to CPOS are documented here. Components are versioned indepe
 | --- | --- | --- |
 | Terminal app | 0.1.8 | `Cargo.toml` |
 | VS Code extension | 0.3.32 | `extensions/vscode/package.json` |
-| Browser companion (Chrome) | 0.10.6 | `extensions/chrome/manifest.json` |
-| Browser companion (Firefox) | 0.10.6 | `extensions/firefox/manifest.json` |
+| Browser companion (Chrome) | 0.10.7 | `extensions/chrome/manifest.json` |
+| Browser companion (Firefox) | 0.10.7 | `extensions/firefox/manifest.json` |
 
 Format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
+
+---
+
+## Browser companions (Chrome + Firefox) — 0.10.7 - 2026-06-19
+
+### Fixed
+- **Rating predictions restored.** Codeforces now rejects `contest.standings` API calls that carry extra query parameters for non-admins, which silently broke the predicted-Δ column on contest standings (no column appeared). CPOS now requests standings with no extra parameters and filters official contestants locally, so live predictions show up again. Finished, rated contests continue to display exact official deltas.
+
+### Changed
+- **Prediction engine is now a faithful port of Carrot's algorithm** — ranks are reassigned from points/penalty using Codeforces' tie convention, the seed excludes the contestant being evaluated, and the seed curve is precomputed for speed. Verified to reproduce official rating changes exactly on contests without debutants.
+- CF API calls are issued anonymously with retries on the call-rate limit, and each contest's field ratings are cached, so a transient API failure no longer skews predictions.
 
 ---
 

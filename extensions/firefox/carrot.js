@@ -8,6 +8,10 @@
   const T = self.CPOS_THEMES;
   const C = self.CPOS;
 
+  const RATING_KEY = "cpos.carrot.ratings"; // { contestId, ts, byHandle } — pre-contest field ratings
+  const RATING_TTL = 2 * 60 * 60 * 1000;    // 2h; a competitor's current rating is stable during a round
+  const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
   // Publish the predicted-delta colours as :root custom props derived from the
   // active theme (the cells live inside CF's table, not a CPOS root, so we mirror
   // tokens onto :root the same way cf-problemset/cf-standings do). Re-derived on
@@ -32,54 +36,103 @@
     return m ? m[1] : null;
   }
 
+  // Public CF API. Two things matter for correctness here:
+  //   1. contest.standings for non-gym contests now rejects ANY extra query
+  //      parameter for non-admins ("available only via anonymous GET requests
+  //      with no extra parameters"), so callers must pass only what CF allows.
+  //   2. We force credentials:"omit" so the request is treated as anonymous (the
+  //      logged-in session cookie is irrelevant to these public methods), and we
+  //      retry on CF's rate limit ("Call limit exceeded") instead of giving up.
   async function cfApi(method, qs) {
-    const res = await fetch(`https://codeforces.com/api/${method}?${qs}`, { cache: "no-store" });
-    const json = await res.json();
-    if (json.status !== "OK") throw new Error(json.comment || `${method} failed`);
-    return json.result;
+    const url = `https://codeforces.com/api/${method}` + (qs ? `?${qs}` : "");
+    let lastErr = "";
+    for (let attempt = 0; attempt < 3; attempt++) {
+      let json;
+      try {
+        const res = await fetch(url, { cache: "no-store", credentials: "omit" });
+        if (res.status === 429 || res.status === 503) { await sleep(700 * (attempt + 1)); continue; }
+        json = await res.json();
+      } catch (e) {
+        lastErr = e.message;
+        await sleep(500 * (attempt + 1));
+        continue;
+      }
+      if (json.status === "OK") return json.result;
+      lastErr = json.comment || `${method} failed`;
+      // Only a rate limit is worth retrying; every other failure is deterministic.
+      if (/limit exceeded/i.test(lastErr) && attempt < 2) { await sleep(900 * (attempt + 1)); continue; }
+      throw new Error(lastErr);
+    }
+    throw new Error(lastErr || `${method} failed`);
   }
 
-  // --- Codeforces rating algorithm (bucketed by rating for O(buckets) seeds). ---
+  // --- Codeforces rating algorithm: a faithful port of Carrot/TLE ---
+  // (github.com/meooow25/carrot, adapted from TLE / Mike Mirzayanov's reference).
+  // Verified to reproduce official deltas EXACTLY on contests whose field has no
+  // debutants; on newcomer-heavy contests it matches Carrot (modern CF applies an
+  // unpublished newcomer adjustment that the public formula can't reproduce — once
+  // a contest is rated we switch to exact official deltas anyway).
+  // Contestants: [{ handle, points, penalty, rating }]. Ranks are reassigned here
+  // from points/penalty (CF's rating formula ranks each tied contestant by the
+  // WORST position in their tie group), not taken from the API's display rank.
   function computeDeltas(contestants) {
     const n = contestants.length;
     if (!n) return new Map();
 
-    // rating -> count, for fast seed sums.
+    // Rank reassignment: points desc, penalty asc; a tie group all share the rank
+    // of the lowest position in the group.
+    const byRank = [...Array(n).keys()].sort((a, b) =>
+      contestants[b].points - contestants[a].points || contestants[a].penalty - contestants[b].penalty);
+    const rankOf = new Array(n);
+    let lastPts, lastPen, rank;
+    for (let i = n - 1; i >= 0; i--) {
+      const c = contestants[byRank[i]];
+      if (c.points !== lastPts || c.penalty !== lastPen) { lastPts = c.points; lastPen = c.penalty; rank = i + 1; }
+      rankOf[byRank[i]] = rank;
+    }
+
+    // Precompute the seed (expected rank) curve once over every integer rating, so
+    // each lookup is O(1) instead of O(field). seed[r] = 1 + Σ_field P(other beats r).
+    const LO = -500, HI = 6000;
     const buckets = new Map();
     for (const c of contestants) buckets.set(c.rating, (buckets.get(c.rating) || 0) + 1);
     const bucketArr = [...buckets.entries()];
-
-    const elo = (ra, rb) => 1 / (1 + Math.pow(10, (rb - ra) / 400));
-    const fullSeed = (x) => {
+    const seedArr = new Float64Array(HI - LO + 1);
+    for (let x = LO; x <= HI; x++) {
       let s = 1;
-      for (const [rating, count] of bucketArr) s += count * elo(rating, x);
-      return s;
-    };
-    const ratingToRank = (m) => {
-      let lo = 1, hi = 8000;
-      while (hi - lo > 1) {
+      for (const [r, cnt] of bucketArr) s += cnt / (1 + Math.pow(10, (x - r) / 400));
+      seedArr[x - LO] = s;
+    }
+    const seedAt = (x) => seedArr[(x < LO ? LO : x > HI ? HI : x) - LO];
+    // Expected rank at rating x, with one player at `exclude` removed from the field.
+    const getSeed = (x, exclude) => seedAt(x) - 1 / (1 + Math.pow(10, (x - exclude) / 400));
+    // Last rating at which the (self-excluded) seed is still >= m.
+    const rankToRating = (m, selfRating) => {
+      let lo = 2, hi = HI;
+      while (lo < hi) {
         const mid = (lo + hi) >> 1;
-        if (fullSeed(mid) < m) hi = mid;
-        else lo = mid;
+        if (getSeed(mid, selfRating) < m) hi = mid;
+        else lo = mid + 1;
       }
-      return lo;
+      return lo - 1;
     };
 
     const deltas = new Array(n);
     for (let i = 0; i < n; i++) {
-      const seed = fullSeed(contestants[i].rating) - 0.5; // exclude self (~elo(r,r))
-      const midRank = Math.sqrt(contestants[i].rank * seed);
-      const need = ratingToRank(midRank);
-      deltas[i] = Math.trunc((need - contestants[i].rating) / 2);
+      const r = contestants[i].rating;
+      const seed = getSeed(r, r);                  // expected rank, self excluded
+      const midRank = Math.sqrt(rankOf[i] * seed);
+      const need = rankToRating(midRank, r);
+      deltas[i] = Math.trunc((need - r) / 2);
     }
 
     const order = [...Array(n).keys()].sort((a, b) => contestants[b].rating - contestants[a].rating);
-    // Adjustment 1: shift so the sum is ~0.
+    // Adjustment 1: shift so the total change is ~0.
     let sum = 0;
     for (let i = 0; i < n; i++) sum += deltas[i];
     const inc1 = Math.trunc(-sum / n) - 1;
     for (let i = 0; i < n; i++) deltas[i] += inc1;
-    // Adjustment 2: keep the top ~4·sqrt(n) stable.
+    // Adjustment 2: keep the top ~4·sqrt(n) by rating stable.
     const s = Math.min(n, Math.round(4 * Math.round(Math.sqrt(n))));
     let topSum = 0;
     for (let i = 0; i < s; i++) topSum += deltas[order[i]];
@@ -91,20 +144,46 @@
     return out;
   }
 
-  async function fetchRatings(handles) {
+  // Current (pre-contest) ratings for the whole field. Cached per-contest so
+  // reopening the standings within the TTL costs zero API calls, and a transient
+  // user.info failure on one chunk never silently turns the whole field into 1400s
+  // (which would make every predicted delta wrong).
+  async function fetchRatings(handles, id) {
     const ratings = new Map();
+    let cache = {};
+    try {
+      const stored = C ? await C.get([RATING_KEY]) : {};
+      const rec = stored[RATING_KEY];
+      if (rec && rec.contestId === id && Date.now() - (rec.ts || 0) < RATING_TTL && rec.byHandle) {
+        cache = rec.byHandle;
+      }
+    } catch { /* ignore cache read errors */ }
+
+    const missing = [];
+    for (const h of handles) {
+      if (Object.prototype.hasOwnProperty.call(cache, h)) ratings.set(h, cache[h]);
+      else missing.push(h);
+    }
+
     const CHUNK = 300;
-    for (let i = 0; i < handles.length; i += CHUNK) {
-      const slice = handles.slice(i, i + CHUNK);
+    for (let i = 0; i < missing.length; i += CHUNK) {
+      const slice = missing.slice(i, i + CHUNK);
       try {
         const infos = await cfApi("user.info", "handles=" + slice.map(encodeURIComponent).join(";"));
         infos.forEach((info, k) => {
-          if (info.handle) ratings.set(info.handle, info.rating != null ? info.rating : 1400);
-          else if (slice[k]) ratings.set(slice[k], 1400);
+          const handle = (info && info.handle) || slice[k];
+          const r = info && info.rating != null ? info.rating : 1400;
+          if (handle) { ratings.set(handle, r); cache[handle] = r; }
         });
       } catch {
-        for (const h of slice) ratings.set(h, 1400);
+        // Don't poison the cache with guesses; only fall back for display.
+        for (const h of slice) if (!ratings.has(h)) ratings.set(h, 1400);
       }
+      if (i + CHUNK < missing.length) await sleep(300); // stay comfortably under CF's call limit
+    }
+
+    if (C && missing.length) {
+      try { await C.set({ [RATING_KEY]: { contestId: id, ts: Date.now(), byHandle: cache } }); } catch { /* best-effort */ }
     }
     return ratings;
   }
@@ -123,7 +202,10 @@
     }
 
     // Otherwise predict from current standings + current ratings.
-    const standings = await cfApi("contest.standings", "contestId=" + id + "&showUnofficial=false");
+    // CF now rejects extra params on contest.standings for non-admins, so request
+    // with ONLY the contestId and filter to official single-person contestants
+    // client-side (default standings are already official-only).
+    const standings = await cfApi("contest.standings", "contestId=" + id);
     const contestants = [];
     const handles = [];
     for (const row of standings.rows) {
@@ -131,9 +213,9 @@
       if (members.length !== 1 || row.party.participantType !== "CONTESTANT") continue;
       const handle = members[0];
       handles.push(handle);
-      contestants.push({ handle, rank: row.rank });
+      contestants.push({ handle, points: row.points, penalty: row.penalty });
     }
-    const ratings = await fetchRatings(handles);
+    const ratings = await fetchRatings(handles, id);
     for (const c of contestants) c.rating = ratings.get(c.handle) ?? 1400;
     const deltaMap = computeDeltas(contestants);
     const out = new Map();

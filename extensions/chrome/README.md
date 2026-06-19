@@ -2,7 +2,7 @@
 
 Browser extension for Codeforces and CSES. Captures public sample tests and relays them to CPOS on your machine. Autofills judge submit pages when you submit from VS Code or the terminal app.
 
-**Current version:** 0.10.6 (see [CHANGELOG.md](../../CHANGELOG.md)).
+**Current version:** 0.10.7 (see [CHANGELOG.md](../../CHANGELOG.md)).
 
 ## Install
 
@@ -20,7 +20,7 @@ Also install the **[CPOS VS Code extension](https://marketplace.visualstudio.com
 
 Data is not sent to third-party servers—only to CPOS on localhost.
 
-## Interface & features (0.10.6)
+## Interface & features (0.10.7)
 
 Click the toolbar icon for the **popup hub** — flat, themeable, with a live CPOS connection indicator and switches for each feature:
 
