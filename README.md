@@ -142,6 +142,7 @@ The companion captures samples and autofills the judge submit form — that's th
 - **Profile analytics** — charts on CF profile pages: activity heatmap, current & longest streak, solved-by-rating and by-index histograms, top tags, verdict & language donuts, and rating-history insights (no duplicate of CF's own rating graph)
 - **Profile compare (VS)** — add other handles and compare stats side-by-side with a rating-history overlay
 - **Daily problem & streak** — a rating-tuned, deterministic "problem of the day" plus a practice streak
+- **Challenges** — 1v1 problem races refereed by Codeforces itself (first Accepted submission wins, so nothing is self-reported). Challenge by handle or randomize the problem; share a private link (default) or, with opt-in online delivery via the free [ntfy.sh](https://ntfy.sh) relay, send it by handle with a desktop notification — no link to paste. Off-by-default online mode keeps everything else fully local
 - **Favorites** — bookmark problems with a star and view them in the popup
 - **Problem timer** — a draggable per-problem stopwatch that persists and auto-resumes
 

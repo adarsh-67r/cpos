@@ -1,7 +1,7 @@
 {
     "manifest_version": 3,
     "name": "CPOS Companion",
-    "version": "0.10.7",
+    "version": "0.11.0",
     "description": "Codeforces & CSES companion: capture & submit, in-browser editor, profile analytics, themes, and practice tools. Local-first.",
     "icons": {
         "16": "icons/icon16.png",
@@ -22,10 +22,11 @@
         "http://127.0.0.1:27121/*",
         "http://127.0.0.1:27122/*",
         "https://codeforces.com/*",
-        "https://cses.fi/*"
+        "https://cses.fi/*",
+        "https://ntfy.sh/*"
     ],
     "background": {
-        "scripts": ["cpos-contests.js", "background.js"]
+        "scripts": ["cpos-contests.js", "cpos-challenge-core.js", "cpos-challenge-bg.js", "background.js"]
     },
     "browser_specific_settings": {
         "gecko": {
@@ -69,6 +70,11 @@
         {
             "matches": ["https://codeforces.com/contest/*/standings*"],
             "js": ["cpos-config.js", "carrot.js"],
+            "run_at": "document_idle"
+        },
+        {
+            "matches": ["https://codeforces.com/*"],
+            "js": ["cpos-config.js", "cpos-challenge-core.js", "cpos-challenge.js"],
             "run_at": "document_idle"
         },
         {

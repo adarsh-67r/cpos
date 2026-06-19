@@ -74,6 +74,11 @@
         <span class="rtxt"><b>Contest reminders</b><small>notify before upcoming CF contests</small></span>
         <span class="sw"><input type="checkbox" data-feature-input="contestReminders" /><span></span></span>
       </label>
+      <label class="row" data-feature="challenges">
+        <span class="ic" data-icon="challenges"></span>
+        <span class="rtxt"><b>Challenges</b><small>1v1 problem races, refereed by Codeforces</small></span>
+        <span class="sw"><input type="checkbox" data-feature-input="challenges" /><span></span></span>
+      </label>
     </div>
   </section>
 
@@ -111,6 +116,11 @@
   <section class="card">
     <div class="card-h">Contests</div>
     <div id="cpos-contests-section"></div>
+  </section>
+
+  <section class="card">
+    <div class="card-h">Challenges <small>1v1 races · serverless</small></div>
+    <div id="cpos-challenges-section"></div>
   </section>
 
   <section class="card">
@@ -163,5 +173,7 @@
   <script src="popup.js"></script>
   <script src="contests-ui.js"></script>
   <script src="practice-ui.js"></script>
+  <script src="cpos-challenge-core.js"></script>
+  <script src="cpos-challenge-ui.js"></script>
 </body>
 </html>

@@ -11,7 +11,7 @@ tools, marker & notes, code & LaTeX styling, and site themes + Modernize. Every
 feature is individually toggleable from the popup, and everything stays read-only
 (public CF API + localhost).
 
-**Current version:** 0.10.6 (see [CHANGELOG.md](../../CHANGELOG.md)).
+**Current version:** 0.11.0 (see [CHANGELOG.md](../../CHANGELOG.md)).
 
 ## Permissions
 

@@ -5,6 +5,10 @@
 // notifications / message listeners; this never touches the submit-pickup logic.
 importScripts("cpos-contests.js");
 
+// Challenge mode runs as its own isolated module (alarms / notifications /
+// CF-API polling), loaded after its shared core. Never touches submit pickup.
+importScripts("cpos-challenge-core.js", "cpos-challenge-bg.js");
+
 const ENDPOINTS = [
   { name: "CPOS VS Code", baseUrl: "http://127.0.0.1:27122" },
   { name: "CPOS TUI", baseUrl: "http://127.0.0.1:27121" }

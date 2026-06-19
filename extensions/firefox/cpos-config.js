@@ -20,6 +20,7 @@
     problemsetTools: true,
     standingsTools: true,
     contestReminders: true,
+    challenges: true,
     dailyProblem: true,
     favorites: true,
     problemTimer: true,

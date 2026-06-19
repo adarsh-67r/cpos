@@ -6,12 +6,20 @@ All notable changes to CPOS are documented here. Components are versioned indepe
 | --- | --- | --- |
 | Terminal app | 0.1.8 | `Cargo.toml` |
 | VS Code extension | 0.3.32 | `extensions/vscode/package.json` |
-| Browser companion (Chrome) | 0.10.7 | `extensions/chrome/manifest.json` |
-| Browser companion (Firefox) | 0.10.7 | `extensions/firefox/manifest.json` |
+| Browser companion (Chrome) | 0.11.0 | `extensions/chrome/manifest.json` |
+| Browser companion (Firefox) | 0.11.0 | `extensions/firefox/manifest.json` |
 
 Format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
+
+## Browser companions (Chrome + Firefox) — 0.11.0 - 2026-06-20
+
+### Added
+- **Challenge mode — 1v1 problem races, refereed by Codeforces.** Challenge a friend by handle (or pick/randomize the problem, rating, and time limit), then race: the winner is decided from **public Codeforces submissions** — first Accepted after the challenge starts — so nothing is ever self-reported. Solve and submit through CPOS as usual; the result is announced automatically.
+  - **Two delivery modes.** *Link mode* (default, fully local) creates a shareable link. *Online delivery* (opt-in) relays invites by handle through the free, no-account [ntfy.sh](https://ntfy.sh) service, so your opponent gets a desktop notification with no link to paste — plus an open lobby to find a random opponent.
+  - **Notifications.** Optional desktop notifications when a challenge is received or decided.
+  - **Privacy.** Online delivery is **off by default**; when enabled it sends only handles, the problem id/title/url/rating, and accept/decline to public ntfy.sh topics (never code, cookies, or credentials). Link mode and every other feature stay 100% local. See the updated Chrome [privacy policy](extensions/chrome/PRIVACY.md).
 
 ## Browser companions (Chrome + Firefox) — 0.10.7 - 2026-06-19
 

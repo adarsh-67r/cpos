@@ -1,6 +1,6 @@
 # CPOS Companion — Privacy Policy
 
-**Last updated:** June 17, 2026
+**Last updated:** June 20, 2026
 **Contact:** [github.com/Soham109/cpos/issues](https://github.com/Soham109/cpos/issues)
 
 CPOS Companion is a browser extension for competitive programming. It works together with the [CPOS VS Code extension](https://marketplace.visualstudio.com/items?itemName=sohamaggarwal.cpos-vscode) and/or the CPOS desktop app on your computer.
@@ -9,9 +9,9 @@ CPOS Companion is a browser extension for competitive programming. It works toge
 
 - **No accounts.** The extension does not create user accounts.
 - **No analytics.** The extension does not use Google Analytics or any third-party tracking.
-- **No remote servers.** The extension does not send your data to the developer or any cloud service.
-- **Local only.** Problem samples, editor run requests, and queued submissions are sent only to `127.0.0.1` on your machine (ports `27121` and `27122`) when CPOS is running.
-- **Local settings.** Preferences, editor drafts, timers, favorites, reminders, notes/highlights, and small public-data caches are stored only in Chrome's local extension storage.
+- **No remote servers — with one optional, off-by-default exception.** By default the extension sends your data only to your own machine. The **Online challenges** feature is *opt-in*; when you turn it on, challenge invites/replies are relayed through the free, no-account [ntfy.sh](https://ntfy.sh) service. See [Optional online challenges](#optional-online-challenges-off-by-default).
+- **Local only by default.** Problem samples, editor run requests, and queued submissions are sent only to `127.0.0.1` on your machine (ports `27121` and `27122`) when CPOS is running.
+- **Local settings.** Preferences, editor drafts, timers, favorites, reminders, notes/highlights, challenges, and small public-data caches are stored only in Chrome's local extension storage.
 
 ## Data the extension accesses
 
@@ -47,10 +47,27 @@ The extension **does not** read passwords, cookies, or browsing history outside 
 | In-browser editor Run requests | `http://127.0.0.1:27122` and/or `http://127.0.0.1:27121` |
 | Pending submission source code | From localhost CPOS → browser submit page only |
 | Public Codeforces API lookups | Codeforces public API only |
-| Local preferences, drafts, timers, favorites, reminders, notes/highlights, and caches | Chrome local extension storage only |
+| Online challenge invites/replies (**only when you enable Online challenges**) | [ntfy.sh](https://ntfy.sh) public relay |
+| Local preferences, drafts, timers, favorites, reminders, notes/highlights, challenges, and caches | Chrome local extension storage only |
 | Anything else | **Nowhere** — not sent to the developer or a CPOS cloud service |
 
 If CPOS is not running locally, captures fail gracefully and nothing is stored by the extension.
+
+## Optional online challenges (off by default)
+
+CPOS includes a **Challenges** feature — 1v1 problem races where Codeforces itself is the referee (the winner is determined from public Codeforces submissions, not by us). It has two delivery modes:
+
+- **Link mode (default, fully local).** A challenge is encoded into a link that you copy and share yourself. Nothing leaves your machine except the link you choose to send.
+- **Online mode (opt-in).** If you enable **Online delivery** in the Challenges panel, the extension uses [ntfy.sh](https://ntfy.sh) — a free, open-source, no-account publish/subscribe service — to deliver challenges by handle (so you don't have to paste a link) and to notify you of incoming challenges. This mode is **off until you turn it on**.
+
+When online mode is enabled, the extension publishes and reads small messages on ntfy.sh topics derived from Codeforces handles (e.g. `cpos-chal-v1-<handle>`). Those messages contain only:
+
+- The challenger's and opponent's Codeforces handles
+- The problem identifier, title, URL, and rating
+- A challenge id, creation time, and duration
+- Whether the challenge was accepted or declined
+
+No passwords, cookies, source code, or personal data are ever sent to ntfy.sh. **ntfy.sh topics are public** — anyone who knows or guesses a topic name could read or post to it — so online mode is intended for friendly use, not for confidential data. ntfy.sh is operated by a third party under [its own privacy policy](https://ntfy.sh/docs/privacy/). You can stop all of this at any time by turning Online delivery off; link mode and every other feature continue to work with no external service.
 
 ## Local data storage
 
@@ -76,9 +93,10 @@ This data stays in Chrome's local extension storage on your device. It is not se
 | `tabs` | Find or open the correct browser tab for submission autofill |
 | `alarms` | Wake the background worker periodically so queued submissions from CPOS are picked up quickly; no data is read or sent by this alarm |
 | `storage` | Save local-only settings, editor drafts, timers, favorites, reminders, notes/highlights, and public-data caches |
-| `notifications` | Show optional local contest reminder notifications |
+| `notifications` | Show optional local notifications — contest reminders and challenge results |
 | `127.0.0.1:27121/27122` | Talk to CPOS running on your computer |
 | `codeforces.com`, `cses.fi` | Read problem pages you visit and interact with submit pages |
+| `ntfy.sh` | **Only used by the opt-in Online challenges feature** to relay challenge invites/replies. Unused unless you enable Online delivery |
 
 ## Children
 

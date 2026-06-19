@@ -36,7 +36,8 @@
     problemTimer: '<path d="M6.4 2.4h3.2"/><path d="M8 2.4v1.7"/><circle cx="8" cy="9.2" r="4.6"/><path d="M8 9.2V6.6"/>',
     annotate: '<path d="m2.8 13.2 1-3.1 6.7-6.7a1.45 1.45 0 0 1 2.05 2.05L5.85 12.2 2.8 13.2Z"/><path d="m9.6 4.4 2 2"/>',
     modernize: '<path d="M8 2.4 9.1 6.5 13.2 7.6 9.1 8.7 8 12.8 6.9 8.7 2.8 7.6 6.9 6.5 8 2.4Z"/>',
-    siteTheme: '<path d="M8 2.4S3.9 7 3.9 10.1a4.1 4.1 0 0 0 8.2 0C12.1 7 8 2.4 8 2.4Z"/>'
+    siteTheme: '<path d="M8 2.4S3.9 7 3.9 10.1a4.1 4.1 0 0 0 8.2 0C12.1 7 8 2.4 8 2.4Z"/>',
+    challenges: '<path d="M5 3.2h6v2.6a3 3 0 0 1-6 0V3.2Z"/><path d="M5 4.2H3.3v.9A2 2 0 0 0 5 7.1M11 4.2h1.7v.9A2 2 0 0 1 11 7.1"/><path d="M8 8.8v2"/><path d="M5.8 13h4.4l-.5-2.2H6.3L5.8 13Z"/>'
   };
   function renderIcons() {
     document.querySelectorAll(".ic[data-icon]").forEach((el) => {
