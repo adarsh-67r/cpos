@@ -71,6 +71,39 @@
   const codeKey = () => "cpos.ide.code." + problemKey();
   const FONT_KEY = "cpos.ide.fontSize";
   const WRAP_KEY = "cpos.ide.wrap";
+  const TEMPLATES_KEY = "cpos.templates";
+  const TEMPLATE_DIRTY_KEY = "cpos.templates.dirty";
+
+  async function syncTemplatesFromRunner() {
+    for (const base of RUNNERS) {
+      try {
+        const res = await fetch(base + "/config", { cache: "no-store" });
+        if (!res.ok) continue;
+        const data = await res.json();
+        if (data && data.templates) {
+          const local = await sget([TEMPLATES_KEY, TEMPLATE_DIRTY_KEY]);
+          const templates = Object.assign({}, local[TEMPLATES_KEY] || {});
+          const dirty = Object.assign({}, local[TEMPLATE_DIRTY_KEY] || {});
+          for (const [lang, content] of Object.entries(data.templates)) {
+            if (!dirty[lang]) templates[lang] = content;
+          }
+          for (const lang of Object.keys(dirty)) {
+            if (!dirty[lang]) continue;
+            const saved = await fetch(base + "/config", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ language: lang, content: templates[lang] || "" })
+            });
+            if (saved.ok) delete dirty[lang];
+          }
+          await sset({ [TEMPLATES_KEY]: templates, [TEMPLATE_DIRTY_KEY]: dirty });
+        }
+        return;
+      } catch (_) {
+        /* try next runner */
+      }
+    }
+  }
 
   async function applyChrome(node) {
     if (!T || !C) return;
@@ -475,8 +508,15 @@
 
   async function buildPanel() {
     if (document.getElementById("cpos-ide-panel")) return;
-    const conf = await sget([codeKey(), "cpos.ide.lang", "cpos.ide.theme", "cpos.ide.width", FONT_KEY, WRAP_KEY]);
+    await syncTemplatesFromRunner();
+    const conf = await sget([codeKey(), "cpos.ide.lang", "cpos.ide.theme", "cpos.ide.width", FONT_KEY, WRAP_KEY, TEMPLATES_KEY]);
     const lang = conf["cpos.ide.lang"] || "cpp";
+    const templates = conf[TEMPLATES_KEY] || {};
+    chrome.storage.onChanged.addListener((changes, area) => {
+      if (area === "local" && changes[TEMPLATES_KEY]) {
+        Object.assign(templates, changes[TEMPLATES_KEY].newValue || {});
+      }
+    });
     const edThemeId = conf["cpos.ide.theme"] || "vscode-dark";
     const width = Math.max(360, Math.min(conf["cpos.ide.width"] || 640, Math.round(window.innerWidth * 0.85)));
     const fontSize = Math.max(10, Math.min(conf[FONT_KEY] || 15, 24));
@@ -545,7 +585,7 @@
     findBar = panel.querySelector("#cpos-ide-findbar");
     const langTag = panel.querySelector("#cpos-ide-langtag");
 
-    const initial = conf[codeKey()] != null ? conf[codeKey()] : (STARTERS[lang] || "");
+    const initial = conf[codeKey()] != null ? conf[codeKey()] : (templates[lang] || STARTERS[lang] || "");
     let saveTimer = null;
     editor = mountEditor(
       panel.querySelector("#cpos-ide-mount"),
@@ -564,13 +604,18 @@
       editor.setLang(langSel.value);
       langTag.textContent = langSel.value;
       await sset({ "cpos.ide.lang": langSel.value });
-      if (!editor.getValue().trim() && STARTERS[langSel.value]) { editor.setValue(STARTERS[langSel.value]); await sset({ [codeKey()]: editor.getValue() }); }
+      const starter = templates[langSel.value] || STARTERS[langSel.value] || "";
+      if (!editor.getValue().trim() && starter) { editor.setValue(starter); await sset({ [codeKey()]: editor.getValue() }); }
     };
     themeSel.onchange = async () => { applyEditorTheme(panel, themeSel.value); await sset({ "cpos.ide.theme": themeSel.value }); };
 
     launch.onclick = () => openPanel(width);
     panel.querySelector(".x").onclick = closePanel;
-    panel.querySelector("#cpos-ide-reset").onclick = async () => { editor.setValue(STARTERS[langSel.value] || ""); await sset({ [codeKey()]: editor.getValue() }); setMsg("Reset to starter."); };
+    panel.querySelector("#cpos-ide-reset").onclick = async () => {
+      editor.setValue(templates[langSel.value] || STARTERS[langSel.value] || "");
+      await sset({ [codeKey()]: editor.getValue() });
+      setMsg("Reset to starter.");
+    };
     panel.querySelector("#cpos-ide-copy").onclick = async () => { try { await navigator.clipboard.writeText(editor.getValue()); setMsg("Copied."); } catch { setMsg("Copy failed."); } };
     panel.querySelector("#cpos-ide-run").onclick = runSamples;
     panel.querySelector("#cpos-ide-submit").onclick = submit;

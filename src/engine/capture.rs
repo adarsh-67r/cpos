@@ -8,6 +8,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 use tiny_http::{Header, Method, Response, Server};
 
+use crate::data::config::Config;
 use crate::data::models::{CapturedCsesProgress, CapturedProblem, PendingSubmit};
 
 pub const DEFAULT_PORT: u16 = 27121;
@@ -17,6 +18,17 @@ pub const DEFAULT_PORT: u16 = 27121;
 pub enum CaptureMsg {
     Problem(CapturedProblem),
     CsesProgress(CapturedCsesProgress),
+    ConfigChanged(Config),
+}
+
+#[derive(Debug, serde::Deserialize)]
+struct SharedConfigUpdate {
+    #[serde(default, alias = "defaultLanguage")]
+    default_language: Option<String>,
+    #[serde(default)]
+    language: Option<String>,
+    #[serde(default)]
+    content: Option<String>,
 }
 
 /// Handle to the running capture server. Used to queue browser auto-submits.
@@ -179,6 +191,70 @@ fn run(server: Server, tx: Sender<CaptureMsg>, pending: Arc<Mutex<Option<Pending
                     }
                     _ => {
                         let _ = request.respond(json_response(404, r#"{"ok":false}"#));
+                    }
+                }
+            }
+
+            (&Method::Get, "/config") => match Config::load() {
+                Ok(config) => {
+                    let mut templates = std::collections::HashMap::new();
+                    for lang in config.compile_commands.keys() {
+                        if let Some(content) = config.read_template(lang) {
+                            templates.insert(lang.clone(), content);
+                        }
+                    }
+                    let body = serde_json::json!({
+                        "ok": true,
+                        "defaultLanguage": config.default_language,
+                        "templates": templates,
+                    })
+                    .to_string();
+                    let _ = request.respond(json_response(200, &body));
+                }
+                Err(e) => {
+                    let body =
+                        serde_json::json!({ "ok": false, "error": e.to_string() }).to_string();
+                    let _ = request.respond(json_response(500, &body));
+                }
+            },
+
+            (&Method::Post, "/config") => {
+                let mut body = String::new();
+                if request.as_reader().read_to_string(&mut body).is_err() {
+                    let _ = request.respond(json_response(
+                        400,
+                        r#"{"ok":false,"error":"bad body"}"#,
+                    ));
+                    continue;
+                }
+                let update = match serde_json::from_str::<SharedConfigUpdate>(&body) {
+                    Ok(update) => update,
+                    Err(e) => {
+                        let body =
+                            serde_json::json!({ "ok": false, "error": e.to_string() }).to_string();
+                        let _ = request.respond(json_response(400, &body));
+                        continue;
+                    }
+                };
+                match Config::load().and_then(|mut config| {
+                    if let Some(lang) = update.default_language.filter(|s| !s.trim().is_empty()) {
+                        config.default_language = lang;
+                    }
+                    if let (Some(lang), Some(content)) = (update.language, update.content) {
+                        config.write_template(&lang, &content)?;
+                    } else {
+                        config.save()?;
+                    }
+                    Ok(config)
+                }) {
+                    Ok(config) => {
+                        let _ = tx.send(CaptureMsg::ConfigChanged(config));
+                        let _ = request.respond(json_response(200, r#"{"ok":true}"#));
+                    }
+                    Err(e) => {
+                        let body =
+                            serde_json::json!({ "ok": false, "error": e.to_string() }).to_string();
+                        let _ = request.respond(json_response(500, &body));
                     }
                 }
             }

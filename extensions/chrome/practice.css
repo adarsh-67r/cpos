@@ -30,6 +30,15 @@
   border-top: 1px solid var(--border);
 }
 #cpos-practice-section .cpos-pr-block:first-of-type { border-top: none; }
+.cpos-pr-rating-pick + .cpos-pr-block { border-top: none; }
+.cpos-pr-rating-pick {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  padding: 6px 0 9px; color: var(--dim); font-size: 10.5px;
+}
+.cpos-pr-rating-pick select {
+  color: var(--fg); background: var(--panel-2); border: 1px solid var(--border);
+  border-radius: 7px; padding: 5px 8px; font: inherit; cursor: pointer;
+}
 #cpos-practice-section .cpos-pr-sub {
   font-size: 10.5px;
   color: var(--dim);

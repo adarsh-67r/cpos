@@ -11,8 +11,12 @@
   const DEFAULTS = {
     "cpos.ui.theme": T.DEFAULT_THEME,
     "cpos.ui.customAccent": "#b794ff",
-    "cpos.features": { profile: true, carrot: true, highlight: true, ide: true, problemTools: true, problemsetTools: true, standingsTools: true, contestReminders: true, dailyProblem: true, favorites: true, problemTimer: true, profileCompare: true, annotate: false, modernize: true, siteTheme: false }
+    "cpos.features": { profile: true, carrot: true, highlight: true, ide: true, problemTools: true, problemsetTools: true, standingsTools: true, contestReminders: true, dailyProblem: true, favorites: true, problemTimer: true, profileCompare: true, annotate: false, modernize: true, siteTheme: false },
+    "cpos.templates": {},
+    "cpos.templates.dirty": {},
+    "cpos.template.defaultLanguage": "cpp"
   };
+  const TEMPLATE_LANGS = ["cpp", "python", "pypy", "java", "kotlin", "rust", "go", "csharp", "javascript", "ruby", "haskell", "pascal", "c"];
 
   // Consistent inline line-icon set (16px grid, currentColor stroke) — replaces
   // the old emoji glyphs so the popup reads as one intentional design, not a
@@ -53,7 +57,10 @@
     state = {
       uiTheme: raw["cpos.ui.theme"] || DEFAULTS["cpos.ui.theme"],
       customAccent: raw["cpos.ui.customAccent"] || DEFAULTS["cpos.ui.customAccent"],
-      features: Object.assign({}, DEFAULTS["cpos.features"], raw["cpos.features"] || {})
+      features: Object.assign({}, DEFAULTS["cpos.features"], raw["cpos.features"] || {}),
+      templates: Object.assign({}, raw["cpos.templates"] || {}),
+      templateDirty: Object.assign({}, raw["cpos.templates.dirty"] || {}),
+      templateLanguage: raw["cpos.template.defaultLanguage"] || "cpp"
     };
     if (!state.features.siteTheme && state.uiTheme !== T.DEFAULT_THEME) {
       state.uiTheme = T.DEFAULT_THEME;
@@ -163,6 +170,94 @@
     text.textContent = "app not running";
   }
 
+  async function fetchSharedConfig() {
+    for (const base of ENDPOINTS) {
+      try {
+        const res = await fetch(base + "/config", { cache: "no-store" });
+        if (!res.ok) continue;
+        const data = await res.json();
+        for (const [lang, content] of Object.entries(data.templates || {})) {
+          if (!state.templateDirty[lang]) state.templates[lang] = content;
+        }
+        state.templateLanguage = data.defaultLanguage || state.templateLanguage;
+        for (const lang of Object.keys(state.templateDirty)) {
+          if (!state.templateDirty[lang]) continue;
+          const synced = await pushSharedTemplate(lang, state.templates[lang] || "");
+          if (synced) delete state.templateDirty[lang];
+        }
+        await set({
+          "cpos.templates": state.templates,
+          "cpos.templates.dirty": state.templateDirty,
+          "cpos.template.defaultLanguage": state.templateLanguage
+        });
+        return base;
+      } catch {
+        /* try next */
+      }
+    }
+    return null;
+  }
+
+  async function pushSharedTemplate(language, content) {
+    let synced = null;
+    for (const base of ENDPOINTS) {
+      try {
+        const res = await fetch(base + "/config", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ language, content })
+        });
+        if (res.ok) synced = synced || base;
+      } catch {
+        /* try next */
+      }
+    }
+    return synced;
+  }
+
+  function renderTemplateEditor() {
+    const lang = document.getElementById("templateLang");
+    const text = document.getElementById("templateText");
+    if (!lang || !text) return;
+    lang.innerHTML = TEMPLATE_LANGS.map((id) =>
+      '<option value="' + id + '"' + (id === state.templateLanguage ? " selected" : "") + ">" + id + "</option>"
+    ).join("");
+    text.value = state.templates[state.templateLanguage] || "";
+  }
+
+  function wireTemplateEditor() {
+    const lang = document.getElementById("templateLang");
+    const text = document.getElementById("templateText");
+    const file = document.getElementById("templateFile");
+    const status = document.getElementById("templateSync");
+    if (!lang || !text || !file) return;
+    lang.onchange = () => {
+      state.templateLanguage = lang.value;
+      text.value = state.templates[lang.value] || "";
+    };
+    document.getElementById("templateUpload").onclick = () => file.click();
+    file.onchange = async () => {
+      const chosen = file.files && file.files[0];
+      if (chosen) text.value = await chosen.text();
+      file.value = "";
+    };
+    document.getElementById("templateReset").onclick = () => { text.value = ""; };
+    document.getElementById("templateSave").onclick = async () => {
+      state.templateLanguage = lang.value;
+      state.templates[lang.value] = text.value;
+      await set({
+        "cpos.templates": state.templates,
+        "cpos.templates.dirty": Object.assign({}, state.templateDirty, { [lang.value]: true }),
+        "cpos.template.defaultLanguage": state.templateLanguage
+      });
+      const endpoint = await pushSharedTemplate(lang.value, text.value);
+      if (endpoint) delete state.templateDirty[lang.value];
+      else state.templateDirty[lang.value] = true;
+      await set({ "cpos.templates.dirty": state.templateDirty });
+      status.textContent = endpoint ? "synced" : "saved locally";
+    };
+  }
+
   function wireCustomColor() {
     const input = document.getElementById("customColor");
     if (!input) return;
@@ -210,6 +305,9 @@
     renderSwatches();
     renderToggles();
     wire();
+    await fetchSharedConfig();
+    renderTemplateEditor();
+    wireTemplateEditor();
     checkConnection();
   })();
 })();

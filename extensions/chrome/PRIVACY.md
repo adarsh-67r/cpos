@@ -63,6 +63,7 @@ The extension uses `chrome.storage.local` for user-owned local state, including:
 - Problem tool preferences, including tag/rating reveal state and problem focus mode
 - Marker highlights and notes, when the marker feature is enabled
 - User-maintained standings friends list and profile-compare handles
+- In-browser editor templates and pending offline template-sync state
 - Short-lived caches of public Codeforces data, such as problem metadata, solved status, standings languages, contest list, and profile compare data
 
 This data stays in Chrome's local extension storage on your device. It is not sent to the developer or any CPOS-operated server. You can remove it by clearing the extension's site/storage data or uninstalling the extension.

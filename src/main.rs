@@ -562,6 +562,10 @@ fn drain_captures(app: &mut App) {
                     "CSES synced (no scored tasks yet)".to_string()
                 };
             }
+            CaptureMsg::ConfigChanged(config) => {
+                app.config = config;
+                app.status_message = "Configuration synced from a CPOS client.".to_string();
+            }
         }
     }
 }

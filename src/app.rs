@@ -523,9 +523,8 @@ impl App {
         self.setup_lang = LANGUAGES[next as usize].to_string();
     }
 
-    /// Persist the wizard's choices. Writes the pasted template to the workspace
-    /// and points `template_file` at it. Returns the workspace root so the UI can
-    /// open it in the user's editor.
+    /// Persist the wizard's choices. Writes the pasted template to CPOS's shared
+    /// config directory so the TUI, VS Code, and browser editor can reuse it.
     pub fn finish_setup(&mut self) -> PathBuf {
         let handle = self.setup_handle.trim().to_string();
         if !handle.is_empty() {
@@ -537,14 +536,9 @@ impl App {
         let _ = std::fs::create_dir_all(&root);
 
         if !self.setup_template.trim().is_empty() {
-            let ext = self.solution_ext();
-            let tdir = root.join("templates");
-            let _ = std::fs::create_dir_all(&tdir);
-            let tpath = tdir.join(format!("template.{ext}"));
             let content = normalize_template_text(&self.setup_template);
-            if std::fs::write(&tpath, content).is_ok() {
-                self.config.template_file = Some(tpath.to_string_lossy().to_string());
-            }
+            let lang = self.setup_lang.clone();
+            let _ = self.config.write_template(&lang, &content);
         }
 
         let cses = self.setup_cses.trim().to_string();
@@ -1366,7 +1360,10 @@ impl App {
             ),
             (
                 "Template File",
-                self.config.template_file.clone().unwrap_or_default(),
+                self.config
+                    .template_path(&self.config.default_language)
+                    .map(|path| path.to_string_lossy().to_string())
+                    .unwrap_or_default(),
             ),
             (
                 "CSES Session",
@@ -1437,6 +1434,15 @@ impl App {
                 } else {
                     Some(v.to_string())
                 };
+                if v.is_empty() {
+                    self.config
+                        .template_files
+                        .remove(&self.config.default_language);
+                } else {
+                    self.config
+                        .template_files
+                        .insert(self.config.default_language.clone(), v.to_string());
+                }
             }
             5 => {
                 let v = self.config_edit_buf.trim();

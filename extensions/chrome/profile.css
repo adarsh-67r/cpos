@@ -9,10 +9,11 @@
   margin: 14px 0;
   font-family: ui-sans-serif, -apple-system, "Segoe UI", Roboto, sans-serif;
   color: var(--fg);
-  width: 100%;
-  max-width: 100%;
+  width: auto;
+  max-width: none;
   min-width: 0;
-  clear: both;
+  clear: none;
+  overflow: hidden;
   isolation: isolate;
   container-type: inline-size;
 }

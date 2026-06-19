@@ -41,12 +41,15 @@ Open the **CPOS** view in the activity bar:
 - **GitHub** — open the CPOS repository
 - **Test cases** — edit, add, or remove samples; Codeforces multi-case inputs can show linked input/output blocks
 - **Themes** — CPOS, Midnight, Amber, Paper, or Native (matches your VS Code theme; Run All uses VS Code button styling)
+- **Settings gear** — beside the Solution tab; configure the default language and paste or upload per-language templates shared with the TUI and browser companion
 
 Keep the **terminal app** running for browsing, recommendations, and analytics. Captures and submissions work with either app.
 
 ## Settings
 
-`Settings → Extensions → CPOS` — save folder, language, template, compile commands, timeouts.
+Use the panel **settings gear** for shared templates. VS Code’s normal
+`Settings → Extensions → CPOS` page still controls save folder, language,
+legacy template path, compile commands, and timeouts.
 
 By default, files are created in the **currently open workspace folder**.
 

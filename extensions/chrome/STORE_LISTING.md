@@ -46,7 +46,7 @@ CAPTURE & SUBMIT
 • Optionally syncs CSES solved/attempted status when you choose to sync
 
 ON THE PROBLEM PAGE
-• In-browser editor — a CodeMirror-powered editor: run against the samples with a per-test diff and custom stdin, then submit in place (running compiles on the local CPOS runner; editing works on its own)
+• In-browser editor — a CodeMirror-powered editor: run against samples with a per-test diff and custom stdin, use shared per-language templates, then submit in place
 • Code & LaTeX styling for statements, editorials and comments
 • Problem focus — hide the Codeforces right rail and expand the statement for split-screen solving
 • Problem tools — rating badge, tag-hider / training mode, one-click sample copy, similar problems, and a per-problem timer
@@ -54,7 +54,8 @@ ON THE PROBLEM PAGE
 PRACTICE & ANALYTICS
 • Profile analytics — activity heatmap, streaks, solved-by-rating / index, tags, verdict and language charts (public CF API, read-only)
 • Profile compare (VS) — stack handles side by side with a rating-history overlay
-• Daily problem & streak, favorites, problemset solve-status, standings tools, and rating predictions
+• Daily problem with Auto or exact-rating selection, streaks, favorites, problemset solve-status, standings tools, and rating predictions
+• Paste or upload templates in the popup and sync them with CPOS on localhost
 • Contest reminders before upcoming Codeforces rounds
 
 APPEARANCE
@@ -115,7 +116,7 @@ Chrome may suspend the extension's background worker when idle. CPOS uses a loca
 
 ### Permission: `storage`
 ```
-Stores the user's own settings locally in chrome.storage.local: feature toggles, theme/palette, in-browser editor drafts and preferences, favorites, problem-timer state, problem focus preference, daily-problem streak, marker notes/highlights, profile-compare handles, friends list, contest-reminder preferences, and short-lived public-data caches. This data never leaves the device except when the user explicitly runs/submits code to their own localhost CPOS app.
+Stores the user's own settings locally in chrome.storage.local: feature toggles, theme/palette, in-browser editor drafts and templates, daily-problem rating/streak, favorites, problem-timer state, problem focus preference, marker notes/highlights, profile-compare handles, friends list, contest-reminder preferences, and short-lived public-data caches. Templates sync only to the user's own localhost CPOS app; other data never leaves the device except when the user explicitly runs or submits code.
 ```
 
 ### Permission: `notifications`

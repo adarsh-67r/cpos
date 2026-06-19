@@ -19,6 +19,7 @@
   const K_FAV = "cpos.fav.list";
   const PS_CACHE = "cpos.daily.problemsetCache";
   const K_FEATURES = "cpos.features";
+  const K_RATING = "cpos.daily.rating";
   const DEFAULT_FEATURES = (self.CPOS && self.CPOS.DEFAULT_FEATURES) || {};
 
   const store = chrome.storage.local;
@@ -84,18 +85,26 @@
 
   // ── render ──────────────────────────────────────────────────────────────────
   async function render() {
-    const data = await get([K_DAILY, K_STREAK, K_FAV, K_FEATURES]);
+    const data = await get([K_DAILY, K_STREAK, K_FAV, K_FEATURES, K_RATING]);
     const features = data[K_FEATURES] || {};
     const dailyOn = featOn(features, "dailyProblem");
     const favOn = featOn(features, "favorites");
     const daily = data[K_DAILY];
     const streak = data[K_STREAK] || { current: 0, longest: 0 };
     const favs = data[K_FAV] || [];
+    const ratingPreference = data[K_RATING] || "auto";
+    const ratingOptions = ['<option value="auto">Auto</option>'];
+    for (let rating = 800; rating <= 3500; rating += 100) {
+      ratingOptions.push('<option value="' + rating + '"' + (String(rating) === String(ratingPreference) ? ' selected' : '') + '>' + rating + '</option>');
+    }
+    if (ratingPreference === "auto") ratingOptions[0] = '<option value="auto" selected>Auto</option>';
 
     // The popup card already renders the "Practice" header — don't repeat it.
     let html = '';
 
     // Daily problem
+    html += '<div class="cpos-pr-rating-pick"><label for="cpos-daily-rating">Daily rating</label>'
+      + '<select id="cpos-daily-rating">' + ratingOptions.join('') + '</select></div>';
     if (!dailyOn) {
       html += '<div class="cpos-pr-block"><div class="cpos-pr-off">Daily problem is off. Enable it in Tools.</div></div>';
     } else if (daily && daily.url) {
@@ -145,6 +154,13 @@
 
     const another = mount.querySelector("#cpos-pr-another");
     if (another) another.addEventListener("click", pickAnother);
+    const ratingSelect = mount.querySelector("#cpos-daily-rating");
+    if (ratingSelect) {
+      ratingSelect.addEventListener("change", async () => {
+        await set({ [K_RATING]: ratingSelect.value, [K_DAILY]: null });
+        render();
+      });
+    }
     mount.querySelectorAll(".cpos-pr-x").forEach((b) => {
       b.addEventListener("click", () => removeFav(b.getAttribute("data-fav")));
     });
@@ -154,7 +170,7 @@
   if (chrome.storage && chrome.storage.onChanged) {
     chrome.storage.onChanged.addListener((changes, area) => {
       if (area !== "local") return;
-      if (changes[K_DAILY] || changes[K_STREAK] || changes[K_FAV] || changes[K_FEATURES]) render();
+      if (changes[K_DAILY] || changes[K_STREAK] || changes[K_FAV] || changes[K_FEATURES] || changes[K_RATING]) render();
     });
   }
 

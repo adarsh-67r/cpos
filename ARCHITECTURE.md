@@ -2,7 +2,7 @@
 
 CPOS is three local clients plus a static website. Nothing runs in the cloud; the browser extension and desktop apps communicate only over `127.0.0.1`.
 
-**Current releases:** terminal app 0.1.8 · VS Code extension 0.3.31 · browser companion 0.9.0 (Chrome) / 0.2.0 (Firefox) (see [CHANGELOG.md](CHANGELOG.md)).
+**Current releases:** terminal app 0.1.8 · VS Code extension 0.3.32 · browser companion 0.10.6 (Chrome + Firefox) (see [CHANGELOG.md](CHANGELOG.md)).
 
 ```
 ┌─────────────────┐     capture / submit      ┌──────────────────┐
@@ -45,6 +45,8 @@ The browser companion polls **both** ports so captures and submissions work whet
 | `POST` | `/capture/cses-progress` | CSES solved and attempted task identifiers |
 | `GET` | `/pending-submit` | Browser polls for a queued submission |
 | `POST` | `/pending-submit/consumed` | Clear the queue after autofill completes |
+| `GET` | `/config` | Read the default language and shared per-language templates |
+| `POST` | `/config` | Save a shared template or default language |
 | `GET` | `/health` | Liveness check |
 
 Cross-origin headers are permissive because traffic never leaves the machine.
@@ -76,12 +78,17 @@ Passwords and session cookies remain in the browser; CPOS does not read or store
 | --- | --- |
 | User’s open folder (VS Code) | Solution sources (e.g. `1982C.cpp`) when `cpos.saveLocation` is `workspaceFolder` |
 | `~/cpos/` or configured `workspace_dir` | Default terminal workspace (`codeforces/`, `cses/`, templates) |
-| `~/.config/cpos/` or `~/Library/Application Support/cpos/` | TUI config, SQLite cache, CSES progress |
+| `~/.config/cpos/` or `~/Library/Application Support/cpos/` | Shared config and per-language templates |
+| Platform data directory (`~/.local/share/cpos/`, `~/Library/Application Support/cpos/`, etc.) | SQLite cache and CSES progress |
 | `~/.cpos-vscode/` | VS Code sample cache, problem metadata, compile artifacts |
 
 When VS Code has forwarded a `solution_path`, or the terminal detects a recent session or project-like working directory, pressing **`o`** in the TUI creates new problems in that folder instead of only under `~/cpos/`.
 
-Shared settings (default language, compile commands, templates) are read from TUI config where the VS Code extension can access them.
+Shared templates are stored per language in the CPOS config directory. The TUI
+and VS Code runner expose them over `/config`; browser edits are cached locally
+when offline and pushed when either runner reconnects. Legacy VS Code
+`cpos.templateFile` and terminal `template_file` paths remain readable and are
+surfaced for migration.
 
 ## VS Code panel (summary)
 

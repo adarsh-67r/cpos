@@ -2,7 +2,7 @@
 
 Browser extension for Codeforces and CSES. Captures public sample tests and relays them to CPOS on your machine. Autofills judge submit pages when you submit from VS Code or the terminal app.
 
-**Current version:** 0.10.5 (see [CHANGELOG.md](../../CHANGELOG.md)).
+**Current version:** 0.10.6 (see [CHANGELOG.md](../../CHANGELOG.md)).
 
 ## Install
 
@@ -20,7 +20,7 @@ Also install the **[CPOS VS Code extension](https://marketplace.visualstudio.com
 
 Data is not sent to third-party servers—only to CPOS on localhost.
 
-## Interface & features (0.10.5)
+## Interface & features (0.10.6)
 
 Click the toolbar icon for the **popup hub** — flat, themeable, with a live CPOS connection indicator and switches for each feature:
 
@@ -29,10 +29,11 @@ Click the toolbar icon for the **popup hub** — flat, themeable, with a live CP
 - **Modernize** — a sleek restyle for Codeforces / CSES: modern system font, roomier spacing, rounded cards, cleaner tables/buttons/code. Typographic/structural only, so it composes with the colour theme.
 - **Recolor the site** — apply any CPOS palette to Codeforces / CSES.
 - **Code & LaTeX styling** — self-contained syntax highlighting for statement/editorial code blocks (no remote scripts).
-- **In-browser editor** — a CodeMirror-powered, line-numbered editor with syntax highlighting, completion basics, per-test diff, custom stdin, find & replace, and starter templates; write, run, and submit without leaving the browser. On by default. _Running_ compiles on the local CPOS runner (VS Code extension or terminal app) since browsers can't execute C++/Java; editing and submit don't need it. Submission reuses the existing background submit injector, so the capture/submit flow is unchanged.
+- **In-browser editor** — a CodeMirror-powered, line-numbered editor with syntax highlighting, completion basics, per-test diff, custom stdin, find & replace, and shared per-language starter templates; write, run, and submit without leaving the browser. On by default. _Running_ compiles on the local CPOS runner (VS Code extension or terminal app) since browsers can't execute C++/Java; editing and submit don't need it. Submission reuses the existing background submit injector, so the capture/submit flow is unchanged.
 - **Profile compare (VS)** — add other handles on a profile and compare stats side-by-side with a rating-history overlay.
 - **Contest reminders** — desktop notifications before upcoming Codeforces contests, with a configurable lead time (public `contest.list`).
-- **Daily problem & streak**, **Favorites**, and a draggable per-problem **timer**.
+- **Daily problem & streak** with Auto or exact-rating selection, **Favorites**, and a draggable per-problem **timer**.
+- **Shared templates** — paste or upload templates in the popup; changes sync to VS Code/TUI over localhost and queue locally while CPOS is offline.
 - **Problem focus** — a small always-available control on Codeforces problem pages that hides the right rail and expands the statement for split-screen solving.
 - **Problem tools** (rating badge, tag-hider/training mode, copy sample input, similar problems), **problemset tools** (solve-status coloring, hide-solved, solve counts), **standings tools** (colorize by language, friends filter), and **marker & notes**.
 

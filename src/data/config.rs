@@ -15,6 +15,9 @@ pub struct Config {
     /// unset, a built-in per-language template is used.
     #[serde(default)]
     pub template_file: Option<String>,
+    /// Per-language template paths shared by every CPOS client.
+    #[serde(default)]
+    pub template_files: HashMap<String, String>,
     /// Optional editor command to open solution files, with `{file}` as a
     /// placeholder. When unset, CPOS auto-detects `cursor`/`code`, then falls
     /// back to the OS default. Example: "nvim {file}" or "code -g {file}".
@@ -81,6 +84,7 @@ impl Default for Config {
             compile_commands,
             workspace_dir: None,
             template_file: None,
+            template_files: HashMap::new(),
             editor: None,
             cses_session: None,
         }
@@ -102,6 +106,60 @@ impl Config {
         dirs::data_dir()
             .unwrap_or_else(|| PathBuf::from("."))
             .join("cpos")
+    }
+
+    pub fn template_path(&self, lang: &str) -> Option<PathBuf> {
+        self.template_files
+            .get(lang)
+            .map(PathBuf::from)
+            .or_else(|| {
+                let shared = Self::shared_template_path(lang);
+                shared.exists().then_some(shared)
+            })
+            .or_else(|| {
+                if lang == self.default_language && self.template_files.is_empty() {
+                    self.template_file.as_ref().map(PathBuf::from)
+                } else {
+                    None
+                }
+            })
+    }
+
+    pub fn shared_template_path(lang: &str) -> PathBuf {
+        Self::config_dir()
+            .join("templates")
+            .join(format!("template.{}", template_extension(lang)))
+    }
+
+    pub fn read_template(&self, lang: &str) -> Option<String> {
+        self.template_path(lang)
+            .and_then(|path| std::fs::read_to_string(path).ok())
+    }
+
+    pub fn write_template(&mut self, lang: &str, content: &str) -> Result<PathBuf> {
+        let path = Self::shared_template_path(lang);
+        if content.trim().is_empty() {
+            if path.exists() {
+                std::fs::remove_file(&path)?;
+            }
+            self.template_files.remove(lang);
+            if self.template_file.as_deref() == Some(path.to_string_lossy().as_ref()) {
+                self.template_file = None;
+            }
+            self.save()?;
+            return Ok(path);
+        }
+        if let Some(parent) = path.parent() {
+            std::fs::create_dir_all(parent)?;
+        }
+        std::fs::write(&path, content)?;
+        self.template_files
+            .insert(lang.to_string(), path.to_string_lossy().to_string());
+        if lang == self.default_language {
+            self.template_file = Some(path.to_string_lossy().to_string());
+        }
+        self.save()?;
+        Ok(path)
     }
 
     pub fn load() -> Result<Self> {
@@ -178,5 +236,23 @@ impl Config {
             .get("cses")
             .map(|s| s.as_str())
             .filter(|s| !s.is_empty())
+    }
+}
+
+fn template_extension(lang: &str) -> &str {
+    match lang {
+        "c" => "c",
+        "cpp" => "cpp",
+        "python" | "pypy" => "py",
+        "java" => "java",
+        "kotlin" => "kt",
+        "rust" => "rs",
+        "go" => "go",
+        "csharp" => "cs",
+        "javascript" => "js",
+        "ruby" => "rb",
+        "haskell" => "hs",
+        "pascal" => "pas",
+        _ => "txt",
     }
 }

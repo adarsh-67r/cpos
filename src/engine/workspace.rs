@@ -373,12 +373,8 @@ fn session_tuple(s: StoredSession) -> (Problem, Option<PathBuf>, String) {
 /// Resolve the template to scaffold with: the user's configured template file
 /// if set and readable, otherwise the built-in per-language template.
 pub fn template_content(config: &Config, lang: &str) -> String {
-    if let Some(path) = config
-        .template_file
-        .as_ref()
-        .filter(|s| !s.trim().is_empty())
-    {
-        if let Ok(content) = std::fs::read_to_string(expand_tilde(path)) {
+    if let Some(path) = config.template_path(lang) {
+        if let Ok(content) = std::fs::read_to_string(expand_tilde(&path.to_string_lossy())) {
             return content;
         }
     }

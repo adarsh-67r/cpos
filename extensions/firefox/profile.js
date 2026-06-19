@@ -320,9 +320,20 @@
   }
 
   function insertPanel(node) {
-    const anchor = document.querySelector(".userbox") || document.querySelector("#pageContent .roundbox") || document.querySelector("#pageContent");
+    const page = document.querySelector("#pageContent") || document.body;
+    const userbox = document.querySelector(".userbox");
+    if (userbox && page.contains(userbox)) {
+      // Native Codeforces wraps the userbox in a floated right column. Insert
+      // after that top-level column (not inside it), then let the analytics root
+      // form its own formatting context beside the float.
+      let column = userbox;
+      while (column.parentElement && column.parentElement !== page) column = column.parentElement;
+      page.insertBefore(node, column.nextSibling);
+      return;
+    }
+    const anchor = document.querySelector("#pageContent .roundbox");
     if (anchor && anchor.parentNode) anchor.parentNode.insertBefore(node, anchor.nextSibling);
-    else (document.querySelector("#pageContent") || document.body).prepend(node);
+    else page.prepend(node);
   }
 
   // loading skeleton shown while the API calls are in flight

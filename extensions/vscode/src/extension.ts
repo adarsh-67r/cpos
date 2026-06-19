@@ -258,6 +258,30 @@ async function handleRequest(req: http.IncomingMessage, res: http.ServerResponse
     return;
   }
 
+  if (req.method === "GET" && req.url === "/config") {
+    sendJson(res, 200, await sharedConfigPayload());
+    return;
+  }
+
+  if (req.method === "POST" && req.url === "/config") {
+    try {
+      const body = await readJson<{ language?: string; content?: string; defaultLanguage?: string; default_language?: string }>(req);
+      const language = body.language?.trim();
+      if (language && typeof body.content === "string") {
+        await writeSharedTemplate(language, body.content);
+      }
+      const defaultLanguage = (body.defaultLanguage ?? body.default_language)?.trim();
+      if (defaultLanguage) {
+        await config().update("defaultLanguage", defaultLanguage, vscode.ConfigurationTarget.Global);
+      }
+      sendJson(res, 200, { ok: true });
+      refreshActions();
+    } catch (error) {
+      sendJson(res, 400, { ok: false, error: error instanceof Error ? error.message : String(error) });
+    }
+    return;
+  }
+
   if (req.method === "POST" && req.url === "/capture/problem") {
     try {
       const body = await readJson<CapturedProblem>(req);
@@ -552,6 +576,53 @@ function tuiConfigPath(): string {
   return path.join(base, "cpos", "config.toml");
 }
 
+function sharedTemplatePath(lang: string): string {
+  const ext = DEFAULT_COMMANDS[lang]?.extension ?? "txt";
+  return path.join(path.dirname(tuiConfigPath()), "templates", `template.${ext}`);
+}
+
+async function writeSharedTemplate(lang: string, content: string): Promise<void> {
+  const file = sharedTemplatePath(lang);
+  if (!content.trim()) {
+    try {
+      await fs.unlink(file);
+    } catch {
+      /* already using the built-in starter */
+    }
+    return;
+  }
+  await fs.mkdir(path.dirname(file), { recursive: true });
+  await fs.writeFile(file, content, "utf8");
+}
+
+async function readSharedTemplate(lang: string): Promise<string | undefined> {
+  try {
+    return await fs.readFile(sharedTemplatePath(lang), "utf8");
+  } catch {
+    return undefined;
+  }
+}
+
+async function sharedConfigPayload(): Promise<{ ok: true; defaultLanguage: string; templates: Record<string, string> }> {
+  const templates: Record<string, string> = {};
+  await Promise.all(Object.keys(DEFAULT_COMMANDS).map(async (lang) => {
+    const content = await readSharedTemplate(lang);
+    if (content !== undefined) templates[lang] = content;
+  }));
+  const defaultLanguage = resolveDefaultLanguage();
+  if (templates[defaultLanguage] === undefined) {
+    const legacy = (userSetting<string>("templateFile") ?? tuiConfig().templateFile ?? "").trim();
+    if (legacy) {
+      try {
+        templates[defaultLanguage] = await fs.readFile(expandHome(legacy), "utf8");
+      } catch {
+        /* keep the template absent and let clients use their built-in starter */
+      }
+    }
+  }
+  return { ok: true, defaultLanguage, templates };
+}
+
 function tuiConfig(): TuiConfig {
   const file = tuiConfigPath();
   try {
@@ -844,9 +915,19 @@ function expandHome(value: string): string {
 }
 
 async function templateFor(lang: string): Promise<string> {
-  // Prefer an explicit VS Code template, then the template configured in the
-  // CPOS TUI, then the built-in starter.
-  const templateFile = (userSetting<string>("templateFile") ?? tuiConfig().templateFile ?? "").trim();
+  // Prefer the shared per-language CPOS template. Existing VS Code/TUI template
+  // paths remain the fallback and are surfaced in the Config UI for migration.
+  const shared = await readSharedTemplate(lang);
+  if (shared !== undefined) return shared;
+  const explicitTemplate = (userSetting<string>("templateFile") ?? "").trim();
+  if (explicitTemplate) {
+    try {
+      return await fs.readFile(expandHome(explicitTemplate), "utf8");
+    } catch (error) {
+      OUTPUT.appendLine(`Could not read template file: ${String(error)}`);
+    }
+  }
+  const templateFile = (tuiConfig().templateFile ?? "").trim();
   if (templateFile) {
     try {
       return await fs.readFile(expandHome(templateFile), "utf8");
@@ -1401,6 +1482,11 @@ type PanelState = {
   theme?: string;
   solution?: SolutionState;
   solutionBlocked: boolean;
+  config: {
+    defaultLanguage: string;
+    templates: Record<string, string>;
+    languages: string[];
+  };
 };
 
 async function currentState(): Promise<PanelState> {
@@ -1409,6 +1495,7 @@ async function currentState(): Promise<PanelState> {
   const tests = source ? await loadSamples(source) : [];
   const results = source ? runResults.get(source) ?? [] : [];
   const solution = meta && solutionData?.problemId === meta.id ? solutionData : undefined;
+  const sharedConfig = await sharedConfigPayload();
   return {
     source,
     fileName: source ? path.basename(source) : "No active file",
@@ -1420,7 +1507,12 @@ async function currentState(): Promise<PanelState> {
     running: runningFor === source && source !== undefined,
     theme: extContext?.globalState.get<string>(PANEL_THEME_KEY),
     solution,
-    solutionBlocked: isSolutionBlocked(meta)
+    solutionBlocked: isSolutionBlocked(meta),
+    config: {
+      defaultLanguage: sharedConfig.defaultLanguage,
+      templates: sharedConfig.templates,
+      languages: Object.keys(DEFAULT_COMMANDS)
+    }
   };
 }
 
@@ -1556,6 +1648,9 @@ class CposActionsProvider implements vscode.WebviewViewProvider {
     index?: number;
     tests?: TestCase[];
     theme?: string;
+    language?: string;
+    content?: string;
+    defaultLanguage?: string;
   }): Promise<void> {
     switch (message.type) {
       case "ready":
@@ -1563,6 +1658,16 @@ class CposActionsProvider implements vscode.WebviewViewProvider {
         break;
       case "saveTheme":
         if (message.theme) await extContext?.globalState.update(PANEL_THEME_KEY, message.theme);
+        break;
+      case "saveTemplate":
+        if (message.language && typeof message.content === "string") {
+          await writeSharedTemplate(message.language, message.content);
+        }
+        if (message.defaultLanguage) {
+          await config().update("defaultLanguage", message.defaultLanguage, vscode.ConfigurationTarget.Global);
+        }
+        await this.postState();
+        vscode.window.showInformationMessage("CPOS: template saved and shared with local CPOS clients.");
         break;
       case "run":
         if (message.tests) await this.persistTests(message.tests);
@@ -2236,6 +2341,30 @@ class CposActionsProvider implements vscode.WebviewViewProvider {
   .tab { padding: 6px 12px; border: none; background: transparent; color: var(--dim); cursor: pointer; border-bottom: 2px solid transparent; font-size: 11px; font-family: var(--mono); text-transform: uppercase; letter-spacing: 0.05em; }
   .tab.active { color: var(--fg); border-bottom-color: var(--accent); font-weight: 700; }
   .tab:hover:not(.active) { color: var(--fg); }
+  .settings-tab {
+    display: inline-flex; align-items: center; justify-content: center;
+    padding: 5px 8px; color: #fff;
+  }
+  .settings-tab svg { width: 13px; height: 13px; }
+  .settings-tab:hover, .settings-tab.active { color: #fff; border-bottom-color: var(--accent); }
+  .config-wrapper { overflow: auto; min-height: 0; padding-bottom: 8px; }
+  .config-card { padding: 12px; display: flex; flex-direction: column; gap: 10px; }
+  .config-title { font-weight: 700; font-size: 12px; color: var(--fg); }
+  .config-note { color: var(--dim); font-size: 10px; line-height: 1.45; }
+  .config-field { display: flex; flex-direction: column; gap: 5px; }
+  .config-field label { color: var(--dim); font-size: 9px; text-transform: uppercase; letter-spacing: .08em; }
+  .config-field select, .config-field textarea {
+    width: 100%; color: var(--fg); background: var(--bg);
+    border: 1px solid var(--border); border-radius: 6px; font: inherit;
+  }
+  .config-field select { padding: 7px 8px; }
+  .config-field textarea { min-height: 260px; padding: 9px; resize: vertical; line-height: 1.45; tab-size: 4; }
+  .config-buttons { display: flex; gap: 6px; flex-wrap: wrap; }
+  .config-buttons button {
+    border: 1px solid var(--border); border-radius: 6px; padding: 6px 9px;
+    color: var(--fg); background: var(--btn-secondary-bg); font: inherit; cursor: pointer;
+  }
+  .config-buttons button.primary { color: var(--btn-fg); background: var(--btn-bg); border-color: var(--btn-border); }
   .statement-view {
     max-width: 980px;
     margin: 0 auto;
@@ -2467,6 +2596,7 @@ class CposActionsProvider implements vscode.WebviewViewProvider {
   const CPOS_LOGO = ${JSON.stringify(logoUri)};
   const GH_ICON = '<svg aria-hidden="true" viewBox="0 0 16 16" width="12" height="12" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.18.82.63-.18 1.31-.27 1.98-.27.67 0 1.35.09 1.98.27 1.51-1.04 2.18-.82 2.18-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>';
   const HEART_ICON = '<svg aria-hidden="true" viewBox="0 0 16 16" width="12" height="12" fill="currentColor"><path d="M8 14.25.345 6.595a3.75 3.75 0 1 1 5.305-5.305L8 3.64l2.35-2.35a3.75 3.75 0 1 1 5.305 5.305L8 14.25z"/></svg>';
+  const SETTINGS_ICON = '<svg aria-hidden="true" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="2.2"/><path d="M6.8 1.8h2.4l.5 1.7 1.4.8 1.7-.5L14 5.9l-1.2 1.3v1.6l1.2 1.3-1.2 2.1-1.7-.5-1.4.8-.5 1.7H6.8l-.5-1.7-1.4-.8-1.7.5L2 10.1l1.2-1.3V7.2L2 5.9l1.2-2.1 1.7.5 1.4-.8.5-1.7Z"/></svg>';
   const vscode = acquireVsCodeApi();
   let state = { tests: [], results: [], source: null };
   let renderedSource = undefined;
@@ -3057,18 +3187,42 @@ class CposActionsProvider implements vscode.WebviewViewProvider {
   }
 
   function tabsHtml() {
-    if (!state.meta) return '';
     const tabs = [{ id: 'tests', label: 'Tests' }];
-    if (state.meta.statementHtml) tabs.push({ id: 'statement', label: 'Statement' });
+    if (state.meta && state.meta.statementHtml) tabs.push({ id: 'statement', label: 'Statement' });
     // Solution tab is hidden while the problem's contest is still running.
-    if (!state.solutionBlocked) tabs.push({ id: 'solution', label: 'Solution' });
+    if (state.meta && !state.solutionBlocked) tabs.push({ id: 'solution', label: 'Solution' });
     return '<div class="tabs" role="tablist">'
       + tabs.map(function(t) {
         return '<button role="tab" aria-selected="' + (activeTab === t.id ? "true" : "false")
           + '" tabindex="0" class="tab ' + (activeTab === t.id ? "active" : "")
           + '" data-act="setTab" data-tab="' + t.id + '">' + t.label + '</button>';
       }).join('')
+      + '<button role="tab" aria-selected="' + (activeTab === 'config' ? "true" : "false")
+      + '" class="tab settings-tab ' + (activeTab === 'config' ? "active" : "")
+      + '" data-act="openConfig" title="CPOS settings" aria-label="CPOS settings">' + SETTINGS_ICON + '</button>'
       + '</div>';
+  }
+
+  function configSection() {
+    const cfg = state.config || { defaultLanguage: 'cpp', templates: {}, languages: ['cpp'] };
+    const languages = cfg.languages || ['cpp'];
+    const chosen = languages.indexOf(cfg.defaultLanguage) >= 0 ? cfg.defaultLanguage : languages[0];
+    const options = languages.map(function(lang) {
+      return '<option value="' + esc(lang) + '"' + (lang === chosen ? ' selected' : '') + '>' + esc(lang) + '</option>';
+    }).join('');
+    const content = (cfg.templates && cfg.templates[chosen]) || '';
+    return '<div class="config-wrapper"><div class="box config-card">'
+      + '<div class="config-title">Shared templates</div>'
+      + '<div class="config-note">Saved under your CPOS config directory and used by VS Code, the TUI, and the browser editor when a local CPOS server is running.</div>'
+      + '<div class="config-field"><label for="config-default-lang">Default language</label><select id="config-default-lang">' + options + '</select></div>'
+      + '<div class="config-field"><label for="config-lang">Language</label><select id="config-lang">' + options + '</select></div>'
+      + '<div class="config-field"><label for="config-template">Template</label><textarea id="config-template" spellcheck="false">' + esc(content) + '</textarea></div>'
+      + '<input id="config-upload" type="file" hidden />'
+      + '<div class="config-buttons">'
+      + '<button data-act="uploadTemplate">Upload file</button>'
+      + '<button data-act="resetTemplate">Reset</button>'
+      + '<button class="primary" data-act="saveTemplate">Save &amp; sync</button>'
+      + '</div></div></div>';
   }
 
   function sanitizeHtml(html) {
@@ -3244,6 +3398,8 @@ class CposActionsProvider implements vscode.WebviewViewProvider {
         body = statementSection();
       } else if (activeTab === "solution" && state.meta && !state.solutionBlocked) {
         body = solutionSection();
+      } else if (activeTab === "config") {
+        body = configSection();
       } else {
         body = testsView();
       }
@@ -3316,7 +3472,7 @@ class CposActionsProvider implements vscode.WebviewViewProvider {
 
   function bind() {
     document.querySelectorAll("[data-act]").forEach((el) => {
-      el.onclick = () => {
+      el.onclick = async () => {
         const act = el.getAttribute("data-act");
         const idx = el.getAttribute("data-index");
         if (act === "toggleThemes") {
@@ -3330,6 +3486,37 @@ class CposActionsProvider implements vscode.WebviewViewProvider {
           document.querySelectorAll(".swatch").forEach((s) => {
             s.classList.toggle("active", s.getAttribute("data-theme") === theme);
           });
+          return;
+        }
+        if (act === "openConfig") {
+          activeTab = "config";
+          persistUiState();
+          render();
+          return;
+        }
+        if (act === "uploadTemplate") {
+          const input = document.getElementById("config-upload");
+          if (input) input.click();
+          return;
+        }
+        if (act === "resetTemplate") {
+          const textarea = document.getElementById("config-template");
+          if (textarea) textarea.value = "";
+          return;
+        }
+        if (act === "saveTemplate") {
+          const language = document.getElementById("config-lang");
+          const defaultLanguage = document.getElementById("config-default-lang");
+          const textarea = document.getElementById("config-template");
+          if (language && textarea) {
+            state.config.templates[language.value] = textarea.value;
+            state.config.defaultLanguage = defaultLanguage ? defaultLanguage.value : state.config.defaultLanguage;
+            send("saveTemplate", {
+              language: language.value,
+              content: textarea.value,
+              defaultLanguage: state.config.defaultLanguage
+            });
+          }
           return;
         }
         if (act === "addTest") {
@@ -3380,6 +3567,21 @@ class CposActionsProvider implements vscode.WebviewViewProvider {
         send(act);
       };
     });
+    const configLang = document.getElementById("config-lang");
+    const configTemplate = document.getElementById("config-template");
+    if (configLang && configTemplate) {
+      configLang.onchange = () => {
+        configTemplate.value = state.config.templates[configLang.value] || "";
+      };
+    }
+    const configUpload = document.getElementById("config-upload");
+    if (configUpload && configTemplate) {
+      configUpload.onchange = async () => {
+        const file = configUpload.files && configUpload.files[0];
+        if (file) configTemplate.value = await file.text();
+        configUpload.value = "";
+      };
+    }
     document.querySelectorAll("textarea.in").forEach((ta) => {
       ta.oninput = () => {
         syncInputLines(ta);
@@ -3421,7 +3623,7 @@ class CposActionsProvider implements vscode.WebviewViewProvider {
       }
       const sameFile = incoming.source === renderedSource && renderedSource !== undefined;
       state = incoming;
-      if (sameFile) patch();
+      if (sameFile && activeTab !== "config") patch();
       else render();
     }
   });

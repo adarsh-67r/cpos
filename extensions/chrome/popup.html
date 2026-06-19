@@ -118,6 +118,22 @@
     <div id="cpos-practice-section"></div>
   </section>
 
+  <details class="card adv" id="templateCard">
+    <summary><span class="card-h">Templates</span><small id="templateSync">local</small></summary>
+    <div class="template-config">
+      <label class="template-label" for="templateLang">Template language</label>
+      <select id="templateLang"></select>
+      <label class="template-label" for="templateText">Starter template</label>
+      <textarea id="templateText" spellcheck="false" placeholder="Paste your template here…"></textarea>
+      <input id="templateFile" type="file" hidden />
+      <div class="template-actions">
+        <button id="templateUpload" type="button">Upload file</button>
+        <button id="templateReset" type="button">Reset</button>
+        <button id="templateSave" class="primary" type="button">Save &amp; sync</button>
+      </div>
+    </div>
+  </details>
+
   <section class="card">
     <div class="card-h">Appearance <small id="siteHint"></small></div>
     <div class="theme-field">

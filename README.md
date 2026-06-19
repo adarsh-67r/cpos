@@ -74,6 +74,7 @@ Install from the [Marketplace](https://marketplace.visualstudio.com/items?itemNa
 - **GitHub** — open the CPOS repository
 - **Test cases** — edit samples; multi-case inputs show linked input/output blocks when captured from Codeforces
 - **Theme** — five panel themes (see [Settings](#settings))
+- **Settings gear** — beside Solution; configure the default language and shared per-language templates for VS Code, the terminal app, and browser editor
 
 ---
 

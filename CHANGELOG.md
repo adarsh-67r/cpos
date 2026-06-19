@@ -5,11 +5,37 @@ All notable changes to CPOS are documented here. Components are versioned indepe
 | Component | Current version | Version file |
 | --- | --- | --- |
 | Terminal app | 0.1.8 | `Cargo.toml` |
-| VS Code extension | 0.3.31 | `extensions/vscode/package.json` |
-| Browser companion (Chrome) | 0.10.5 | `extensions/chrome/manifest.json` |
-| Browser companion (Firefox) | 0.10.5 | `extensions/firefox/manifest.json` |
+| VS Code extension | 0.3.32 | `extensions/vscode/package.json` |
+| Browser companion (Chrome) | 0.10.6 | `extensions/chrome/manifest.json` |
+| Browser companion (Firefox) | 0.10.6 | `extensions/firefox/manifest.json` |
 
 Format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
+
+---
+
+## Browser companions (Chrome + Firefox) — 0.10.6 - 2026-06-19
+
+### Added
+- **Configurable daily rating.** Choose Auto or an exact Codeforces rating for the daily problem from the popup.
+- **Shared templates.** Paste or upload per-language starter templates and sync them with the VS Code extension or terminal app over localhost. Offline edits are queued and synced when CPOS reconnects.
+
+### Changed
+- The in-browser editor now uses shared templates for new drafts and Reset, while retaining built-in starters as a fallback.
+- Existing VS Code `cpos.templateFile` and terminal `template_file` templates are imported through the local config API.
+
+### Fixed
+- **Profile analytics placement.** Analytics no longer fall far down the Codeforces profile page when Modernize is disabled.
+
+---
+
+## VS Code extension — 0.3.32 - 2026-06-19
+
+### Added
+- **Shared template configuration.** A settings gear in the CPOS panel opens a Config tab where users can select a language, paste or upload a template, reset it, and save it for VS Code, the terminal app, and browser companion.
+- **Local config API.** The VS Code runner now exposes shared template configuration over localhost for the Chrome and Firefox browser editors.
+
+### Changed
+- Existing `cpos.templateFile` and terminal `template_file` configurations are loaded into the new template editor automatically. Saving migrates the template to CPOS's shared per-language template directory.
 
 ---
 

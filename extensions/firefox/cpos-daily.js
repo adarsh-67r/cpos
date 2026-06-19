@@ -21,6 +21,7 @@
   const K_HANDLE = "cpos.daily.handle";      // last known handle
   const K_STREAK = "cpos.streak.data";       // { current, longest, lastActive, computedAt }
   const K_DISMISS = "cpos.daily.dismissed";  // date string of last dismissal
+  const K_RATING = "cpos.daily.rating";       // "auto" or an exact Codeforces rating
 
   // ── small helpers (mirrors profile.js conventions) ──────────────────────────
   const pad2 = (n) => String(n).padStart(2, "0");
@@ -121,7 +122,9 @@
 
   // ── pick a deterministic-per-day problem within the rating band ─────────────
   // band tuned to user rating ~[r-100, r+200]; default 1100-1400 if unknown.
-  function ratingBand(rating) {
+  function ratingBand(rating, preference) {
+    const exact = Number(preference);
+    if (preference !== "auto" && Number.isFinite(exact) && exact >= 800) return [exact, exact];
     if (rating == null) return [1100, 1400];
     return [Math.max(800, rating - 100), rating + 200];
   }
@@ -194,17 +197,20 @@
     await set({ [K_STREAK]: streak });
 
     // Daily problem — only recompute if the stored one is from a previous day.
-    const stored = (await get([K_DAILY]))[K_DAILY];
+    const storedData = await get([K_DAILY, K_RATING]);
+    const stored = storedData[K_DAILY];
+    const ratingPreference = storedData[K_RATING] || "auto";
     const today = todayStr();
-    if (!stored || stored.date !== today) {
+    if (!stored || stored.date !== today || stored.ratingPreference !== ratingPreference) {
       let problems = [];
       try { problems = await getProblemset(); } catch (e) { problems = []; }
       if (problems.length) {
         const solved = solvedSet(submissions);
-        const band = ratingBand(rating);
+        const band = ratingBand(rating, ratingPreference);
         const seed = today + "|" + (handle || "anon");
         const pick = pickProblem(problems, band, solved, seed, 0);
-        if (pick) await set({ [K_DAILY]: Object.assign({ date: today, seed, nudge: 0 }, pick) });
+        if (pick) await set({ [K_DAILY]: Object.assign({ date: today, seed, nudge: 0, ratingPreference }, pick) });
+        else await set({ [K_DAILY]: null });
       }
     }
   }
@@ -258,6 +264,9 @@
       const node = document.getElementById(BANNER_ID);
       if (node) applyBannerTheme(node);
     }
+  });
+  chrome.storage.onChanged.addListener((changes, area) => {
+    if (area === "local" && changes[K_RATING]) sync();
   });
   sync();
 })();

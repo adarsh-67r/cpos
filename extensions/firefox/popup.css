@@ -104,6 +104,27 @@ details.adv > summary::after {
 details.adv[open] > summary::after { transform: rotate(45deg); }
 details.adv > summary:hover { color: var(--fg); }
 
+/* ── shared template editor ─────────────────────────────────────────────── */
+.template-config { display: flex; flex-direction: column; gap: 7px; padding: 7px 4px 4px; }
+.template-label { color: var(--dim); font-size: 9px; text-transform: uppercase; letter-spacing: .09em; }
+.template-config select, .template-config textarea {
+  width: 100%; color: var(--fg); background: var(--bg);
+  border: 1px solid var(--border); border-radius: 8px; font: inherit;
+}
+.template-config select { padding: 7px 8px; }
+.template-config textarea {
+  min-height: 180px; padding: 8px; resize: vertical;
+  font-family: ui-monospace, "SFMono-Regular", Consolas, monospace;
+  font-size: 11px; line-height: 1.4; tab-size: 4;
+}
+.template-config select:focus, .template-config textarea:focus { outline: none; border-color: var(--accent); }
+.template-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+.template-actions button {
+  border: 1px solid var(--border); border-radius: 7px; padding: 6px 8px;
+  color: var(--fg); background: var(--panel-2); font: inherit; font-size: 10.5px; cursor: pointer;
+}
+.template-actions button.primary { color: var(--accent-on); background: var(--accent); border-color: var(--accent); }
+
 /* ── theme picker ───────────────────────────────────────────────────────── */
 .theme-field { display: flex; flex-direction: column; gap: 7px; padding: 4px 4px 6px; }
 .theme-lbl { display: flex; flex-direction: column; gap: 1px; }
