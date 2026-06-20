@@ -4,16 +4,28 @@ All notable changes to CPOS are documented here. Components are versioned indepe
 
 | Component | Current version | Version file |
 | --- | --- | --- |
-| Terminal app | 0.1.8 | `Cargo.toml` |
-| VS Code extension | 0.3.32 | `extensions/vscode/package.json` |
-| Browser companion (Chrome) | 0.11.0 | `extensions/chrome/manifest.json` |
-| Browser companion (Firefox) | 0.11.0 | `extensions/firefox/manifest.json` |
+| Terminal app | 0.2.0 | `Cargo.toml` |
+| VS Code extension | 0.5.0 | `extensions/vscode/package.json` |
+| Browser companion (Chrome) | 0.15.0 | `extensions/chrome/manifest.json` |
+| Browser companion (Firefox) | 0.15.0 | `extensions/firefox/manifest.json` |
 
 Format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
-## Browser companions (Chrome + Firefox) — 0.11.0 - 2026-06-20
+## Challenge polish — 2026-06-20
+
+Browser companion **0.15.0**, VS Code **0.5.0**, terminal **0.2.0**.
+
+### Changed
+- **Challenges popup redesigned.** Themed to match the rest of the popup (no more default-looking controls). Your Codeforces handle is auto-detected and shown read-only; online delivery is always on; the rating field only appears for a random problem; and a single "Accept public challenges" toggle with a rating range replaces the separate find button. Removed the connection/offline indicator and the redundant Challenges feature row.
+- **VS Code panel: responsive header.** Tabs and the Sponsor/Theme buttons collapse to icons when the panel is narrow, so nothing overflows. The "Video Solutions" box no longer shows when no videos are found, and the Templates section is now collapsible.
+- **TUI:** a small block-`C` brand logo replaces the diamond mark.
+
+### Fixed
+- The "Accept public challenges" toggle is now clickable (wrapped in a label).
+
+## Challenge mode (browser 0.15.0) - 2026-06-20
 
 ### Added
 - **Challenge mode — 1v1 problem races, refereed by Codeforces.** Challenge a friend by handle (or pick/randomize the problem, rating, and time limit), then race: the winner is decided from **public Codeforces submissions** — first Accepted after the challenge starts — so nothing is ever self-reported. Solve and submit through CPOS as usual; the result is announced automatically.

@@ -155,6 +155,7 @@
   async function checkConnection() {
     const dot = document.getElementById("connDot");
     const text = document.getElementById("connText");
+    if (!dot || !text) return; // connection indicator removed from the header
     for (const base of ENDPOINTS) {
       try {
         const res = await fetch(`${base}/pending-submit`, { cache: "no-store" });

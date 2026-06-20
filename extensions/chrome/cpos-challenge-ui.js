@@ -194,7 +194,8 @@
     pubRow.appendChild(el("span", { class: "lbl" }, "Accept public challenges"));
     const minR = el("input", { type: "number", class: "ch-range", value: String(range.min), min: "800", max: "3500", step: "100", title: "min rating" });
     const maxR = el("input", { type: "number", class: "ch-range", value: String(range.max), min: "800", max: "3500", step: "100", title: "max rating" });
-    const swWrap = el("span", { class: "sw" }); const swIn = el("input", { type: "checkbox" }); if (publicOn) swIn.checked = true;
+    // Must be a <label> so a click reaches the (zero-size, visually-hidden) checkbox.
+    const swWrap = el("label", { class: "sw" }); const swIn = el("input", { type: "checkbox" }); if (publicOn) swIn.checked = true;
     swWrap.appendChild(swIn); swWrap.appendChild(el("span"));
     pubRow.appendChild(minR); pubRow.appendChild(el("span", null, "–")); pubRow.appendChild(maxR); pubRow.appendChild(swWrap);
     mount.appendChild(pubRow);

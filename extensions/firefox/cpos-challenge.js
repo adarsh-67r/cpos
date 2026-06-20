@@ -15,11 +15,7 @@
   const set = (obj) => new Promise((res) => store.set(obj, () => res()));
 
   async function featureOn() {
-    try {
-      if (self.CPOS && typeof self.CPOS.feature === "function") return await self.CPOS.feature(C.FEATURE);
-    } catch (_) {}
-    const raw = await get(["cpos.features"]);
-    return (raw["cpos.features"] || {})[C.FEATURE] !== false; // default on
+    return true; // Challenges is always on (no toggle); handle detection + link import always run.
   }
 
   // ---- detect + persist the logged-in handle ---------------------------------

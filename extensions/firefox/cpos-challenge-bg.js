@@ -23,9 +23,7 @@
   const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
   async function featureEnabled() {
-    const raw = await get([FEATURES_STORE_KEY]);
-    const f = raw[FEATURES_STORE_KEY] || {};
-    return f[C.FEATURE] !== false; // default on
+    return true; // Challenges is always on (no enable/disable toggle anymore).
   }
   async function notifyEnabled() {
     const raw = await get([C.NOTIFY_KEY]);

@@ -2341,6 +2341,16 @@ class CposActionsProvider implements vscode.WebviewViewProvider {
   .tab { padding: 6px 12px; border: none; background: transparent; color: var(--dim); cursor: pointer; border-bottom: 2px solid transparent; font-size: 11px; font-family: var(--mono); text-transform: uppercase; letter-spacing: 0.05em; }
   .tab.active { color: var(--fg); border-bottom-color: var(--accent); font-weight: 700; }
   .tab:hover:not(.active) { color: var(--fg); }
+  .tab { display: inline-flex; align-items: center; gap: 6px; }
+  .tab-ico { display: none; align-items: center; }
+  .tab-ico svg { width: 14px; height: 14px; display: block; }
+  /* Narrow panel: collapse tab text + header button text to icons so nothing overflows. */
+  .compact .tabs { gap: 2px; }
+  .compact .tab { padding: 6px 8px; }
+  .compact .tab-label { display: none; }
+  .compact .tab-ico { display: inline-flex; }
+  .compact .headtools .iconbtn .btn-label { display: none; }
+  .compact .headtools .iconbtn.sponsor, .compact .headtools .iconbtn.theme { padding: 4px 6px; }
   .settings-tab {
     display: inline-flex; align-items: center; justify-content: center;
     padding: 5px 8px; color: #fff;
@@ -2605,6 +2615,13 @@ class CposActionsProvider implements vscode.WebviewViewProvider {
   const GH_ICON = '<svg aria-hidden="true" viewBox="0 0 16 16" width="12" height="12" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.18.82.63-.18 1.31-.27 1.98-.27.67 0 1.35.09 1.98.27 1.51-1.04 2.18-.82 2.18-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>';
   const HEART_ICON = '<svg aria-hidden="true" viewBox="0 0 16 16" width="12" height="12" fill="currentColor"><path d="M8 14.25.345 6.595a3.75 3.75 0 1 1 5.305-5.305L8 3.64l2.35-2.35a3.75 3.75 0 1 1 5.305 5.305L8 14.25z"/></svg>';
   const SETTINGS_ICON = '<svg aria-hidden="true" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="2.2"/><path d="M6.8 1.8h2.4l.5 1.7 1.4.8 1.7-.5L14 5.9l-1.2 1.3v1.6l1.2 1.3-1.2 2.1-1.7-.5-1.4.8-.5 1.7H6.8l-.5-1.7-1.4-.8-1.7.5L2 10.1l1.2-1.3V7.2L2 5.9l1.2-2.1 1.7.5 1.4-.8.5-1.7Z"/></svg>';
+  // Per-tab glyphs shown when the panel is too narrow for text labels.
+  const TAB_ICONS = {
+    tests: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><rect x="3" y="2.5" width="10" height="11" rx="1.5"/><path d="m5.4 6 1.2 1.2L8.9 5"/><path d="M5.5 10h5"/></svg>',
+    statement: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><rect x="3.5" y="2" width="9" height="12" rx="1.5"/><path d="M5.5 5h5M5.5 8h5M5.5 11h3"/></svg>',
+    solution: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M8 2.2a4 4 0 0 0-2.4 7.2c.5.4.8 1 .8 1.6h3.2c0-.6.3-1.2.8-1.6A4 4 0 0 0 8 2.2Z"/><path d="M6.6 13.2h2.8"/></svg>',
+    compete: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M5 3h6v3a3 3 0 0 1-6 0V3Z"/><path d="M5 3.8H3.4v1A1.8 1.8 0 0 0 5 6.6M11 3.8h1.6v1A1.8 1.8 0 0 1 11 6.6"/><path d="M8 9v1.8M6 13.2h4l-.4-2.4H6.4Z"/></svg>'
+  };
   const vscode = acquireVsCodeApi();
   let state = { tests: [], results: [], source: null };
   let renderedSource = undefined;
@@ -3067,9 +3084,9 @@ class CposActionsProvider implements vscode.WebviewViewProvider {
       + '<div class="row">'
       + '<span class="brandrow"><img class="logo" src="' + CPOS_LOGO + '" alt="CPOS" /><span class="title">CPOS</span></span>'
       + '<span class="headtools">'
-      + '<button class="iconbtn sponsor" data-act="openSponsor" title="Sponsor CPOS — keep it free and local-first">' + HEART_ICON + 'Sponsor</button>'
+      + '<button class="iconbtn sponsor" data-act="openSponsor" title="Sponsor CPOS — keep it free and local-first">' + HEART_ICON + '<span class="btn-label">Sponsor</span></button>'
       + '<button class="iconbtn gh icononly" data-act="openGithub" title="CPOS on GitHub" aria-label="CPOS on GitHub">' + GH_ICON + '</button>'
-      + '<button class="iconbtn theme" data-act="toggleThemes" title="Themes">◑ theme</button>'
+      + '<button class="iconbtn theme" data-act="toggleThemes" title="Themes">◑<span class="btn-label"> theme</span></button>'
       + '</span>'
       + '</div>'
       + '<div class="rule"></div>'
@@ -3202,8 +3219,10 @@ class CposActionsProvider implements vscode.WebviewViewProvider {
     return '<div class="tabs" role="tablist">'
       + tabs.map(function(t) {
         return '<button role="tab" aria-selected="' + (activeTab === t.id ? "true" : "false")
-          + '" tabindex="0" class="tab ' + (activeTab === t.id ? "active" : "")
-          + '" data-act="setTab" data-tab="' + t.id + '">' + t.label + '</button>';
+          + '" tabindex="0" title="' + t.label + '" class="tab ' + (activeTab === t.id ? "active" : "")
+          + '" data-act="setTab" data-tab="' + t.id + '">'
+          + '<span class="tab-ico">' + (TAB_ICONS[t.id] || '') + '</span>'
+          + '<span class="tab-label">' + t.label + '</span></button>';
       }).join('')
       + '<button role="tab" aria-selected="' + (activeTab === 'config' ? "true" : "false")
       + '" class="tab settings-tab ' + (activeTab === 'config' ? "active" : "")
@@ -3637,6 +3656,16 @@ class CposActionsProvider implements vscode.WebviewViewProvider {
       else render();
     }
   });
+
+  // Collapse tab/header text to icons when the panel is too narrow to fit them.
+  function applyCompact() {
+    try {
+      const w = document.documentElement.clientWidth || document.body.clientWidth || 999;
+      document.body.classList.toggle("compact", w < 360);
+    } catch (e) {}
+  }
+  try { new ResizeObserver(applyCompact).observe(document.documentElement); } catch (e) {}
+  applyCompact();
 
   send("ready");
 </script>
