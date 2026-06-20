@@ -36,6 +36,42 @@
   async function saveChallenges(map) {
     await set({ [C.STORE_KEY]: map });
   }
+  function normalizeRange(range) {
+    const a = Math.max(800, Math.min(3500, Number(range && range.min) || 800));
+    const b = Math.max(800, Math.min(3500, Number(range && range.max) || 3500));
+    return a <= b ? { min: a, max: b } : { min: b, max: a };
+  }
+  async function loadSettings() {
+    const raw = await get([C.SETTINGS_KEY, "cpos.challenge.publicOn", "cpos.challenge.range"]);
+    const saved = raw[C.SETTINGS_KEY];
+    if (saved) {
+      return {
+        publicOn: saved.publicOn === true,
+        range: normalizeRange(saved.range),
+        updatedAt: Number(saved.updatedAt) || 0
+      };
+    }
+    const migrated = {
+      publicOn: raw["cpos.challenge.publicOn"] === true,
+      range: normalizeRange(raw["cpos.challenge.range"]),
+      updatedAt: Date.now()
+    };
+    await saveSettings(migrated);
+    return migrated;
+  }
+  async function saveSettings(settings) {
+    const value = {
+      publicOn: settings.publicOn === true,
+      range: normalizeRange(settings.range),
+      updatedAt: Number(settings.updatedAt) || Date.now()
+    };
+    await set({
+      [C.SETTINGS_KEY]: value,
+      "cpos.challenge.publicOn": value.publicOn,
+      "cpos.challenge.range": value.range
+    });
+    return value;
+  }
 
   // ---- public CF API ----------------------------------------------------------
   async function userStatus(handle) {
@@ -144,7 +180,7 @@
     if (dirty) await saveChallenges(map);
   }
 
-  // ---- optional online transport (ntfy.sh) — OPT-IN, off by default ----------
+  // ---- online transport (ntfy.sh) --------------------------------------------
   // Direct, no-URL delivery: each user subscribes (polls) a topic derived from
   // their own handle; challenging someone publishes to THEIR topic. Codeforces
   // still decides the winner — ntfy only carries the invite/accept/decline.
@@ -285,13 +321,51 @@
     if (dirty) await saveChallenges(map);
   }
 
-  // Two-way sync with the local CPOS apps (VS Code :27122 / TUI :27121) so the
-  // Compete tab and the popup show the same challenges. We pull (adopt the most-
-  // advanced status), then push our state + detected handle + public settings.
-  const APP_BASES = ["http://127.0.0.1:27122", "http://127.0.0.1:27121"];
+  // The browser companion owns delivery, public-lobby discovery, and refereeing.
+  // VS Code mirrors this state over localhost. Preferences are timestamped so an
+  // older client can never silently overwrite a newer choice.
+  const APP_BASES = ["http://127.0.0.1:27122"];
+  const rank = (s) => ({ pending: 0, active: 1, won: 2, lost: 2, draw: 2, expired: 2, declined: 2, removed: 3 }[s] ?? 0);
+
+  async function refreshPublicMatches() {
+    const settings = await loadSettings();
+    if (!settings.publicOn) {
+      await set({ [C.PUBLIC_MATCHES_KEY]: [] });
+      return [];
+    }
+    const me = await myHandle();
+    const have = await loadChallenges();
+    let text = "";
+    try {
+      const res = await fetch(`${C.NTFY_BASE}/${C.LOBBY_TOPIC}/json?poll=1&since=6h`, { cache: "no-store" });
+      if (res.ok) text = await res.text();
+    } catch (_) {
+      return (await get([C.PUBLIC_MATCHES_KEY]))[C.PUBLIC_MATCHES_KEY] || [];
+    }
+    const seen = new Set();
+    const matches = [];
+    for (const line of text.split("\n")) {
+      const value = line.trim();
+      if (!value) continue;
+      let event;
+      try { event = JSON.parse(value); } catch (_) { continue; }
+      if (!event || event.event !== "message") continue;
+      const parsed = C.parseNetBody(event.message || "");
+      if (!(parsed && parsed.kind === "invite" && parsed.challenge)) continue;
+      const invite = parsed.challenge;
+      if (have[invite.id] || seen.has(invite.id) || invite.from === me || C.inviteExpired({ ...invite, status: C.STATUS.PENDING }, Date.now())) continue;
+      const rating = Number(invite.problem && invite.problem.rating) || 0;
+      if (rating && (rating < settings.range.min || rating > settings.range.max)) continue;
+      seen.add(invite.id);
+      matches.push(invite);
+    }
+    matches.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+    await set({ [C.PUBLIC_MATCHES_KEY]: matches.slice(0, 30) });
+    return matches;
+  }
+
   async function syncWithApps() {
     const me = await myHandle();
-    const rank = (s) => ({ pending: 0, active: 1, won: 2, lost: 2, draw: 2, expired: 2, declined: 2 }[s] ?? 0);
     for (const base of APP_BASES) {
       let app = null;
       try {
@@ -309,31 +383,50 @@
         else if (rank(rem.status) > rank(loc.status)) { map[id] = rem; dirty = true; }
       }
       if (dirty) await saveChallenges(map);
+
+      let settings = await loadSettings();
       if (app.cf) {
-        const cur = await get(["cpos.challenge.publicOn", "cpos.challenge.range", C.HANDLE_KEY, "cpos.cf.handleManual"]);
-        const upd = {};
-        if (typeof app.cf.publicOn === "boolean" && app.cf.publicOn !== (cur["cpos.challenge.publicOn"] === true)) upd["cpos.challenge.publicOn"] = app.cf.publicOn;
-        if (app.cf.range && JSON.stringify(app.cf.range) !== JSON.stringify(cur["cpos.challenge.range"] || null)) upd["cpos.challenge.range"] = app.cf.range;
-        // A handle set explicitly in an app (manual) wins and propagates here.
-        if (app.cf.handleManual && app.cf.handle && app.cf.handle !== cur[C.HANDLE_KEY]) {
-          upd[C.HANDLE_KEY] = app.cf.handle;
-          upd["cpos.cf.handleManual"] = true;
+        const appUpdatedAt = Number(app.cf.updatedAt) || 0;
+        if (appUpdatedAt > settings.updatedAt) {
+          settings = await saveSettings({
+            publicOn: app.cf.publicOn,
+            range: app.cf.range,
+            updatedAt: appUpdatedAt
+          });
+          if (app.cf.handle) {
+            const current = await get([C.HANDLE_KEY, "cpos.cf.handleManual"]);
+            if (!current["cpos.cf.handleManual"] || app.cf.handleManual) {
+              await set({
+                [C.HANDLE_KEY]: app.cf.handle,
+                "cpos.cf.handleManual": app.cf.handleManual === true
+              });
+            }
+          }
+        } else if (app.cf.handleManual && app.cf.handle) {
+          const current = await get([C.HANDLE_KEY, "cpos.cf.handleManual"]);
+          if (!current["cpos.cf.handleManual"]) {
+            await set({ [C.HANDLE_KEY]: app.cf.handle, "cpos.cf.handleManual": true });
+          }
         }
-        if (Object.keys(upd).length) await set(upd);
       }
 
       // push browser -> app
-      const after = await get([C.STORE_KEY, "cpos.challenge.publicOn", "cpos.challenge.range", C.HANDLE_KEY, "cpos.cf.handleManual"]);
+      const after = await get([C.STORE_KEY, C.PUBLIC_MATCHES_KEY, C.HANDLE_KEY, "cpos.cf.handleManual"]);
+      settings = await loadSettings();
       try {
         await fetch(base + "/challenges", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             challenges: after[C.STORE_KEY] || {},
-            handle: after[C.HANDLE_KEY] || me,
-            handleManual: after["cpos.cf.handleManual"] === true,
-            publicOn: after["cpos.challenge.publicOn"] === true,
-            range: after["cpos.challenge.range"] || { min: 800, max: 3500 }
+            publicMatches: after[C.PUBLIC_MATCHES_KEY] || [],
+            cf: {
+              handle: after[C.HANDLE_KEY] || me,
+              handleManual: after["cpos.cf.handleManual"] === true,
+              publicOn: settings.publicOn,
+              range: settings.range,
+              updatedAt: settings.updatedAt
+            }
           })
         });
       } catch (_) { /* best-effort */ }
@@ -343,10 +436,12 @@
   // ---- listeners (our own; coexist with background.js + cpos-contests.js) -----
   let tick = 0;
   async function tickPoll() {
-    await syncWithApps();                  // sync with VS Code / TUI (local HTTP)
+    await syncWithApps();                  // first pull any newer VS Code preferences
+    await refreshPublicMatches();          // browser owns public-lobby discovery
     await publishPending();                // deliver any unpublished (e.g. VS Code-created) invites
     await pollAll();                       // CF referee
     if (tick % 2 === 0) await netPollInbox(); // ntfy inbox, ~every 2 minutes
+    await syncWithApps();                  // push discovered matches and new statuses
     tick++;
   }
   chrome.alarms.create(POLL_ALARM, { periodInMinutes: POLL_PERIOD_MIN });
@@ -371,17 +466,32 @@
     if (!msg || typeof msg.type !== "string") return; // not ours
     if (msg.type === "cpos-challenge-poll") {
       Promise.resolve()
-        .then(() => pollAll())
-        .then(() => netPollInbox())
+        .then(() => tickPoll())
         .then(() => sendResponse({ ok: true }))
         .catch(() => sendResponse({ ok: false }));
       return true; // async
+    }
+    if (msg.type === "cpos-challenge-sync") {
+      Promise.resolve()
+        .then(() => refreshPublicMatches())
+        .then(() => syncWithApps())
+        .then(() => sendResponse({ ok: true }))
+        .catch(() => sendResponse({ ok: false }));
+      return true;
     }
     if (msg.type === "cpos-challenge-net") {
       netSend(msg.action, msg.challengeId).then((ok) => sendResponse({ ok })).catch(() => sendResponse({ ok: false }));
       return true; // async
     }
     // Unknown type — let other listeners handle it.
+  });
+
+  let syncTimer = null;
+  chrome.storage.onChanged.addListener((changes, area) => {
+    if (area !== "local") return;
+    if (!changes[C.STORE_KEY] && !changes[C.SETTINGS_KEY] && !changes[C.HANDLE_KEY]) return;
+    clearTimeout(syncTimer);
+    syncTimer = setTimeout(() => void syncWithApps(), 250);
   });
 
   // Poll once on load and on the usual lifecycle events.

@@ -33,12 +33,12 @@ CPOS Companion
 
 ### Summary (132 chars max)
 ```
-A Codeforces & CSES companion: capture samples to CPOS, an in-browser editor, profile analytics, themes, and practice tools. Local-first.
+A Codeforces & CSES companion: capture, edit, practice, analyze profiles, and run submission-refereed races with friends.
 ```
 
 ### Description
 ```
-CPOS Companion is a local-first companion for Codeforces and CSES. It connects your browser to CPOS (the VS Code extension and terminal app) and layers optional practice and on-page tooling over the judge sites. No accounts, no servers — everything runs on your machine, and every feature toggles individually from the popup.
+CPOS Companion is a local-first companion for Codeforces and CSES. It connects your browser to CPOS (the VS Code extension and terminal app) and layers optional practice and on-page tooling over the judge sites. There are no CPOS accounts or analytics. Most data stays on your machine; Compete uses the public ntfy.sh relay for race delivery and matchmaking.
 
 CAPTURE & SUBMIT
 • Open a Codeforces or CSES problem and it captures the public sample tests for CPOS on your machine
@@ -58,6 +58,13 @@ PRACTICE & ANALYTICS
 • Paste or upload templates in the popup and sync them with CPOS on localhost
 • Contest reminders before upcoming Codeforces rounds
 
+COMPETE
+• Challenge a friend by Codeforces handle or publish an open race
+• Choose the current problem, enter a problem ID/link, or pick randomly by rating
+• Discover public races in a selected rating range
+• Codeforces public submissions decide the winner: first Accepted after the race starts
+• Race state and matching preferences sync locally with the VS Code extension
+
 APPEARANCE
 • Modernize — a sleek font, calmer spacing and cards for Codeforces & CSES
 • One theme palette shared across the popup, the site, and every CPOS tool
@@ -67,8 +74,9 @@ REQUIRES
 • You must be logged in to Codeforces or CSES in this browser for submissions
 
 PRIVACY
-• No analytics, no accounts, no cloud servers
-• Local communication is to 127.0.0.1 only; everything else is the public Codeforces API and the sites you already use
+• No analytics or CPOS accounts
+• Capture, code execution, templates, and submissions use 127.0.0.1 only
+• Compete uses public ntfy.sh topics for handles, problem/race metadata, and accept/decline replies—never source code, passwords, or cookies
 • Full privacy policy: https://github.com/Soham109/cpos/blob/main/extensions/chrome/PRIVACY.md
 
 Open source: https://github.com/Soham109/cpos
@@ -86,7 +94,7 @@ A companion for the competitive-programming judges Codeforces and CSES: it captu
 
 ### Host permission: `http://127.0.0.1:27121/*` and `http://127.0.0.1:27122/*`
 ```
-CPOS runs locally on the user's machine (terminal app and VS Code extension). Captured samples, the user's code for the in-editor "Run", and pending submissions are sent only to these localhost endpoints. No data is sent to external servers.
+CPOS runs locally on the user's machine (terminal app and VS Code extension). Captured samples, the user's code for the in-editor "Run", templates, and pending submissions are sent only to these localhost endpoints.
 ```
 
 ### Host permission: `https://codeforces.com/*`
@@ -111,7 +119,7 @@ Finds an existing Codeforces/CSES tab or opens one when the user submits from CP
 
 ### Permission: `alarms`
 ```
-Chrome may suspend the extension's background worker when idle. CPOS uses a local alarm every 30 seconds solely to wake that worker and check whether the user queued a submission from CPOS (VS Code or desktop app) on localhost. The alarm does not read browsing data, does not contact external servers, and does not run unless the extension is installed.
+Chrome may suspend the extension's background worker when idle. CPOS uses alarms to check localhost for queued submissions, refresh contest reminders, and keep Compete invitations/results current through the public Codeforces API and ntfy.sh relay. It does not read unrelated browsing history.
 ```
 
 ### Permission: `storage`
@@ -121,7 +129,12 @@ Stores the user's own settings locally in chrome.storage.local: feature toggles,
 
 ### Permission: `notifications`
 ```
-Used only by the optional Contest reminders feature (off until the user enables it). Shows a local desktop notification before upcoming Codeforces contests, using the contest schedule from the public Codeforces contest.list API. No notification content is sent off-device.
+Used for optional contest reminders and Compete race invitations/results. Notifications are generated locally from the public Codeforces schedule or locally stored race state.
+```
+
+### Host permission: `https://ntfy.sh/*`
+```
+Compete uses ntfy.sh as a public, no-account relay to deliver race invitations and accept/decline replies by Codeforces handle, and to discover open public races. Messages contain handles, problem/race metadata, and replies—never source code, passwords, or cookies. ntfy.sh topics are public and are intended for friendly competition.
 ```
 
 ---
@@ -131,8 +144,8 @@ Used only by the optional Contest reminders feature (off until the user enables 
 When asked whether you collect or use user data:
 
 - **No**, the extension does not sell or transfer user data to third parties for unrelated purposes.
-- **No** remote collection — data stays on the user's device (localhost CPOS only).
-- Check **No personal data collected** / equivalent if the form allows, or disclose only: *problem metadata and source code transmitted locally to CPOS on 127.0.0.1 when the user uses capture/run/submit; settings and drafts stored locally in Chrome extension storage*.
+- **No** analytics or developer-operated remote collection.
+- Disclose: *problem metadata and source code transmitted locally to CPOS on 127.0.0.1 when the user uses capture/run/submit; settings and drafts stored locally; Compete handles and race metadata transmitted through public ntfy.sh topics when race delivery or public matching is used*.
 
 ---
 

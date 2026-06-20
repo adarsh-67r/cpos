@@ -13,25 +13,30 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
-## Challenge polish — 2026-06-20
+## CPOS 0.2.0 / VS Code 0.5.0 / Browser companions 0.15.0 — 2026-06-20
 
 Browser companion **0.15.0**, VS Code **0.5.0**, terminal **0.2.0**.
 
+### Added
+- **Compete — Codeforces races refereed from public submissions.** Challenge a friend by handle or publish an open race, choose a specific problem or rating, set a time limit, and let CPOS determine the winner from the first Accepted submission after the race starts.
+- **Public matching.** Discover open races inside a chosen problem-rating range and accept them explicitly from the browser popup or VS Code.
+- **Shared Compete state.** The browser companion handles delivery and Codeforces polling while VS Code mirrors identity, races, results, matching preferences, and discovered public races over localhost.
+
 ### Changed
-- **Challenges popup redesigned.** Themed to match the rest of the popup (no more default-looking controls). Your Codeforces handle is auto-detected and shown read-only; online delivery is always on; the rating field only appears for a random problem; and a single "Accept public challenges" toggle with a rating range replaces the separate find button. Removed the connection/offline indicator and the redundant Challenges feature row.
-- **VS Code panel: responsive header.** Tabs and the Sponsor/Theme buttons collapse to icons when the panel is narrow, so nothing overflows. The "Video Solutions" box no longer shows when no videos are found, and the Templates section is now collapsible.
-- **TUI:** a small block-`C` brand logo replaces the diamond mark.
+- **Compete redesigned across the browser and VS Code.** Identity, friend/open race creation, public matching, incoming invites, active races, and history now follow the same workflow in both clients.
+- **Browser popup reorganized.** A focused Settings / Compete navigation replaces the long wall of nested cards. Practice, upcoming contests, feature toggles, appearance, advanced tools, and templates share one organized settings surface.
+- **Reliable browser ↔ VS Code sync.** Races, manual Codeforces handles, public matching preferences, rating ranges, and discovered open races sync automatically. Timestamped preferences prevent stale overwrites, and removed races no longer reappear after a merge.
+- **VS Code settings reorganized.** Challenge controls moved into Compete. Settings now has a dedicated **Shown tabs** section plus a clearer shared-template editor.
+- **VS Code navigation is adaptive.** Users choose which optional tabs are shown. Labels collapse to icons only when needed, with Tests retaining its label longest; Sponsor and Theme use the same space-aware behavior.
+- **TUI header:** a pixel-`C` tile matching the CPOS icon and the full product name now share one compact line, freeing another row for content.
 
 ### Fixed
-- The "Accept public challenges" toggle is now clickable (wrapped in a label).
+- Public matching results created in the browser now appear automatically in VS Code and can be accepted there.
+- Editing Compete state while the VS Code panel is open now refreshes the Compete view instead of only patching the Tests view.
+- Removed races use tombstones during synchronization, preventing deleted entries from reappearing after another client merges state.
 
-## Challenge mode (browser 0.15.0) - 2026-06-20
-
-### Added
-- **Challenge mode — 1v1 problem races, refereed by Codeforces.** Challenge a friend by handle (or pick/randomize the problem, rating, and time limit), then race: the winner is decided from **public Codeforces submissions** — first Accepted after the challenge starts — so nothing is ever self-reported. Solve and submit through CPOS as usual; the result is announced automatically.
-  - **Two delivery modes.** *Link mode* (default, fully local) creates a shareable link. *Online delivery* (opt-in) relays invites by handle through the free, no-account [ntfy.sh](https://ntfy.sh) service, so your opponent gets a desktop notification with no link to paste — plus an open lobby to find a random opponent.
-  - **Notifications.** Optional desktop notifications when a challenge is received or decided.
-  - **Privacy.** Online delivery is **off by default**; when enabled it sends only handles, the problem id/title/url/rating, and accept/decline to public ntfy.sh topics (never code, cookies, or credentials). Link mode and every other feature stay 100% local. See the updated Chrome [privacy policy](extensions/chrome/PRIVACY.md).
+### Privacy
+- Compete delivery uses public [ntfy.sh](https://ntfy.sh) topics derived from Codeforces handles. Messages contain race metadata and accept/decline replies—not passwords, cookies, or source code. See the updated [privacy policy](extensions/chrome/PRIVACY.md).
 
 ## Browser companions (Chrome + Firefox) — 0.10.7 - 2026-06-19
 

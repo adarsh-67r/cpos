@@ -42,12 +42,14 @@ Open the **CPOS** view in the activity bar:
 - **Test cases** — edit, add, or remove samples; Codeforces multi-case inputs can show linked input/output blocks
 - **Themes** — CPOS, Midnight, Amber, Paper, or Native (matches your VS Code theme; Run All uses VS Code button styling)
 - **Settings gear** — beside the Solution tab; configure the default language and paste or upload per-language templates shared with the TUI and browser companion
+- **Compete** — create friend or open Codeforces races, discover public matches by rating, accept invites, and track results; state and preferences sync with the browser companion
 
 Keep the **terminal app** running for browsing, recommendations, and analytics. Captures and submissions work with either app.
 
 ## Settings
 
-Use the panel **settings gear** for shared templates. VS Code’s normal
+Use the panel **settings gear** to choose which tabs are shown and manage shared
+templates. VS Code’s normal
 `Settings → Extensions → CPOS` page still controls save folder, language,
 legacy template path, compile commands, and timeouts.
 

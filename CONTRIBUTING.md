@@ -10,10 +10,10 @@ For how the pieces fit together, see [ARCHITECTURE.md](ARCHITECTURE.md). Release
 
 | Component | Current version |
 | --- | --- |
-| Terminal app | 0.1.6 (`Cargo.toml`) |
-| VS Code extension | 0.3.27 (`extensions/vscode/package.json`) |
-| Browser companion (Chrome) | 0.6.14 (`extensions/chrome/manifest.json`) |
-| Browser companion (Firefox) | 0.0.2 (`extensions/firefox/manifest.json`) |
+| Terminal app | 0.2.0 (`Cargo.toml`) |
+| VS Code extension | 0.5.0 (`extensions/vscode/package.json`) |
+| Browser companion (Chrome) | 0.15.0 (`extensions/chrome/manifest.json`) |
+| Browser companion (Firefox) | 0.15.0 (`extensions/firefox/manifest.json`) |
 
 ## Ways to help
 

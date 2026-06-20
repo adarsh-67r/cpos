@@ -1,6 +1,9 @@
 # CPOS architecture
 
-CPOS is three local clients plus a static website. Nothing runs in the cloud; the browser extension and desktop apps communicate only over `127.0.0.1`.
+CPOS is three local clients plus a static website. Capture, execution, templates,
+and submission communicate over `127.0.0.1`. The browser companion's Compete
+feature additionally uses public ntfy.sh topics for race delivery and matching;
+Codeforces public submissions act as the referee.
 
 **Current releases:** terminal app 0.2.0 · VS Code extension 0.5.0 · browser companion 0.15.0 (Chrome + Firefox) (see [CHANGELOG.md](CHANGELOG.md)).
 
@@ -24,7 +27,7 @@ CPOS is three local clients plus a static website. Nothing runs in the cloud; th
 | --- | --- |
 | `src/` | Terminal application (ratatui UI, sync, recommendations, local test runner) |
 | `extensions/vscode/` | VS Code extension: side panel, webview UI, capture HTTP server |
-| `extensions/chrome/` | Chrome/Edge/Brave browser companion: DOM capture on problem pages, submit autofill on judge pages, plus opt-in popup-toggleable tooling (profile analytics/compare, in-browser editor, rating predictions, contest reminders, practice tools, problemset/standings tools, marker & notes, code/LaTeX styling, site themes) — all read-only public CF API + localhost |
+| `extensions/chrome/` | Chrome/Edge/Brave browser companion: DOM capture, submit autofill, popup-toggleable practice/site tools, and Compete delivery/refereeing. Most features use public judge data + localhost; Compete also uses ntfy.sh |
 | `extensions/firefox/` | Firefox browser companion: full feature parity with Chrome over the same localhost capture/submit protocol, source/self-installed until AMO publishing |
 | `docs/` | Static landing site |
 
@@ -47,6 +50,7 @@ The browser companion polls **both** ports so captures and submissions work whet
 | `POST` | `/pending-submit/consumed` | Clear the queue after autofill completes |
 | `GET` | `/config` | Read the default language and shared per-language templates |
 | `POST` | `/config` | Save a shared template or default language |
+| `GET/POST` | `/challenges` | VS Code-only mirror for Compete races, public matches, identity, and matching preferences |
 | `GET` | `/health` | Liveness check |
 
 Cross-origin headers are permissive because traffic never leaves the machine.

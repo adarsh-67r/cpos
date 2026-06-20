@@ -26,138 +26,99 @@
         <div class="sub">Competitive Programming OS</div>
       </div>
     </div>
+    <div class="header-meta">
+      <span class="ver" id="ver"></span>
+    </div>
   </header>
 
-  <section class="card">
-    <div class="card-h">Core</div>
-    <div class="rows">
-      <label class="row" data-feature="profile">
-        <span class="ic" data-icon="profile"></span>
-        <span class="rtxt"><b>Profile analytics</b><small>extra charts on Codeforces profiles</small></span>
-        <span class="sw"><input type="checkbox" data-feature-input="profile" /><span></span></span>
-      </label>
-      <label class="row" data-feature="ide">
-        <span class="ic" data-icon="ide"></span>
-        <span class="rtxt"><b>In-browser editor</b><small>code & submit on the problem page</small></span>
-        <span class="sw"><input type="checkbox" data-feature-input="ide" /><span></span></span>
-      </label>
-      <label class="row" data-feature="highlight">
-        <span class="ic" data-icon="highlight"></span>
-        <span class="rtxt"><b>Code & LaTeX styling</b><small>highlight statements & editorials</small></span>
-        <span class="sw"><input type="checkbox" data-feature-input="highlight" /><span></span></span>
-      </label>
-      <label class="row" data-feature="problemTools">
-        <span class="ic" data-icon="problemTools"></span>
-        <span class="rtxt"><b>Problem tools</b><small>rating badge, tag hider & sample copy</small></span>
-        <span class="sw"><input type="checkbox" data-feature-input="problemTools" /><span></span></span>
-      </label>
-      <label class="row" data-feature="problemsetTools">
-        <span class="ic" data-icon="problemsetTools"></span>
-        <span class="rtxt"><b>Problemset solve-status</b><small>color rows by solved / attempted</small></span>
-        <span class="sw"><input type="checkbox" data-feature-input="problemsetTools" /><span></span></span>
-      </label>
-      <label class="row" data-feature="dailyProblem">
-        <span class="ic" data-icon="dailyProblem"></span>
-        <span class="rtxt"><b>Daily problem & streak</b><small>a problem of the day for your rating</small></span>
-        <span class="sw"><input type="checkbox" data-feature-input="dailyProblem" /><span></span></span>
-      </label>
-      <label class="row" data-feature="favorites">
-        <span class="ic" data-icon="favorites"></span>
-        <span class="rtxt"><b>Favorites</b><small>bookmark problems with a star</small></span>
-        <span class="sw"><input type="checkbox" data-feature-input="favorites" /><span></span></span>
-      </label>
-      <label class="row" data-feature="contestReminders">
-        <span class="ic" data-icon="contestReminders"></span>
-        <span class="rtxt"><b>Contest reminders</b><small>notify before upcoming CF contests</small></span>
-        <span class="sw"><input type="checkbox" data-feature-input="contestReminders" /><span></span></span>
-      </label>
-    </div>
-  </section>
+  <nav class="popup-nav" aria-label="CPOS popup sections">
+    <button class="nav-item active" type="button" data-popup-tab="settings" aria-selected="true">Settings</button>
+    <button class="nav-item" type="button" data-popup-tab="compete" aria-selected="false">Compete</button>
+  </nav>
 
-  <details class="card adv">
-    <summary><span class="card-h">Advanced</span><small>power-user tools</small></summary>
-    <div class="rows">
-      <label class="row" data-feature="carrot">
-        <span class="ic" data-icon="carrot"></span>
-        <span class="rtxt"><b>Rating predictions</b><small>predicted deltas on standings</small></span>
-        <span class="sw"><input type="checkbox" data-feature-input="carrot" /><span></span></span>
-      </label>
-      <label class="row" data-feature="profileCompare">
-        <span class="ic" data-icon="profileCompare"></span>
-        <span class="rtxt"><b>Profile compare (VS)</b><small>side-by-side stats & rating overlay</small></span>
-        <span class="sw"><input type="checkbox" data-feature-input="profileCompare" /><span></span></span>
-      </label>
-      <label class="row" data-feature="standingsTools">
-        <span class="ic" data-icon="standingsTools"></span>
-        <span class="rtxt"><b>Standings tools</b><small>color rows by language; friends-only filter</small></span>
-        <span class="sw"><input type="checkbox" data-feature-input="standingsTools" /><span></span></span>
-      </label>
-      <label class="row" data-feature="problemTimer">
-        <span class="ic" data-icon="problemTimer"></span>
-        <span class="rtxt"><b>Problem timer</b><small>per-problem stopwatch that auto-resumes</small></span>
-        <span class="sw"><input type="checkbox" data-feature-input="problemTimer" /><span></span></span>
-      </label>
-      <label class="row" data-feature="annotate">
-        <span class="ic" data-icon="annotate"></span>
-        <span class="rtxt"><b>Marker & notes</b><small>highlight & annotate statement text</small></span>
-        <span class="sw"><input type="checkbox" data-feature-input="annotate" /><span></span></span>
-      </label>
-    </div>
-  </details>
-
-  <section class="card">
-    <div class="card-h">Appearance <small id="siteHint"></small></div>
-    <div class="theme-field">
-      <div class="theme-lbl"><b>Theme</b><small>one palette — popup, site &amp; all CPOS tools</small></div>
-      <div class="swatches" id="themeSwatches"></div>
-      <label class="custom-pick" id="customPick" title="Pick your own accent colour">
-        <span class="custom-chip"><input type="color" id="customColor" value="#b794ff" /></span>
-        <span class="custom-txt">Custom colour</span>
-      </label>
-    </div>
-    <div class="rows">
-      <label class="row" data-feature="modernize">
-        <span class="ic" data-icon="modernize"></span>
-        <span class="rtxt"><b>Modernize</b><small>sleek font, spacing & cards for CF / CSES</small></span>
-        <span class="sw"><input type="checkbox" data-feature-input="modernize" /><span></span></span>
-      </label>
-    </div>
-  </section>
-
-  <section class="card">
-    <div class="card-h">Contests</div>
-    <div id="cpos-contests-section"></div>
-  </section>
-
-  <section class="card">
-    <div class="card-h">Challenges</div>
-    <div id="cpos-challenges-section"></div>
-  </section>
-
-  <section class="card">
-    <div class="card-h">Practice</div>
-    <div id="cpos-practice-section"></div>
-  </section>
-
-  <details class="card adv" id="templateCard">
-    <summary><span class="card-h">Templates</span><small id="templateSync">local</small></summary>
-    <div class="template-config">
-      <label class="template-label" for="templateLang">Template language</label>
-      <select id="templateLang"></select>
-      <label class="template-label" for="templateText">Starter template</label>
-      <textarea id="templateText" spellcheck="false" placeholder="Paste your template here…"></textarea>
-      <input id="templateFile" type="file" hidden />
-      <div class="template-actions">
-        <button id="templateUpload" type="button">Upload file</button>
-        <button id="templateReset" type="button">Reset</button>
-        <button id="templateSave" class="primary" type="button">Save &amp; sync</button>
+  <main class="popup-main">
+    <section class="popup-panel" data-popup-panel="compete">
+      <div class="panel-intro">
+        <div><span class="eyebrow">Codeforces races</span><h1>Compete</h1></div>
+        <small>First accepted submission wins.</small>
       </div>
-    </div>
-  </details>
+      <div id="cpos-challenges-section"></div>
+    </section>
+
+    <section class="popup-panel active" data-popup-panel="settings">
+      <div class="panel-intro">
+        <div><span class="eyebrow">Preferences</span><h1>Settings</h1></div>
+        <small id="siteHint">Changes apply immediately.</small>
+      </div>
+
+      <section class="card settings-card">
+        <div class="card-h"><span>Page features</span><small>everyday tools</small></div>
+        <div class="rows settings-rows">
+          <label class="row" data-feature="profile"><span class="ic" data-icon="profile"></span><span class="rtxt"><b>Profile analytics</b><small>Charts and insights on profiles</small></span><span class="sw"><input type="checkbox" data-feature-input="profile" /><span></span></span></label>
+          <label class="row" data-feature="ide"><span class="ic" data-icon="ide"></span><span class="rtxt"><b>In-browser editor</b><small>Code and submit on problem pages</small></span><span class="sw"><input type="checkbox" data-feature-input="ide" /><span></span></span></label>
+          <label class="row" data-feature="problemTools"><span class="ic" data-icon="problemTools"></span><span class="rtxt"><b>Problem tools</b><small>Rating, training mode, and sample copy</small></span><span class="sw"><input type="checkbox" data-feature-input="problemTools" /><span></span></span></label>
+          <label class="row" data-feature="dailyProblem"><span class="ic" data-icon="dailyProblem"></span><span class="rtxt"><b>Daily problem</b><small>Rating-tuned problem and streak</small></span><span class="sw"><input type="checkbox" data-feature-input="dailyProblem" /><span></span></span></label>
+          <label class="row" data-feature="favorites"><span class="ic" data-icon="favorites"></span><span class="rtxt"><b>Favorites</b><small>Bookmark problems for later</small></span><span class="sw"><input type="checkbox" data-feature-input="favorites" /><span></span></span></label>
+          <label class="row" data-feature="contestReminders"><span class="ic" data-icon="contestReminders"></span><span class="rtxt"><b>Contest reminders</b><small>Notify before Codeforces contests</small></span><span class="sw"><input type="checkbox" data-feature-input="contestReminders" /><span></span></span></label>
+        </div>
+      </section>
+
+      <section class="card settings-card">
+        <div class="card-h"><span>Appearance</span><small>one visual system</small></div>
+        <div class="theme-field">
+          <div class="theme-lbl"><b>Theme</b><small>Applied to the popup and supported CPOS surfaces</small></div>
+          <div class="swatches" id="themeSwatches"></div>
+          <label class="custom-pick" id="customPick" title="Pick your own accent colour"><span class="custom-chip"><input type="color" id="customColor" value="#b794ff" /></span><span class="custom-txt">Custom accent</span></label>
+        </div>
+        <div class="rows settings-rows">
+          <label class="row" data-feature="modernize"><span class="ic" data-icon="modernize"></span><span class="rtxt"><b>Modernize site</b><small>Refined typography, spacing, and cards</small></span><span class="sw"><input type="checkbox" data-feature-input="modernize" /><span></span></span></label>
+          <label class="row" data-feature="highlight"><span class="ic" data-icon="highlight"></span><span class="rtxt"><b>Code &amp; LaTeX styling</b><small>Improve statements and editorials</small></span><span class="sw"><input type="checkbox" data-feature-input="highlight" /><span></span></span></label>
+        </div>
+      </section>
+
+      <details class="card disclosure">
+        <summary><span><b>More features</b><small>Standings, comparison, timer, and notes</small></span></summary>
+        <div class="rows settings-rows">
+          <label class="row" data-feature="problemsetTools"><span class="ic" data-icon="problemsetTools"></span><span class="rtxt"><b>Problemset status</b><small>Color solved and attempted rows</small></span><span class="sw"><input type="checkbox" data-feature-input="problemsetTools" /><span></span></span></label>
+          <label class="row" data-feature="carrot"><span class="ic" data-icon="carrot"></span><span class="rtxt"><b>Rating predictions</b><small>Predicted deltas on standings</small></span><span class="sw"><input type="checkbox" data-feature-input="carrot" /><span></span></span></label>
+          <label class="row" data-feature="profileCompare"><span class="ic" data-icon="profileCompare"></span><span class="rtxt"><b>Profile compare</b><small>Side-by-side stats and rating overlay</small></span><span class="sw"><input type="checkbox" data-feature-input="profileCompare" /><span></span></span></label>
+          <label class="row" data-feature="standingsTools"><span class="ic" data-icon="standingsTools"></span><span class="rtxt"><b>Standings tools</b><small>Language colors and friends filter</small></span><span class="sw"><input type="checkbox" data-feature-input="standingsTools" /><span></span></span></label>
+          <label class="row" data-feature="problemTimer"><span class="ic" data-icon="problemTimer"></span><span class="rtxt"><b>Problem timer</b><small>Persistent per-problem stopwatch</small></span><span class="sw"><input type="checkbox" data-feature-input="problemTimer" /><span></span></span></label>
+          <label class="row" data-feature="annotate"><span class="ic" data-icon="annotate"></span><span class="rtxt"><b>Marker &amp; notes</b><small>Annotate statement text</small></span><span class="sw"><input type="checkbox" data-feature-input="annotate" /><span></span></span></label>
+        </div>
+      </details>
+
+      <details class="card disclosure" id="templateCard">
+        <summary><span><b>Code templates</b><small>Shared with VS Code and the TUI</small></span><em id="templateSync">local</em></summary>
+        <div class="template-config">
+          <label class="template-label" for="templateLang">Language</label>
+          <select id="templateLang"></select>
+          <label class="template-label" for="templateText">Starter template</label>
+          <textarea id="templateText" spellcheck="false" placeholder="Paste your template here…"></textarea>
+          <input id="templateFile" type="file" hidden />
+          <div class="template-actions">
+            <button id="templateUpload" type="button">Upload file</button>
+            <button id="templateReset" type="button">Reset</button>
+            <button id="templateSave" class="primary" type="button">Save &amp; sync</button>
+          </div>
+        </div>
+      </details>
+
+      <section class="card feature-card">
+        <div class="card-h"><span>Practice</span><small>keep momentum</small></div>
+        <div id="cpos-practice-section"></div>
+      </section>
+
+      <section class="card feature-card">
+        <div class="card-h"><span>Contests</span><small>up next</small></div>
+        <div id="cpos-contests-section"></div>
+      </section>
+    </section>
+  </main>
 
   <footer class="ftr">
     <a href="https://github.com/Soham109/cpos" target="_blank" rel="noopener">GitHub</a>
-    <span class="ver" id="ver"></span>
+    <span>Local-first competitive programming</span>
   </footer>
 
   <script src="themes.js"></script>

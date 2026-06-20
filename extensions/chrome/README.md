@@ -18,11 +18,14 @@ Also install the **[CPOS VS Code extension](https://marketplace.visualstudio.com
 - Polls for queued submissions and autofills the judge submit form in your logged-in browser session (picks the newest matching compiler on Codeforces, e.g. C++23 over C++17)
 - Scrapes CSES solved and attempted status on the problem list when requested
 
-Data is not sent to third-party servers—only to CPOS on localhost.
+Captures, run requests, templates, and submissions stay on localhost. The optional
+Compete workflow uses public `ntfy.sh` topics to deliver race invitations,
+accept/decline replies, and public-race discovery; it never sends source code,
+cookies, or passwords. See [PRIVACY.md](PRIVACY.md).
 
 ## Interface & features (0.15.0)
 
-Click the toolbar icon for the **popup hub** — flat, themeable, with a live CPOS connection indicator and switches for each feature:
+Click the toolbar icon for a focused **Settings / Compete** popup:
 
 - **Profile analytics** — augments `codeforces.com/profile/<handle>` in place with charts CF doesn't already show: a submission activity heatmap, solved-by-rating and solved-by-index histograms, verdict and language donuts, top tags, and acceptance rate / rank progress (public CF API, read-only).
 - **Rating predictions** — a predicted-Δ column on contest standings using the official Codeforces rating formula (exact deltas once a contest is rated).
@@ -34,6 +37,7 @@ Click the toolbar icon for the **popup hub** — flat, themeable, with a live CP
 - **Contest reminders** — desktop notifications before upcoming Codeforces contests, with a configurable lead time (public `contest.list`).
 - **Daily problem & streak** with Auto or exact-rating selection, **Favorites**, and a draggable per-problem **timer**.
 - **Shared templates** — paste or upload templates in the popup; changes sync to VS Code/TUI over localhost and queue locally while CPOS is offline.
+- **Compete** — challenge a friend or publish an open Codeforces race, discover public matches by rating, and track invites/results in sync with VS Code.
 - **Problem focus** — a small always-available control on Codeforces problem pages that hides the right rail and expands the statement for split-screen solving.
 - **Problem tools** (rating badge, tag-hider/training mode, copy sample input, similar problems), **problemset tools** (solve-status coloring, hide-solved, solve counts), **standings tools** (colorize by language, friends filter), and **marker & notes**.
 

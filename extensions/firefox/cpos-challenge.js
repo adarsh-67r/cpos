@@ -342,7 +342,10 @@
       btn.onclick = async (e) => {
         e.preventDefault(); e.stopPropagation();
         const m = (await get([C.STORE_KEY]))[C.STORE_KEY] || {};
-        delete m[mine.id];
+        if (m[mine.id]) {
+          m[mine.id].status = C.STATUS.REMOVED;
+          m[mine.id].removedAt = Date.now();
+        }
         await set({ [C.STORE_KEY]: m });
         toast("Challenge cancelled");
       };

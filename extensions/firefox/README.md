@@ -9,7 +9,9 @@ in-browser editor, rating predictions, contest reminders, daily problem & streak
 favorites, problem timer, problemset/standings tools, problem
 tools, marker & notes, code & LaTeX styling, and site themes + Modernize. Every
 feature is individually toggleable from the popup, and everything stays read-only
-(public CF API + localhost).
+(public CF API + localhost), except Compete race delivery/public matching, which
+uses public ntfy.sh topics containing race metadata and replies—not source code,
+cookies, or passwords.
 
 **Current version:** 0.15.0 (see [CHANGELOG.md](../../CHANGELOG.md)).
 
@@ -30,6 +32,10 @@ from source for local use:
 3. Select `extensions/firefox/manifest.json`.
 
 Firefox 142 or newer is required. Temporary add-ons are removed when Firefox restarts; reload this manifest when needed.
+
+Firefox's install prompt discloses `websiteContent` transmission because captured
+problem data and editor run requests leave the browser for the user's localhost
+CPOS app, while Compete race metadata can be sent through ntfy.sh.
 
 ## Package
 

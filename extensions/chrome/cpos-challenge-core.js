@@ -14,6 +14,8 @@
   const HANDLE_KEY = "cpos.cf.handle"; // the user's detected Codeforces handle
   const NOTIFY_KEY = "cpos.challenge.notify"; // bool, default true
   const PROBLEMS_KEY = "cpos.challenge.problems"; // cached problemset for random picks
+  const SETTINGS_KEY = "cpos.challenge.settings"; // { publicOn, range, updatedAt }
+  const PUBLIC_MATCHES_KEY = "cpos.challenge.publicMatches"; // discovered lobby races
   const FEATURE = "challenges"; // cpos.features flag (mirrors cpos-config defaults)
 
   const STATUS = {
@@ -23,18 +25,19 @@
     LOST: "lost",
     DRAW: "draw",
     EXPIRED: "expired",
-    DECLINED: "declined"
+    DECLINED: "declined",
+    REMOVED: "removed"
   };
-  const TERMINAL = [STATUS.WON, STATUS.LOST, STATUS.DRAW, STATUS.EXPIRED, STATUS.DECLINED];
+  const TERMINAL = [STATUS.WON, STATUS.LOST, STATUS.DRAW, STATUS.EXPIRED, STATUS.DECLINED, STATUS.REMOVED];
 
   const LINK_PARAM = "cposc"; // https://codeforces.com/?cposc=<payload>
 
-  // ---- optional online delivery (opt-in) via ntfy.sh -------------------------
+  // ---- online race delivery via ntfy.sh --------------------------------------
   // ntfy.sh is a free, no-account, open pub/sub relay. Each user subscribes to a
   // topic derived from their handle; challenging someone publishes to THEIR topic
   // (no URL to share, real push). Topics are PUBLIC — fine for a friendly race,
   // but we never put anything sensitive in them. Off by default; the user opts in.
-  const ONLINE_KEY = "cpos.challenge.online"; // bool, default false
+  const ONLINE_KEY = "cpos.challenge.online"; // legacy compatibility key; delivery defaults on
   const NET_SINCE_KEY = "cpos.challenge.netSince"; // { [topic]: lastSeenSec }
   const INVITE_TTL_MIN = 4; // a pending invite lapses if not accepted within this many minutes
   const NTFY_BASE = "https://ntfy.sh";
@@ -231,7 +234,7 @@
   }
 
   root.CPOSChallenge = {
-    STORE_KEY, HANDLE_KEY, NOTIFY_KEY, PROBLEMS_KEY, FEATURE, STATUS, TERMINAL, LINK_PARAM,
+    STORE_KEY, HANDLE_KEY, NOTIFY_KEY, PROBLEMS_KEY, SETTINGS_KEY, PUBLIC_MATCHES_KEY, FEATURE, STATUS, TERMINAL, LINK_PARAM,
     ONLINE_KEY, NET_SINCE_KEY, NTFY_BASE, TOPIC_PREFIX, LOBBY_TOPIC, NET_TAG, INVITE_TTL_MIN,
     b64urlEncode, b64urlDecode, makeId, genNonce,
     parseProblem, problemLabel, encode, decode, link, deadlineAt, inviteExpired, inviteSecondsLeft,

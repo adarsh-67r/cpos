@@ -282,8 +282,31 @@
     input.onchange = onPick;
   }
 
+  function wirePopupNavigation() {
+    const buttons = Array.from(document.querySelectorAll("[data-popup-tab]"));
+    const panels = Array.from(document.querySelectorAll("[data-popup-panel]"));
+    const allowed = new Set(buttons.map((button) => button.getAttribute("data-popup-tab")));
+    const activate = (name) => {
+      const tab = allowed.has(name) ? name : "settings";
+      buttons.forEach((button) => {
+        const selected = button.getAttribute("data-popup-tab") === tab;
+        button.classList.toggle("active", selected);
+        button.setAttribute("aria-selected", selected ? "true" : "false");
+      });
+      panels.forEach((panel) => panel.classList.toggle("active", panel.getAttribute("data-popup-panel") === tab));
+      try { sessionStorage.setItem("cpos.popup.tab", tab); } catch (_) {}
+    };
+    buttons.forEach((button) => {
+      button.onclick = () => activate(button.getAttribute("data-popup-tab"));
+    });
+    let initial = "settings";
+    try { initial = sessionStorage.getItem("cpos.popup.tab") || "settings"; } catch (_) {}
+    activate(initial);
+  }
+
   function wire() {
     document.getElementById("ver").textContent = "v" + chrome.runtime.getManifest().version;
+    wirePopupNavigation();
     wireCustomColor();
 
     // Hint which site the active tab is on.
