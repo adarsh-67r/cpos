@@ -1,12 +1,10 @@
-// CPOS Challenge — popup UI. Renders into #cpos-challenges-section.
+// CPOS Challenge — popup UI (renders into #cpos-challenges-section).
 //
-// Two delivery modes:
-//   • Link (default, fully private): create a challenge → copy a link → share it.
-//   • Online (opt-in, uses the free no-account ntfy.sh relay): challenge someone
-//     by handle and they get a desktop notification — no URL to share. You can
-//     also post/find "open" challenges in a shared lobby.
-// Either way Codeforces is the referee (the background module decides the winner
-// from public submissions). Reads/writes chrome.storage.local.
+// Design goals: dead simple. Your authenticated Codeforces handle is used as-is
+// (read-only). Online delivery is always on — challenge a friend by handle (or
+// leave it blank for anyone), pick a problem or let it randomise, hit Send.
+// Turning on "Accept public challenges" with a rating range auto-lists open
+// matches. Codeforces decides the winner. Styled with the popup's theme tokens.
 (function () {
   const C = self.CPOSChallenge;
   const mount = document.getElementById("cpos-challenges-section");
@@ -17,6 +15,8 @@
   const set = (obj) => new Promise((res) => store.set(obj, () => res()));
   const send = (m) => { try { chrome.runtime.sendMessage(m, () => void chrome.runtime.lastError); } catch (_) {} };
 
+  const PUBLIC_KEY = "cpos.challenge.publicOn"; // accept public challenges
+  const RANGE_KEY = "cpos.challenge.range";     // { min, max }
   const PROBLEMS_TTL = 24 * 60 * 60 * 1000;
 
   function el(tag, attrs, text) {
@@ -25,8 +25,39 @@
     if (text != null) e.textContent = text;
     return e;
   }
-  function css(e, s) { e.style.cssText = s; return e; }
-  const INPUT = "padding:6px 8px;border-radius:8px;border:1px solid #d0d0da;font-size:13px;box-sizing:border-box;width:100%;";
+
+  // One-time themed styles so inputs/buttons match the popup palette (no defaults).
+  function ensureStyle() {
+    if (document.getElementById("cpos-ch-style")) return;
+    const s = el("style", { id: "cpos-ch-style" });
+    s.textContent =
+      "#cpos-challenges-section{display:flex;flex-direction:column;gap:9px;font-size:12px}" +
+      "#cpos-challenges-section .ch-as{color:var(--dim);font-size:11px}" +
+      "#cpos-challenges-section .ch-as b{color:var(--fg)}" +
+      "#cpos-challenges-section input,#cpos-challenges-section select{box-sizing:border-box;width:100%;padding:7px 9px;border-radius:8px;border:1px solid var(--border);background:var(--panel-2);color:var(--fg);font:inherit;font-size:12px}" +
+      "#cpos-challenges-section input:focus,#cpos-challenges-section select:focus{outline:none;border-color:var(--accent)}" +
+      "#cpos-challenges-section .ch-form{display:flex;flex-direction:column;gap:7px}" +
+      "#cpos-challenges-section .ch-2{display:flex;gap:7px}" +
+      "#cpos-challenges-section .ch-send{width:100%;padding:9px;border:0;border-radius:9px;background:var(--accent);color:var(--accent-on);font-weight:700;font-size:13px;cursor:pointer}" +
+      "#cpos-challenges-section .ch-send:hover{filter:brightness(1.06)}" +
+      "#cpos-challenges-section .ch-send:disabled{opacity:.5;cursor:default;filter:none}" +
+      "#cpos-challenges-section .ch-mini{padding:5px 11px;border:1px solid var(--border);border-radius:7px;background:transparent;color:var(--fg);font:inherit;font-size:12px;font-weight:600;cursor:pointer}" +
+      "#cpos-challenges-section .ch-mini:hover{border-color:var(--accent);color:var(--accent)}" +
+      "#cpos-challenges-section .ch-mini.solid{background:var(--accent);color:var(--accent-on);border-color:var(--accent)}" +
+      "#cpos-challenges-section .ch-msg{font-size:11px;min-height:14px}" +
+      "#cpos-challenges-section .ch-pub{display:flex;align-items:center;gap:8px}" +
+      "#cpos-challenges-section .ch-pub .lbl{flex:1}" +
+      "#cpos-challenges-section .ch-range{width:58px!important;flex:0 0 auto;text-align:center}" +
+      "#cpos-challenges-section .ch-row{display:flex;align-items:center;gap:8px;padding:7px 9px;border:1px solid var(--border);border-radius:9px}" +
+      "#cpos-challenges-section .ch-row.dash{border-style:dashed}" +
+      "#cpos-challenges-section .ch-row .who{flex:1;min-width:0}" +
+      "#cpos-challenges-section .ch-prob{color:var(--accent);font-weight:600;text-decoration:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block}" +
+      "#cpos-challenges-section .ch-sub{color:var(--dim);font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}" +
+      "#cpos-challenges-section .ch-badge{font-size:10px;font-weight:700;color:#fff;padding:3px 7px;border-radius:20px;white-space:nowrap}" +
+      "#cpos-challenges-section .ch-x{border:0;background:transparent;color:var(--dim);cursor:pointer;font-size:12px;padding:2px 4px}" +
+      "#cpos-challenges-section .ch-empty{color:var(--dim);text-align:center;padding:4px}";
+    document.head.appendChild(s);
+  }
 
   // ---- problemset cache (random picks) ---------------------------------------
   async function getProblems() {
@@ -55,19 +86,19 @@
     return { platform: "codeforces", contestId: p.contestId, index: p.index, id: `${p.contestId}${p.index}`, name: p.name || "", url: `https://codeforces.com/contest/${p.contestId}/problem/${p.index}`, rating: p.rating };
   }
   async function enrich(problem) {
-    const problems = await getProblems();
-    const hit = problems.find((p) => p.contestId === problem.contestId && p.index === problem.index);
+    const hit = (await getProblems()).find((p) => p.contestId === problem.contestId && p.index === problem.index);
     if (hit) { problem.name = hit.name || problem.name || ""; problem.rating = hit.rating || problem.rating || 0; }
     return problem;
   }
 
   async function loadAll() {
-    const raw = await get([C.STORE_KEY, C.HANDLE_KEY, C.NOTIFY_KEY, C.ONLINE_KEY]);
+    const raw = await get([C.STORE_KEY, C.HANDLE_KEY, PUBLIC_KEY, RANGE_KEY]);
+    const r = raw[RANGE_KEY] || {};
     return {
       map: raw[C.STORE_KEY] || {},
       handle: raw[C.HANDLE_KEY] || "",
-      notify: raw[C.NOTIFY_KEY] !== false,
-      online: raw[C.ONLINE_KEY] === true
+      publicOn: raw[PUBLIC_KEY] === true,
+      range: { min: Number(r.min) || 800, max: Number(r.max) || 3500 }
     };
   }
   async function saveChallenge(ch) {
@@ -78,254 +109,184 @@
   }
 
   const BADGE = {
-    pending: ["Pending", "#f59f00"],
-    active: ["In progress", "#7c5cff"],
-    won: ["Won 🏆", "#2f9e44"],
-    lost: ["Lost", "#e03131"],
-    draw: ["Draw", "#f08c00"],
-    expired: ["Expired", "#868e96"],
-    declined: ["Declined", "#868e96"]
+    pending: ["Pending", "#f59f00"], active: ["Racing", "#7c5cff"],
+    won: ["Won", "#2f9e44"], lost: ["Lost", "#e03131"], draw: ["Draw", "#f08c00"],
+    expired: ["Expired", "#868e96"], declined: ["Declined", "#868e96"]
   };
-  function fmtWhen(ms) {
-    try { return new Date(ms).toLocaleString([], { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }); }
-    catch (_) { return ""; }
-  }
 
   // ---- render -----------------------------------------------------------------
   async function render() {
-    const { map, handle, notify, online } = await loadAll();
+    ensureStyle();
+    const { map, handle, publicOn, range } = await loadAll();
     mount.textContent = "";
-    const root = css(el("div"), "display:flex;flex-direction:column;gap:10px;");
 
-    // Your handle — auto-detected from any Codeforces page you're logged into.
-    const hInput = el("input", { type: "text", placeholder: "your Codeforces handle", value: handle });
-    css(hInput, INPUT);
-    hInput.addEventListener("change", async () => { await set({ [C.HANDLE_KEY]: hInput.value.trim() }); });
+    // Who you are — the authenticated handle, read-only.
     if (handle) {
-      const hRow = css(el("div"), "display:flex;align-items:center;gap:6px;font-size:12px;");
-      const lbl = css(el("span"), "flex:1;opacity:.8;");
-      lbl.appendChild(document.createTextNode("Racing as "));
-      lbl.appendChild(el("b", null, handle));
-      hInput.style.display = "none";
-      const edit = css(el("button", { type: "button" }, "change"), "border:0;background:transparent;color:#7c5cff;cursor:pointer;font-size:12px;padding:0;");
-      edit.addEventListener("click", () => { lbl.style.display = "none"; edit.style.display = "none"; hInput.style.display = ""; hInput.focus(); });
-      hRow.appendChild(lbl); hRow.appendChild(edit); hRow.appendChild(hInput);
-      root.appendChild(hRow);
+      const who = el("div", { class: "ch-as" });
+      who.appendChild(document.createTextNode("Racing as "));
+      who.appendChild(el("b", null, handle));
+      mount.appendChild(who);
     } else {
-      root.appendChild(css(el("div", null, "Open any Codeforces page and I'll detect your handle — or type it:"), "font-size:11px;opacity:.6;"));
-      root.appendChild(hInput);
+      mount.appendChild(el("div", { class: "ch-as" }, "Open a Codeforces page so CPOS can detect your handle."));
     }
 
-    // Online delivery toggle (detail in tooltip — keep the panel clean)
-    const oRow = css(el("label"), "display:flex;align-items:center;gap:8px;font-size:12px;cursor:pointer;");
-    oRow.title = "Notify your opponent by handle via ntfy.sh (free, no account). Off = share a private link instead.";
-    const oChk = el("input", { type: "checkbox" });
-    oChk.checked = online;
-    oChk.addEventListener("change", async () => { await set({ [C.ONLINE_KEY]: oChk.checked }); send({ type: "cpos-challenge-poll" }); });
-    oRow.appendChild(oChk);
-    const oTxt = el("span");
-    oTxt.appendChild(el("b", null, "Online delivery"));
-    oTxt.appendChild(css(el("span", null, " — notify by handle, no link"), "opacity:.7;"));
-    oRow.appendChild(oTxt);
-    root.appendChild(oRow);
-
     // Create form
-    const form = css(el("div"), "display:flex;flex-direction:column;gap:7px;padding:10px;border:1px solid #e6e6ee;border-radius:10px;");
-    form.appendChild(css(el("div", null, "New challenge"), "font-weight:700;font-size:13px;"));
-
-    const oppInput = el("input", { type: "text", placeholder: online ? "opponent handle (blank = open lobby)" : "opponent handle (optional)" });
-    css(oppInput, INPUT);
-    form.appendChild(oppInput);
-
-    const probInput = el("input", { type: "text", placeholder: "problem URL or 1234A (blank = random)" });
-    css(probInput, INPUT);
-    form.appendChild(probInput);
-
-    const optRow = css(el("div"), "display:flex;gap:7px;");
-    const ratingInput = el("input", { type: "number", placeholder: "random rating", value: "1400", min: "800", max: "3500", step: "100" });
-    css(ratingInput, INPUT);
-    const durSel = css(el("select"), INPUT);
+    const form = el("div", { class: "ch-form" });
+    const oppInput = el("input", { type: "text", placeholder: "friend's handle — blank for anyone" });
+    const probInput = el("input", { type: "text", placeholder: "problem link or ID — blank for random" });
+    const row2 = el("div", { class: "ch-2" });
+    const ratingInput = el("input", { type: "number", value: "1400", min: "800", max: "3500", step: "100", title: "difficulty for the random problem" });
+    const durSel = el("select");
     [["30", "30 min"], ["60", "1 hour"], ["120", "2 hours"], ["1440", "1 day"]].forEach(([v, t]) => {
       const o = el("option", { value: v }, t); if (v === "60") o.selected = true; durSel.appendChild(o);
     });
-    const wrap1 = css(el("div"), "flex:1;"); wrap1.appendChild(ratingInput);
-    const wrap2 = css(el("div"), "flex:1;"); wrap2.appendChild(durSel);
-    optRow.appendChild(wrap1); optRow.appendChild(wrap2);
-    form.appendChild(optRow);
+    const ratingWrap = el("div"); ratingWrap.style.flex = "1"; ratingWrap.appendChild(ratingInput);
+    const durWrap = el("div"); durWrap.style.flex = "1"; durWrap.appendChild(durSel);
+    row2.appendChild(ratingWrap); row2.appendChild(durWrap);
+    const sendBtn = el("button", { class: "ch-send", type: "button" }, "Send challenge");
+    if (!handle) sendBtn.disabled = true;
+    const msg = el("div", { class: "ch-msg" });
+    form.appendChild(oppInput); form.appendChild(probInput); form.appendChild(row2); form.appendChild(sendBtn); form.appendChild(msg);
+    mount.appendChild(form);
 
-    const createBtn = css(el("button", { type: "button", class: "primary" }, online ? "Send challenge" : "Create challenge"), "padding:8px;border-radius:8px;cursor:pointer;font-weight:600;");
-    form.appendChild(createBtn);
-    const msg = css(el("div"), "font-size:12px;");
-    form.appendChild(msg);
-    const linkBox = css(el("div"), "display:none;");
-    form.appendChild(linkBox);
+    // Rating only matters for a random problem.
+    const syncRating = () => { ratingWrap.style.display = probInput.value.trim() ? "none" : ""; };
+    probInput.addEventListener("input", syncRating); syncRating();
 
-    createBtn.addEventListener("click", async () => {
-      const me = hInput.value.trim();
-      if (!me) { msg.style.color = "#e03131"; msg.textContent = "Set your handle first."; return; }
-      createBtn.disabled = true;
-      msg.style.color = "#666"; msg.textContent = "Building…";
+    sendBtn.addEventListener("click", async () => {
+      if (!handle) return;
+      sendBtn.disabled = true; msg.style.color = "var(--dim)"; msg.textContent = "Sending…";
       try {
         let problem;
-        const probRaw = probInput.value.trim();
-        if (probRaw) {
-          const parsed = C.parseProblem(probRaw);
-          if (!parsed) { msg.style.color = "#e03131"; msg.textContent = "Use a CF problem URL or e.g. 1234A."; createBtn.disabled = false; return; }
+        const raw = probInput.value.trim();
+        if (raw) {
+          const parsed = C.parseProblem(raw);
+          if (!parsed) { msg.style.color = "var(--bad,#e03131)"; msg.textContent = "Use a CF problem link or e.g. 1234A."; sendBtn.disabled = false; return; }
           problem = await enrich(parsed);
         } else {
-          const rating = Math.max(800, Math.min(3500, parseInt(ratingInput.value, 10) || 1400));
-          problem = pickRandom(await getProblems(), rating);
-          if (!problem) { msg.style.color = "#e03131"; msg.textContent = "Couldn't fetch a random problem (offline?)."; createBtn.disabled = false; return; }
+          problem = pickRandom(await getProblems(), Math.max(800, Math.min(3500, parseInt(ratingInput.value, 10) || 1400)));
+          if (!problem) { msg.style.color = "var(--bad,#e03131)"; msg.textContent = "Couldn't fetch a random problem (offline?)."; sendBtn.disabled = false; return; }
         }
         const opponent = oppInput.value.trim();
         const ch = {
-          id: C.makeId(), role: "out", me, opponent, problem,
+          id: C.makeId(), role: "out", me: handle, opponent, problem,
           createdAt: Date.now(), durationMin: parseInt(durSel.value, 10) || 60,
-          nonce: C.genNonce(), status: online ? C.STATUS.PENDING : C.STATUS.ACTIVE,
-          myAcSec: null, oppAcSec: null, polled: false, notified: false, online
+          nonce: C.genNonce(), status: C.STATUS.PENDING, myAcSec: null, oppAcSec: null,
+          polled: false, notified: false, online: true
         };
         await saveChallenge(ch);
-        if (online) {
-          send({ type: "cpos-challenge-net", action: "invite", challengeId: ch.id });
-          msg.style.color = "#2f9e44";
-          msg.textContent = opponent
-            ? `Sent to ${opponent} — they have ${C.INVITE_TTL_MIN} min to accept.`
-            : `Posted to the open lobby — expires in ${C.INVITE_TTL_MIN} min.`;
-          showLink(linkBox, ch, "or share a direct link:");
-        } else {
-          showLink(linkBox, ch, "");
-          msg.style.color = "#2f9e44";
-          msg.textContent = opponent ? `Challenge for ${opponent} — send them this link.` : "Open challenge — share this link.";
-        }
+        send({ type: "cpos-challenge-net", action: "invite", challengeId: ch.id });
         send({ type: "cpos-challenge-poll" });
-        oppInput.value = ""; probInput.value = "";
+        msg.style.color = "var(--ok,#2f9e44)";
+        msg.textContent = opponent
+          ? `Sent to ${opponent} — ${C.INVITE_TTL_MIN} min to accept.`
+          : `Open challenge posted — ${C.INVITE_TTL_MIN} min to find a taker.`;
+        oppInput.value = ""; probInput.value = ""; syncRating();
       } catch (_) {
-        msg.style.color = "#e03131"; msg.textContent = "Something went wrong.";
+        msg.style.color = "var(--bad,#e03131)"; msg.textContent = "Something went wrong.";
       } finally {
-        createBtn.disabled = false;
+        sendBtn.disabled = !handle;
       }
     });
-    root.appendChild(form);
 
-    // Lobby browse (online only)
-    if (online) {
-      const lobbyBtn = css(el("button", { type: "button" }, "Find open challenges"), "padding:7px;border-radius:8px;cursor:pointer;font-size:12px;");
-      const lobbyOut = css(el("div"), "display:flex;flex-direction:column;gap:6px;");
-      lobbyBtn.addEventListener("click", () => browseLobby(lobbyOut, me => me, hInput, lobbyBtn));
-      root.appendChild(lobbyBtn);
-      root.appendChild(lobbyOut);
-    }
+    // Accept public challenges — toggle + range; turning it on auto-lists matches.
+    const pubRow = el("div", { class: "ch-pub" });
+    pubRow.appendChild(el("span", { class: "lbl" }, "Accept public challenges"));
+    const minR = el("input", { type: "number", class: "ch-range", value: String(range.min), min: "800", max: "3500", step: "100", title: "min rating" });
+    const maxR = el("input", { type: "number", class: "ch-range", value: String(range.max), min: "800", max: "3500", step: "100", title: "max rating" });
+    const swWrap = el("span", { class: "sw" }); const swIn = el("input", { type: "checkbox" }); if (publicOn) swIn.checked = true;
+    swWrap.appendChild(swIn); swWrap.appendChild(el("span"));
+    pubRow.appendChild(minR); pubRow.appendChild(el("span", null, "–")); pubRow.appendChild(maxR); pubRow.appendChild(swWrap);
+    mount.appendChild(pubRow);
+    const pubList = el("div", { class: "ch-form" });
+    mount.appendChild(pubList);
 
-    renderList(root, map);
+    const persistRange = () => set({ [RANGE_KEY]: { min: parseInt(minR.value, 10) || 800, max: parseInt(maxR.value, 10) || 3500 } });
+    minR.addEventListener("change", persistRange);
+    maxR.addEventListener("change", persistRange);
+    swIn.addEventListener("change", async () => { await set({ [PUBLIC_KEY]: swIn.checked }); await persistRange(); refreshPublic(pubList, handle, swIn.checked, parseInt(minR.value, 10) || 0, parseInt(maxR.value, 10) || 9999); });
+    if (publicOn) refreshPublic(pubList, handle, true, range.min, range.max);
 
-    // Decided-notifications toggle
-    const nRow = css(el("label"), "display:flex;align-items:center;gap:8px;font-size:12px;cursor:pointer;");
-    const nChk = el("input", { type: "checkbox" }); nChk.checked = notify;
-    nChk.addEventListener("change", async () => { await set({ [C.NOTIFY_KEY]: nChk.checked }); });
-    nRow.appendChild(nChk);
-    nRow.appendChild(el("span", null, "Desktop notifications (challenge received / decided)"));
-    root.appendChild(nRow);
-
-    mount.appendChild(root);
+    // Your challenges
+    renderList(mount, map);
   }
 
-  function showLink(box, ch, label) {
-    box.textContent = "";
-    box.style.cssText = "display:flex;flex-direction:column;gap:4px;margin-top:4px;";
-    if (label) box.appendChild(css(el("div", null, label), "font-size:11px;opacity:.6;"));
-    const row = css(el("div"), "display:flex;gap:6px;");
-    const link = C.link(ch);
-    const inp = el("input", { type: "text", readonly: "readonly", value: link });
-    css(inp, INPUT + "font-size:11px;");
-    inp.addEventListener("focus", () => inp.select());
-    const copy = css(el("button", { type: "button" }, "Copy"), "padding:6px 10px;border-radius:8px;cursor:pointer;");
-    copy.addEventListener("click", async () => {
-      try { await navigator.clipboard.writeText(link); copy.textContent = "Copied!"; setTimeout(() => (copy.textContent = "Copy"), 1500); }
-      catch (_) { inp.select(); try { document.execCommand("copy"); } catch (e) {} }
-    });
-    row.appendChild(inp); row.appendChild(copy);
-    box.appendChild(row);
-  }
-
-  async function browseLobby(out, _meFn, hInput, btn) {
-    const me = hInput.value.trim();
-    out.textContent = "";
-    btn.disabled = true; btn.textContent = "Searching…";
+  // Fetch open lobby challenges in range and list them (accept inline). No button.
+  async function refreshPublic(container, me, on, lo, hi) {
+    container.textContent = "";
+    if (!on) return;
+    container.appendChild(el("div", { class: "ch-empty" }, "Looking for open challenges…"));
     try {
       const res = await fetch(`${C.NTFY_BASE}/${C.LOBBY_TOPIC}/json?poll=1&since=6h`, { cache: "no-store" });
       const text = res.ok ? await res.text() : "";
-      const seen = await get([C.STORE_KEY]);
-      const have = seen[C.STORE_KEY] || {};
+      const have = (await get([C.STORE_KEY]))[C.STORE_KEY] || {};
+      const seen = new Set();
       const invites = [];
       for (const line of text.split("\n")) {
         const s = line.trim(); if (!s) continue;
         let ev; try { ev = JSON.parse(s); } catch (_) { continue; }
         if (!ev || ev.event !== "message") continue;
         const p = C.parseNetBody(ev.message || "");
-        if (p && p.kind === "invite" && p.challenge && !have[p.challenge.id] && p.challenge.from !== me) invites.push(p.challenge);
+        if (!(p && p.kind === "invite" && p.challenge)) continue;
+        const inv = p.challenge;
+        if (have[inv.id] || seen.has(inv.id) || inv.from === me) continue;
+        const r = inv.problem.rating || 0;
+        if (r && (r < lo || r > hi)) continue;
+        seen.add(inv.id); invites.push(inv);
       }
-      if (!invites.length) { out.appendChild(css(el("div", null, "No open challenges right now."), "font-size:12px;opacity:.6;")); }
+      container.textContent = "";
+      if (!invites.length) { container.appendChild(el("div", { class: "ch-empty" }, `No open challenges rated ${lo}–${hi}.`)); return; }
       for (const inv of invites.slice(0, 8)) {
-        const row = css(el("div"), "display:flex;align-items:center;gap:8px;padding:6px 8px;border:1px dashed #d8c9ff;border-radius:8px;");
-        const left = css(el("div"), "flex:1;min-width:0;font-size:12px;");
-        left.appendChild(css(el("div", null, C.problemLabel(inv.problem)), "font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"));
-        left.appendChild(css(el("div", null, `from ${inv.from || "?"}`), "opacity:.6;"));
-        row.appendChild(left);
-        const acc = css(el("button", { type: "button" }, "Accept"), "padding:5px 9px;border-radius:7px;cursor:pointer;");
-        acc.addEventListener("click", async () => { await acceptIncoming(inv, me); btn.disabled = false; btn.textContent = "Find open challenges"; });
+        const row = el("div", { class: "ch-row dash" });
+        const who = el("div", { class: "who" });
+        who.appendChild(el("div", { class: "ch-prob", style: "color:var(--fg)" }, C.problemLabel(inv.problem)));
+        who.appendChild(el("div", { class: "ch-sub" }, `from ${inv.from || "?"}`));
+        row.appendChild(who);
+        const acc = el("button", { class: "ch-mini solid", type: "button" }, "Accept");
+        acc.addEventListener("click", () => acceptIncoming(inv, me));
         row.appendChild(acc);
-        out.appendChild(row);
+        container.appendChild(row);
       }
     } catch (_) {
-      out.appendChild(css(el("div", null, "Lobby unavailable right now."), "font-size:12px;opacity:.6;"));
-    } finally {
-      btn.disabled = false; btn.textContent = "Find open challenges";
+      container.textContent = ""; container.appendChild(el("div", { class: "ch-empty" }, "Lobby unavailable right now."));
     }
   }
 
-  // Accept an incoming invite object (from inbox-stored or lobby): make it active
-  // locally, tell the creator over ntfy, and open the problem.
   async function acceptIncoming(inv, me) {
     if (!me) return;
-    const ch = {
+    await saveChallenge({
       id: inv.id, role: "in", me, opponent: inv.from || "", problem: inv.problem,
       createdAt: inv.createdAt || Date.now(), durationMin: inv.durationMin || 60, nonce: inv.nonce || "",
       status: C.STATUS.ACTIVE, myAcSec: null, oppAcSec: null, polled: false, notified: false, online: true
-    };
-    await saveChallenge(ch);
-    send({ type: "cpos-challenge-net", action: "accept", challengeId: ch.id });
+    });
+    send({ type: "cpos-challenge-net", action: "accept", challengeId: inv.id });
     send({ type: "cpos-challenge-poll" });
-    try { window.open(ch.problem.url, "_blank", "noopener"); } catch (_) {}
+    try { window.open(inv.problem.url, "_blank", "noopener"); } catch (_) {}
+  }
+
+  function fmtWhen(ms) {
+    try { return new Date(ms).toLocaleString([], { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }); }
+    catch (_) { return ""; }
   }
 
   function renderList(root, map) {
-    const old = root.querySelector(".cpos-chal-list");
-    if (old) old.remove();
-    const list = el("div", { class: "cpos-chal-list" });
-    css(list, "display:flex;flex-direction:column;gap:6px;");
-
-    const items = Object.values(map).sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0)).slice(0, 14);
-    if (!items.length) {
-      list.appendChild(css(el("div", null, "No challenges yet — create one above."), "font-size:12px;opacity:.6;text-align:center;padding:6px;"));
-      root.appendChild(list);
-      return;
-    }
-
+    const items = Object.values(map).sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0)).slice(0, 12);
+    const list = el("div", { class: "ch-form" });
+    list.appendChild(el("div", { class: "ch-as" }, "Your challenges"));
+    if (!items.length) { list.appendChild(el("div", { class: "ch-empty" }, "None yet.")); root.appendChild(list); return; }
     for (const ch of items) {
-      const row = css(el("div"), "display:flex;align-items:center;gap:8px;padding:7px 9px;border:1px solid #ececf2;border-radius:9px;");
-      const left = css(el("div"), "flex:1;min-width:0;");
-      const probA = el("a", { href: ch.problem.url, target: "_blank", rel: "noopener" }, C.problemLabel(ch.problem));
-      css(probA, "color:#5b3fd6;font-weight:600;text-decoration:none;font-size:12.5px;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;");
-      left.appendChild(probA);
-      const who = ch.opponent ? `${ch.role === "out" ? "vs" : "from"} ${ch.opponent}` : (ch.role === "out" ? "open" : "open");
-      left.appendChild(css(el("div", null, `${who} · ${fmtWhen(ch.createdAt)}`), "font-size:11px;opacity:.6;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"));
-      row.appendChild(left);
+      const row = el("div", { class: "ch-row" });
+      const who = el("div", { class: "who" });
+      const a = el("a", { class: "ch-prob", href: ch.problem.url, target: "_blank", rel: "noopener" }, C.problemLabel(ch.problem));
+      who.appendChild(a);
+      const opp = ch.opponent ? `${ch.role === "out" ? "vs" : "from"} ${ch.opponent}` : "open";
+      who.appendChild(el("div", { class: "ch-sub" }, `${opp} · ${fmtWhen(ch.createdAt)}`));
+      row.appendChild(who);
 
-      // Incoming pending → Accept / Decline
       if (ch.role === "in" && ch.status === C.STATUS.PENDING) {
-        const acc = css(el("button", { type: "button" }, "Accept"), "padding:5px 9px;border-radius:7px;cursor:pointer;font-size:12px;");
-        acc.addEventListener("click", async () => { await acceptIncoming(ch, ch.me); });
-        const dec = css(el("button", { type: "button" }, "Decline"), "padding:5px 8px;border-radius:7px;cursor:pointer;font-size:12px;background:#f1f1f5;border:0;");
+        const acc = el("button", { class: "ch-mini solid", type: "button" }, "Accept");
+        acc.addEventListener("click", () => acceptIncoming(ch, ch.me));
+        const dec = el("button", { class: "ch-mini", type: "button" }, "Decline");
         dec.addEventListener("click", async () => {
           ch.status = C.STATUS.DECLINED; await saveChallenge(ch);
           if (ch.online) send({ type: "cpos-challenge-net", action: "decline", challengeId: ch.id });
@@ -333,22 +294,14 @@
         row.appendChild(acc); row.appendChild(dec);
       } else {
         const [label, color] = BADGE[ch.status] || [ch.status, "#868e96"];
-        row.appendChild(css(el("span", null, label), `font-size:11px;font-weight:700;color:#fff;background:${color};padding:3px 7px;border-radius:20px;white-space:nowrap;`));
+        const b = el("span", { class: "ch-badge" }, label); b.style.background = color;
+        row.appendChild(b);
       }
-
-      const copy = css(el("button", { type: "button", title: "Copy challenge link" }, "🔗"), "border:0;background:transparent;cursor:pointer;font-size:13px;padding:2px 4px;");
-      copy.addEventListener("click", async (e) => {
-        e.preventDefault();
-        try { await navigator.clipboard.writeText(C.link(ch)); copy.textContent = "✓"; setTimeout(() => (copy.textContent = "🔗"), 1200); } catch (_) {}
+      const x = el("button", { class: "ch-x", type: "button", title: "Remove" }, "✕");
+      x.addEventListener("click", async () => {
+        const m = (await get([C.STORE_KEY]))[C.STORE_KEY] || {}; delete m[ch.id]; await set({ [C.STORE_KEY]: m });
       });
-      row.appendChild(copy);
-
-      const del = css(el("button", { type: "button", title: "Remove" }, "✕"), "border:0;background:transparent;cursor:pointer;font-size:12px;color:#aaa;padding:2px 4px;");
-      del.addEventListener("click", async () => {
-        const raw = await get([C.STORE_KEY]); const m = raw[C.STORE_KEY] || {};
-        delete m[ch.id]; await set({ [C.STORE_KEY]: m });
-      });
-      row.appendChild(del);
+      row.appendChild(x);
       list.appendChild(row);
     }
     root.appendChild(list);
@@ -357,7 +310,7 @@
   if (chrome.storage.onChanged) {
     chrome.storage.onChanged.addListener((changes, area) => {
       if (area !== "local") return;
-      if (changes[C.STORE_KEY] || changes[C.HANDLE_KEY] || changes[C.NOTIFY_KEY] || changes[C.ONLINE_KEY]) render();
+      if (changes[C.STORE_KEY] || changes[C.HANDLE_KEY] || changes[PUBLIC_KEY] || changes[RANGE_KEY]) render();
     });
   }
   send({ type: "cpos-challenge-poll" });

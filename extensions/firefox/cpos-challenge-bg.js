@@ -152,7 +152,7 @@
   // still decides the winner — ntfy only carries the invite/accept/decline.
   async function onlineEnabled() {
     const raw = await get([C.ONLINE_KEY]);
-    return raw[C.ONLINE_KEY] === true; // default OFF
+    return raw[C.ONLINE_KEY] !== false; // default ON (delivery by handle is the core flow)
   }
   async function myHandle() {
     const raw = await get([C.HANDLE_KEY]);

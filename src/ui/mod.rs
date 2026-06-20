@@ -28,7 +28,7 @@ pub fn draw(frame: &mut Frame, app: &App) {
         .direction(Direction::Vertical)
         .horizontal_margin(1)
         .constraints([
-            Constraint::Length(3), // header
+            Constraint::Length(4), // header (two-row brand logo)
             Constraint::Length(1), // tabs
             Constraint::Length(1), // spacer
             Constraint::Min(8),    // content
@@ -73,14 +73,19 @@ fn draw_header(frame: &mut Frame, app: &App, area: Rect) {
         .constraints([Constraint::Min(20), Constraint::Length(46)])
         .split(inner);
 
-    let brand = Paragraph::new(Line::from(vec![
-        Span::styled(" ◆ ", Style::default().fg(t.accent)),
-        Span::styled(
-            "CPOS",
-            Style::default().fg(t.accent).add_modifier(Modifier::BOLD),
-        ),
-        Span::styled("  Competitive Programming OS", Style::default().fg(t.dim)),
-    ]));
+    // Small two-row CPOS mark: a block "C" in the brand colour, echoing the app
+    // icon (a terminal can't render the pixel logo, so this is the closest mark).
+    let logo = Style::default().fg(t.accent).add_modifier(Modifier::BOLD);
+    let brand = Paragraph::new(vec![
+        Line::from(vec![
+            Span::styled("▛▀", logo),
+            Span::styled("  CPOS", Style::default().fg(t.accent).add_modifier(Modifier::BOLD)),
+        ]),
+        Line::from(vec![
+            Span::styled("▙▄", logo),
+            Span::styled("  Competitive Programming OS", Style::default().fg(t.dim)),
+        ]),
+    ]);
     frame.render_widget(brand, cols[0]);
 
     let rating = app.current_rating();

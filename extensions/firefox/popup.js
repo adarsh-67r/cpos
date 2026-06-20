@@ -168,7 +168,7 @@
       }
     }
     dot.className = "dot off";
-    text.textContent = "app not running";
+    text.textContent = "offline";
   }
 
   async function fetchSharedConfig() {

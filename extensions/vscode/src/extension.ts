@@ -2349,6 +2349,14 @@ class CposActionsProvider implements vscode.WebviewViewProvider {
   .settings-tab:hover, .settings-tab.active { color: #fff; border-bottom-color: var(--accent); }
   .config-wrapper { overflow: auto; min-height: 0; padding-bottom: 8px; }
   .config-card { padding: 12px; display: flex; flex-direction: column; gap: 10px; }
+  .config-collapse { padding: 0; display: block; margin-bottom: 8px; }
+  .config-collapse > summary { cursor: pointer; padding: 11px 12px; font-weight: 700; font-size: 12px; color: var(--fg); list-style: none; }
+  .config-collapse > summary::-webkit-details-marker { display: none; }
+  .config-collapse > summary::before { content: "\\25B8 "; color: var(--dim); }
+  .config-collapse[open] > summary::before { content: "\\25BE "; }
+  .config-collapse > *:not(summary) { margin-left: 12px; margin-right: 12px; }
+  .config-collapse > *:not(summary) + * { margin-top: 10px; }
+  .config-collapse > .config-buttons { margin-bottom: 12px; }
   .config-title { font-weight: 700; font-size: 12px; color: var(--fg); }
   .config-note { color: var(--dim); font-size: 10px; line-height: 1.45; }
   .config-field { display: flex; flex-direction: column; gap: 5px; }
@@ -3211,9 +3219,10 @@ class CposActionsProvider implements vscode.WebviewViewProvider {
       return '<option value="' + esc(lang) + '"' + (lang === chosen ? ' selected' : '') + '>' + esc(lang) + '</option>';
     }).join('');
     const content = (cfg.templates && cfg.templates[chosen]) || '';
-    return '<div class="config-wrapper"><div class="box config-card">'
-      + '<div class="config-title">Shared templates</div>'
-      + '<div class="config-note">Saved under your CPOS config directory and used by VS Code, the TUI, and the browser editor when a local CPOS server is running.</div>'
+    return '<div class="config-wrapper">'
+      + '<details class="box config-card config-collapse">'
+      + '<summary class="config-summary">Shared templates</summary>'
+      + '<div class="config-note">Shared by Chrome, VS Code &amp; TUI.</div>'
       + '<div class="config-field"><label for="config-default-lang">Default language</label><select id="config-default-lang">' + options + '</select></div>'
       + '<div class="config-field"><label for="config-lang">Language</label><select id="config-lang">' + options + '</select></div>'
       + '<div class="config-field"><label for="config-template">Template</label><textarea id="config-template" spellcheck="false">' + esc(content) + '</textarea></div>'
@@ -3222,7 +3231,8 @@ class CposActionsProvider implements vscode.WebviewViewProvider {
       + '<button data-act="uploadTemplate">Upload file</button>'
       + '<button data-act="resetTemplate">Reset</button>'
       + '<button class="primary" data-act="saveTemplate">Save &amp; sync</button>'
-      + '</div></div></div>';
+      + '</div>'
+      + '</details></div>';
   }
 
   function sanitizeHtml(html) {
@@ -3341,7 +3351,7 @@ class CposActionsProvider implements vscode.WebviewViewProvider {
           + '</div></div>';
       }).join('');
     } else {
-      videoContent = '<div class="sol-empty">Could not auto-load videos — use the links below to search manually.</div>';
+      videoContent = null; // none found — don't render an empty "Video Solutions" box
     }
 
     // ── Links accordion content ──
@@ -3382,7 +3392,7 @@ class CposActionsProvider implements vscode.WebviewViewProvider {
     }
 
     return '<div class="sol-wrapper">'
-      + accordion('videos', 'Video Solutions', videoContent, true)
+      + (videoContent ? accordion('videos', 'Video Solutions', videoContent, true) : '')
       + accordion('links',  'Editorials &amp; Links', linksHtml, true)
       + '</div>';
   }
