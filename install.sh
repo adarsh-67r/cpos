@@ -116,7 +116,8 @@ if [ ! -f "$tmp/cpos" ]; then
 fi
 
 mkdir -p "$bin_dir"
-cp "$tmp/cpos" "$bin_dir/cpos"
+rm -f "$bin_dir/cpos"
+mv "$tmp/cpos" "$bin_dir/cpos"
 chmod 755 "$bin_dir/cpos"
 
 echo "Installed CPOS to $bin_dir/cpos"
