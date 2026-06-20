@@ -249,22 +249,97 @@
     const map = await loadChallenges();
     const ch = map[challengeId];
     if (!ch) return false;
+    let ok = false;
     if (action === "invite") {
       const topic = ch.opponent ? C.topicForHandle(ch.opponent) : C.LOBBY_TOPIC;
-      return ntfyPublish(topic, C.buildInvite(ch), `${ch.me} challenges you`);
-    }
-    if (action === "accept" || action === "decline") {
+      ok = await ntfyPublish(topic, C.buildInvite(ch), `${ch.me} challenges you`);
+      if (ok) ch.invitePublished = true;
+    } else if (action === "accept" || action === "decline") {
       if (!ch.opponent) return false; // creator's handle unknown
       const topic = C.topicForHandle(ch.opponent);
-      return ntfyPublish(topic, C.buildReply(action, ch.id, ch.me), `${ch.me} ${action}ed your challenge`);
+      ok = await ntfyPublish(topic, C.buildReply(action, ch.id, ch.me), `${ch.me} ${action}ed your challenge`);
+      if (ok) ch[action === "accept" ? "acceptSent" : "declineSent"] = true;
     }
-    return false;
+    if (ok) { map[challengeId] = ch; await saveChallenges(map); }
+    return ok;
+  }
+
+  // Publish invites/replies for challenges that haven't been sent yet — covers
+  // challenges created/accepted in VS Code (synced in) that never went through a
+  // netSend message. Flag-guarded so nothing is published twice.
+  async function publishPending() {
+    if (!(await onlineEnabled())) return;
+    const map = await loadChallenges();
+    let dirty = false;
+    for (const ch of Object.values(map)) {
+      if (!ch || !ch.online) continue;
+      if (ch.role === "out" && ch.status === C.STATUS.PENDING && !ch.invitePublished) {
+        const topic = ch.opponent ? C.topicForHandle(ch.opponent) : C.LOBBY_TOPIC;
+        if (await ntfyPublish(topic, C.buildInvite(ch), `${ch.me} challenges you`)) { ch.invitePublished = true; dirty = true; }
+      } else if (ch.role === "in" && ch.opponent && ch.status === C.STATUS.ACTIVE && !ch.acceptSent) {
+        if (await ntfyPublish(C.topicForHandle(ch.opponent), C.buildReply("accept", ch.id, ch.me), `${ch.me} accepted your challenge`)) { ch.acceptSent = true; dirty = true; }
+      } else if (ch.role === "in" && ch.opponent && ch.status === C.STATUS.DECLINED && !ch.declineSent) {
+        if (await ntfyPublish(C.topicForHandle(ch.opponent), C.buildReply("decline", ch.id, ch.me), `${ch.me} declined your challenge`)) { ch.declineSent = true; dirty = true; }
+      }
+    }
+    if (dirty) await saveChallenges(map);
+  }
+
+  // Two-way sync with the local CPOS apps (VS Code :27122 / TUI :27121) so the
+  // Compete tab and the popup show the same challenges. We pull (adopt the most-
+  // advanced status), then push our state + detected handle + public settings.
+  const APP_BASES = ["http://127.0.0.1:27122", "http://127.0.0.1:27121"];
+  async function syncWithApps() {
+    const me = await myHandle();
+    const rank = (s) => ({ pending: 0, active: 1, won: 2, lost: 2, draw: 2, expired: 2, declined: 2 }[s] ?? 0);
+    for (const base of APP_BASES) {
+      let app = null;
+      try {
+        const res = await fetch(base + "/challenges", { cache: "no-store" });
+        if (res.ok) app = await res.json();
+      } catch (_) { continue; } // app not running
+      if (!app || !app.ok) continue;
+
+      // adopt app -> browser
+      const map = await loadChallenges();
+      let dirty = false;
+      for (const id of Object.keys(app.challenges || {})) {
+        const rem = app.challenges[id]; const loc = map[id];
+        if (!loc) { map[id] = rem; dirty = true; }
+        else if (rank(rem.status) > rank(loc.status)) { map[id] = rem; dirty = true; }
+      }
+      if (dirty) await saveChallenges(map);
+      if (app.cf) {
+        const cur = await get(["cpos.challenge.publicOn", "cpos.challenge.range"]);
+        const upd = {};
+        if (typeof app.cf.publicOn === "boolean" && app.cf.publicOn !== (cur["cpos.challenge.publicOn"] === true)) upd["cpos.challenge.publicOn"] = app.cf.publicOn;
+        if (app.cf.range && JSON.stringify(app.cf.range) !== JSON.stringify(cur["cpos.challenge.range"] || null)) upd["cpos.challenge.range"] = app.cf.range;
+        if (Object.keys(upd).length) await set(upd);
+      }
+
+      // push browser -> app
+      const after = await get([C.STORE_KEY, "cpos.challenge.publicOn", "cpos.challenge.range"]);
+      try {
+        await fetch(base + "/challenges", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            challenges: after[C.STORE_KEY] || {},
+            handle: me,
+            publicOn: after["cpos.challenge.publicOn"] === true,
+            range: after["cpos.challenge.range"] || { min: 800, max: 3500 }
+          })
+        });
+      } catch (_) { /* best-effort */ }
+    }
   }
 
   // ---- listeners (our own; coexist with background.js + cpos-contests.js) -----
   let tick = 0;
   async function tickPoll() {
-    await pollAll();                       // CF referee, every minute
+    await syncWithApps();                  // sync with VS Code / TUI (local HTTP)
+    await publishPending();                // deliver any unpublished (e.g. VS Code-created) invites
+    await pollAll();                       // CF referee
     if (tick % 2 === 0) await netPollInbox(); // ntfy inbox, ~every 2 minutes
     tick++;
   }

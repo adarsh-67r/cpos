@@ -246,6 +246,102 @@ function updateStatus(): void {
   status.show();
 }
 
+// ───────────────────────── Challenge mode (synced store) ─────────────────────
+// VS Code holds the same challenge data as the browser companion and serves it
+// over localhost. The browser remains the network engine (ntfy delivery + CF
+// refereeing) and syncs both ways; this side is a synced store + UI (no
+// notifications here, by design).
+const CHALLENGE_STORE = "cpos.challenges";
+const CHALLENGE_CF = "cpos.challengeCf";
+type ChProblem = { platform: string; contestId: number; index: string; id: string; name: string; url: string; rating: number };
+type Challenge = {
+  id: string; role: string; me: string; opponent: string; problem: ChProblem;
+  createdAt: number; durationMin: number; nonce: string; status: string;
+  myAcSec: number | null; oppAcSec: number | null; polled: boolean; notified: boolean; online: boolean;
+};
+type ChallengeCf = { handle: string; publicOn: boolean; range: { min: number; max: number } };
+
+function loadChallenges(): Record<string, Challenge> {
+  return extContext?.globalState.get<Record<string, Challenge>>(CHALLENGE_STORE) ?? {};
+}
+async function saveChallenges(map: Record<string, Challenge>): Promise<void> {
+  await extContext?.globalState.update(CHALLENGE_STORE, map);
+}
+function loadChallengeCf(): ChallengeCf {
+  return extContext?.globalState.get<ChallengeCf>(CHALLENGE_CF) ?? { handle: "", publicOn: false, range: { min: 800, max: 3500 } };
+}
+async function saveChallengeCf(cf: ChallengeCf): Promise<void> {
+  await extContext?.globalState.update(CHALLENGE_CF, cf);
+}
+function chRandId(n: number): string {
+  let s = ""; while (s.length < n) s += Math.random().toString(36).slice(2);
+  return s.slice(0, n);
+}
+function parseChallengeProblem(input: string): ChProblem | null {
+  const s = (input || "").trim();
+  const m = s.match(/codeforces\.com\/problemset\/problem\/(\d+)\/([A-Za-z][0-9]*)/i)
+    || s.match(/codeforces\.com\/contest\/(\d+)\/problem\/([A-Za-z][0-9]*)/i)
+    || s.match(/^\s*(\d+)\s*[/ ]?\s*([A-Za-z][0-9]*)\s*$/);
+  if (!m) return null;
+  const c = parseInt(m[1], 10); const x = m[2].toUpperCase();
+  if (!c || !x) return null;
+  return { platform: "codeforces", contestId: c, index: x, id: `${c}${x}`, name: "", url: `https://codeforces.com/contest/${c}/problem/${x}`, rating: 0 };
+}
+async function pickRandomProblem(rating: number): Promise<ChProblem | null> {
+  try {
+    const res = await fetch("https://codeforces.com/api/problemset.problems");
+    const j = (await res.json()) as { status: string; result?: { problems?: Array<{ contestId: number; index: string; name: string; rating: number }> } };
+    if (j.status !== "OK" || !j.result?.problems) return null;
+    const all = j.result.problems.filter((p) => p.contestId && p.index && typeof p.rating === "number");
+    let pool = all.filter((p) => p.rating === rating);
+    if (pool.length < 5) pool = all.filter((p) => Math.abs(p.rating - rating) <= 100);
+    if (!pool.length) pool = all;
+    if (!pool.length) return null;
+    const p = pool[Math.floor(Math.random() * pool.length)];
+    return { platform: "codeforces", contestId: p.contestId, index: p.index, id: `${p.contestId}${p.index}`, name: p.name || "", url: `https://codeforces.com/contest/${p.contestId}/problem/${p.index}`, rating: p.rating };
+  } catch { return null; }
+}
+async function challengeCreate(opponent: string, problemRaw: string, rating: number, durationMin: number): Promise<void> {
+  const cf = loadChallengeCf();
+  if (!cf.handle) return;
+  const problem = problemRaw ? parseChallengeProblem(problemRaw) : await pickRandomProblem(Math.max(800, Math.min(3500, rating || 1400)));
+  if (!problem) return;
+  const map = loadChallenges();
+  const id = chRandId(12);
+  map[id] = {
+    id, role: "out", me: cf.handle, opponent: (opponent || "").trim(), problem,
+    createdAt: Date.now(), durationMin: durationMin || 60, nonce: chRandId(8), status: "pending",
+    myAcSec: null, oppAcSec: null, polled: false, notified: false, online: true
+  };
+  await saveChallenges(map);
+}
+async function challengeSetStatus(id: string, action: string): Promise<void> {
+  const map = loadChallenges(); const ch = map[id]; if (!ch) return;
+  if (action === "accept") ch.status = "active";
+  else if (action === "decline") ch.status = "declined";
+  await saveChallenges(map);
+}
+async function challengeRemove(id: string): Promise<void> {
+  const map = loadChallenges(); delete map[id]; await saveChallenges(map);
+}
+async function challengeSetPublic(on: boolean, min: number, max: number): Promise<void> {
+  const cf = loadChallengeCf();
+  cf.publicOn = !!on;
+  cf.range = { min: min || 800, max: max || 3500 };
+  await saveChallengeCf(cf);
+}
+// Merge a map pushed from the browser. The browser is authoritative for
+// network-derived status, so prefer a more-advanced remote status over local.
+function mergeChallenges(incoming: Record<string, Challenge>): Record<string, Challenge> {
+  const map = loadChallenges();
+  const rank = (s: string): number => (({ pending: 0, active: 1, won: 2, lost: 2, draw: 2, expired: 2, declined: 2 } as Record<string, number>)[s] ?? 0);
+  for (const id of Object.keys(incoming)) {
+    const rem = incoming[id]; const loc = map[id];
+    map[id] = !loc || rank(rem.status) >= rank(loc.status) ? rem : loc;
+  }
+  return map;
+}
+
 async function handleRequest(req: http.IncomingMessage, res: http.ServerResponse): Promise<void> {
   setCors(res);
   if (req.method === "OPTIONS") {
@@ -331,6 +427,28 @@ async function handleRequest(req: http.IncomingMessage, res: http.ServerResponse
       }
       const results = await runCodeAgainstTests(body.code, body.language, body.tests);
       sendJson(res, 200, { ok: true, results });
+    } catch (error) {
+      sendJson(res, 400, { ok: false, error: error instanceof Error ? error.message : String(error) });
+    }
+    return;
+  }
+
+  // Challenge sync: the browser companion is the network engine; it pulls the
+  // shared store (GET) and pushes its merged state + the detected handle (POST).
+  if (req.method === "GET" && req.url === "/challenges") {
+    sendJson(res, 200, { ok: true, challenges: loadChallenges(), cf: loadChallengeCf() });
+    return;
+  }
+  if (req.method === "POST" && req.url === "/challenges") {
+    try {
+      const body = await readJson<{ challenges?: Record<string, Challenge>; handle?: string; publicOn?: boolean; range?: { min: number; max: number } }>(req);
+      if (body.challenges) await saveChallenges(mergeChallenges(body.challenges));
+      const cf = loadChallengeCf();
+      if (typeof body.handle === "string" && body.handle) cf.handle = body.handle;
+      if (typeof body.publicOn === "boolean") cf.publicOn = body.publicOn;
+      if (body.range) cf.range = body.range;
+      await saveChallengeCf(cf);
+      sendJson(res, 200, { ok: true });
     } catch (error) {
       sendJson(res, 400, { ok: false, error: error instanceof Error ? error.message : String(error) });
     }
@@ -1487,6 +1605,8 @@ type PanelState = {
     templates: Record<string, string>;
     languages: string[];
   };
+  challenges: Record<string, Challenge>;
+  cf: ChallengeCf;
 };
 
 async function currentState(): Promise<PanelState> {
@@ -1512,7 +1632,9 @@ async function currentState(): Promise<PanelState> {
       defaultLanguage: sharedConfig.defaultLanguage,
       templates: sharedConfig.templates,
       languages: Object.keys(DEFAULT_COMMANDS)
-    }
+    },
+    challenges: loadChallenges(),
+    cf: loadChallengeCf()
   };
 }
 
@@ -1651,9 +1773,37 @@ class CposActionsProvider implements vscode.WebviewViewProvider {
     language?: string;
     content?: string;
     defaultLanguage?: string;
+    opponent?: string;
+    problem?: string;
+    rating?: number;
+    durationMin?: number;
+    id?: string;
+    on?: boolean;
+    min?: number;
+    max?: number;
   }): Promise<void> {
     switch (message.type) {
       case "ready":
+        await this.postState();
+        break;
+      case "chCreate":
+        await challengeCreate(message.opponent ?? "", message.problem ?? "", message.rating ?? 1400, message.durationMin ?? 60);
+        await this.postState();
+        break;
+      case "chAccept":
+        if (message.id) await challengeSetStatus(message.id, "accept");
+        await this.postState();
+        break;
+      case "chDecline":
+        if (message.id) await challengeSetStatus(message.id, "decline");
+        await this.postState();
+        break;
+      case "chRemove":
+        if (message.id) await challengeRemove(message.id);
+        await this.postState();
+        break;
+      case "chSetPublic":
+        await challengeSetPublic(!!message.on, message.min ?? 800, message.max ?? 3500);
         await this.postState();
         break;
       case "saveTheme":
@@ -2341,16 +2491,21 @@ class CposActionsProvider implements vscode.WebviewViewProvider {
   .tab { padding: 6px 12px; border: none; background: transparent; color: var(--dim); cursor: pointer; border-bottom: 2px solid transparent; font-size: 11px; font-family: var(--mono); text-transform: uppercase; letter-spacing: 0.05em; }
   .tab.active { color: var(--fg); border-bottom-color: var(--accent); font-weight: 700; }
   .tab:hover:not(.active) { color: var(--fg); }
-  .tab { display: inline-flex; align-items: center; gap: 6px; }
+  .tabs { flex-wrap: nowrap; overflow: hidden; }
+  .tab { display: inline-flex; align-items: center; gap: 6px; flex: 0 0 auto; }
   .tab-ico { display: none; align-items: center; }
   .tab-ico svg { width: 14px; height: 14px; display: block; }
-  /* Narrow panel: collapse tab text + header button text to icons so nothing overflows. */
-  .compact .tabs { gap: 2px; }
-  .compact .tab { padding: 6px 8px; }
-  .compact .tab-label { display: none; }
-  .compact .tab-ico { display: inline-flex; }
-  .compact .headtools .iconbtn .btn-label { display: none; }
-  .compact .headtools .iconbtn.sponsor, .compact .headtools .iconbtn.theme { padding: 4px 6px; }
+  /* Only tabs flagged .ico-only (by the overflow check) drop their text — lowest
+     priority first, so Tests/Statement keep their labels as long as they fit. */
+  .tab.ico-only { padding: 6px 9px; }
+  .tab.ico-only .tab-label { display: none; }
+  .tab.ico-only .tab-ico { display: inline-flex; }
+  /* Header: keep the Sponsor/Theme button text; let the brand truncate first so
+     the buttons never clip. */
+  .head .row { flex-wrap: nowrap; }
+  .brandrow { flex: 1 1 auto; min-width: 0; overflow: hidden; }
+  .brandrow .title { overflow: hidden; text-overflow: ellipsis; }
+  .headtools { flex: 0 0 auto; }
   .settings-tab {
     display: inline-flex; align-items: center; justify-content: center;
     padding: 5px 8px; color: #fff;
@@ -2367,6 +2522,38 @@ class CposActionsProvider implements vscode.WebviewViewProvider {
   .config-collapse > *:not(summary) { margin-left: 12px; margin-right: 12px; }
   .config-collapse > *:not(summary) + * { margin-top: 10px; }
   .config-collapse > .config-buttons { margin-bottom: 12px; }
+  /* Compete (challenges) tab */
+  .cmp-wrap { display: flex; flex-direction: column; gap: 10px; overflow: auto; min-height: 0; padding-bottom: 8px; }
+  .cmp-as { color: var(--dim); font-size: 11px; }
+  .cmp-as b { color: var(--fg); }
+  .cmp-form { display: flex; flex-direction: column; gap: 7px; }
+  .cmp-in { width: 100%; box-sizing: border-box; padding: 7px 9px; border-radius: 6px; border: 1px solid var(--border); background: var(--input-bg); color: var(--fg); font: inherit; font-size: 12px; }
+  .cmp-in:focus { outline: none; border-color: var(--accent); }
+  .cmp-row2 { display: flex; gap: 7px; }
+  .cmp-row2 > * { flex: 1; min-width: 0; }
+  .cmp-send { width: 100%; padding: 9px; border: 0; border-radius: 7px; background: var(--accent); color: var(--accent-on); font: inherit; font-weight: 700; font-size: 12px; cursor: pointer; }
+  .cmp-send:hover { filter: brightness(1.06); }
+  .cmp-send:disabled { opacity: .5; cursor: default; filter: none; }
+  .cmp-msg { font-size: 11px; color: var(--dim); min-height: 14px; }
+  .cmp-pub { display: flex; align-items: center; gap: 8px; font-size: 12px; }
+  .cmp-pub-lbl { flex: 1; }
+  .cmp-range { width: 56px; box-sizing: border-box; padding: 5px 6px; border-radius: 6px; border: 1px solid var(--border); background: var(--input-bg); color: var(--fg); font: inherit; font-size: 11px; text-align: center; }
+  .cmp-dash { color: var(--dim); }
+  .cmp-toggle { width: 34px; height: 19px; border-radius: 999px; border: 1px solid var(--border); background: var(--border-soft); position: relative; cursor: pointer; flex: 0 0 auto; padding: 0; }
+  .cmp-toggle > span { position: absolute; width: 13px; height: 13px; border-radius: 50%; background: var(--dim); top: 2px; left: 2px; transition: .16s; }
+  .cmp-toggle.on { background: var(--accent); border-color: var(--accent); }
+  .cmp-toggle.on > span { transform: translateX(15px); background: var(--accent-on); }
+  .cmp-listhead { color: var(--dim); font-size: 10px; text-transform: uppercase; letter-spacing: .08em; margin-top: 2px; }
+  .cmp-list { display: flex; flex-direction: column; gap: 6px; }
+  .cmp-item { display: flex; align-items: center; gap: 8px; padding: 7px 9px; border: 1px solid var(--border); border-radius: 7px; }
+  .cmp-who { flex: 1; min-width: 0; }
+  .cmp-prob { color: var(--accent); font-weight: 600; font-size: 12px; text-decoration: none; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; cursor: pointer; }
+  .cmp-sub { color: var(--dim); font-size: 11px; }
+  .cmp-mini { padding: 5px 9px; border: 1px solid var(--border); border-radius: 6px; background: transparent; color: var(--fg); font: inherit; font-size: 11px; cursor: pointer; }
+  .cmp-mini:hover { border-color: var(--accent); color: var(--accent); }
+  .cmp-mini.solid { background: var(--accent); color: var(--accent-on); border-color: var(--accent); }
+  .cmp-badge { font-size: 10px; font-weight: 700; color: #fff; padding: 3px 7px; border-radius: 20px; white-space: nowrap; }
+  .cmp-x { border: 0; background: transparent; color: var(--dim); cursor: pointer; font-size: 11px; padding: 2px 4px; }
   .config-title { font-weight: 700; font-size: 12px; color: var(--fg); }
   .config-note { color: var(--dim); font-size: 10px; line-height: 1.45; }
   .config-field { display: flex; flex-direction: column; gap: 5px; }
@@ -3212,14 +3399,16 @@ class CposActionsProvider implements vscode.WebviewViewProvider {
   }
 
   function tabsHtml() {
-    const tabs = [{ id: 'tests', label: 'Tests' }];
-    if (state.meta && state.meta.statementHtml) tabs.push({ id: 'statement', label: 'Statement' });
+    // prio = how long the label survives when the row is too narrow (higher stays).
+    const tabs = [{ id: 'tests', label: 'Tests', prio: 4 }];
+    if (state.meta && state.meta.statementHtml) tabs.push({ id: 'statement', label: 'Statement', prio: 3 });
     // Solution tab is hidden while the problem's contest is still running.
-    if (state.meta && !state.solutionBlocked) tabs.push({ id: 'solution', label: 'Solution' });
+    if (state.meta && !state.solutionBlocked) tabs.push({ id: 'solution', label: 'Solution', prio: 2 });
+    tabs.push({ id: 'compete', label: 'Compete', prio: 1 });
     return '<div class="tabs" role="tablist">'
       + tabs.map(function(t) {
         return '<button role="tab" aria-selected="' + (activeTab === t.id ? "true" : "false")
-          + '" tabindex="0" title="' + t.label + '" class="tab ' + (activeTab === t.id ? "active" : "")
+          + '" tabindex="0" title="' + t.label + '" data-prio="' + (t.prio || 0) + '" class="tab ' + (activeTab === t.id ? "active" : "")
           + '" data-act="setTab" data-tab="' + t.id + '">'
           + '<span class="tab-ico">' + (TAB_ICONS[t.id] || '') + '</span>'
           + '<span class="tab-label">' + t.label + '</span></button>';
@@ -3416,6 +3605,69 @@ class CposActionsProvider implements vscode.WebviewViewProvider {
       + '</div>';
   }
 
+  function competeSection() {
+    const cf = state.cf || {};
+    const handle = cf.handle || '';
+    const range = cf.range || { min: 800, max: 3500 };
+    const chs = state.challenges || {};
+    const items = Object.keys(chs).map(function (k) { return chs[k]; })
+      .sort(function (a, b) { return (b.createdAt || 0) - (a.createdAt || 0); }).slice(0, 12);
+    const BADGE = { pending: ['Pending', '#f59f00'], active: ['Racing', 'var(--accent)'], won: ['Won', '#2f9e44'], lost: ['Lost', '#e03131'], draw: ['Draw', '#f08c00'], expired: ['Expired', '#888'], declined: ['Declined', '#888'] };
+
+    const who = handle
+      ? '<div class="cmp-as">Racing as <b>' + esc(handle) + '</b></div>'
+      : '<div class="cmp-as">Open a Codeforces page in your browser (with the CPOS companion) so CPOS can detect your handle.</div>';
+
+    const form = '<div class="cmp-form">'
+      + '<input id="cmp-opp" class="cmp-in" type="text" placeholder="opponent handle — blank for anyone" />'
+      + '<input id="cmp-prob" class="cmp-in" type="text" placeholder="problem link or ID — blank for random" />'
+      + '<div class="cmp-row2">'
+      +   '<input id="cmp-rating" class="cmp-in" type="number" value="1400" min="800" max="3500" step="100" title="difficulty for a random problem" />'
+      +   '<select id="cmp-dur" class="cmp-in"><option value="30">30 min</option><option value="60" selected>1 hour</option><option value="120">2 hours</option><option value="1440">1 day</option></select>'
+      + '</div>'
+      + '<button class="cmp-send" data-act="chCreate"' + (handle ? '' : ' disabled') + '>Send challenge</button>'
+      + '<div id="cmp-msg" class="cmp-msg"></div>'
+      + '</div>';
+
+    const pub = '<div class="cmp-pub">'
+      + '<span class="cmp-pub-lbl">Accept public challenges</span>'
+      + '<input id="cmp-min" class="cmp-range" type="number" value="' + (range.min || 800) + '" min="800" max="3500" step="100" title="min rating" />'
+      + '<span class="cmp-dash">–</span>'
+      + '<input id="cmp-max" class="cmp-range" type="number" value="' + (range.max || 3500) + '" min="800" max="3500" step="100" title="max rating" />'
+      + '<button class="cmp-toggle ' + (cf.publicOn ? 'on' : '') + '" role="switch" aria-checked="' + (cf.publicOn ? 'true' : 'false') + '" data-act="chTogglePublic" title="Match me with public challenges in this range"><span></span></button>'
+      + '</div>';
+
+    let listHtml;
+    if (!items.length) {
+      listHtml = '<div style="color:var(--dim);text-align:center;padding:4px;font-size:12px">No challenges yet.</div>';
+    } else {
+      listHtml = items.map(function (ch) {
+        const p = ch.problem || {};
+        const prob = (p.id || '') + (p.name ? ' — ' + p.name : '');
+        const url = p.url || '#';
+        const oppTxt = ch.opponent ? ((ch.role === 'out' ? 'vs ' : 'from ') + ch.opponent) : 'open';
+        let right;
+        if (ch.role === 'in' && ch.status === 'pending') {
+          right = '<button class="cmp-mini solid" data-act="chAccept" data-id="' + esc(ch.id) + '">Accept</button>'
+                + '<button class="cmp-mini" data-act="chDecline" data-id="' + esc(ch.id) + '">Decline</button>';
+        } else {
+          const b = BADGE[ch.status] || [ch.status, '#888'];
+          right = '<span class="cmp-badge" style="background:' + b[1] + '">' + esc(b[0]) + '</span>';
+        }
+        return '<div class="cmp-item">'
+          + '<div class="cmp-who"><span class="cmp-prob" data-act="openUrl" data-href="' + esc(url) + '">' + esc(prob) + '</span>'
+          + '<div class="cmp-sub">' + esc(oppTxt) + '</div></div>'
+          + right
+          + '<button class="cmp-x" data-act="chRemove" data-id="' + esc(ch.id) + '" title="Remove">&#10005;</button>'
+          + '</div>';
+      }).join('');
+    }
+
+    return '<div class="cmp-wrap">' + who + form + pub
+      + '<div class="cmp-listhead">Your challenges</div>'
+      + '<div class="cmp-list">' + listHtml + '</div></div>';
+  }
+
   function render() {
     const app = document.getElementById("app");
     let body = "";
@@ -3427,6 +3679,8 @@ class CposActionsProvider implements vscode.WebviewViewProvider {
         body = statementSection();
       } else if (activeTab === "solution" && state.meta && !state.solutionBlocked) {
         body = solutionSection();
+      } else if (activeTab === "compete") {
+        body = competeSection();
       } else if (activeTab === "config") {
         body = configSection();
       } else {
@@ -3458,6 +3712,7 @@ class CposActionsProvider implements vscode.WebviewViewProvider {
         window.MathJax.typesetPromise([app.querySelector('.statement-view')]).catch(function(){});
       }
     }
+    applyCompact();
   }
 
   // Update verdicts/results without wiping in-progress textarea edits (same file).
@@ -3591,6 +3846,25 @@ class CposActionsProvider implements vscode.WebviewViewProvider {
           if (href) send("openUrl", { url: href });
           return;
         }
+        if (act === "chCreate") {
+          const opp = (document.getElementById("cmp-opp") || {}).value || "";
+          const prob = (document.getElementById("cmp-prob") || {}).value || "";
+          const rating = +((document.getElementById("cmp-rating") || {}).value || 1400);
+          const durationMin = +((document.getElementById("cmp-dur") || {}).value || 60);
+          const msg = document.getElementById("cmp-msg");
+          if (msg) msg.textContent = "Sending…";
+          send("chCreate", { opponent: opp.trim(), problem: prob.trim(), rating: rating, durationMin: durationMin });
+          return;
+        }
+        if (act === "chAccept") { send("chAccept", { id: el.getAttribute("data-id") }); return; }
+        if (act === "chDecline") { send("chDecline", { id: el.getAttribute("data-id") }); return; }
+        if (act === "chRemove") { send("chRemove", { id: el.getAttribute("data-id") }); return; }
+        if (act === "chTogglePublic") {
+          const min = +((document.getElementById("cmp-min") || {}).value || 800);
+          const max = +((document.getElementById("cmp-max") || {}).value || 3500);
+          send("chSetPublic", { on: !el.classList.contains("on"), min: min, max: max });
+          return;
+        }
         if (act === "runSingle") { send("runSingle", { index: Number(idx), tests: collectTests() }); return; }
         if (act === "run") { send("run", { tests: collectTests() }); return; }
         send(act);
@@ -3657,15 +3931,25 @@ class CposActionsProvider implements vscode.WebviewViewProvider {
     }
   });
 
-  // Collapse tab/header text to icons when the panel is too narrow to fit them.
+  // Collapse the lowest-priority tabs to icons ONLY when the row actually
+  // overflows, so Tests/Statement keep their labels as long as they fit.
   function applyCompact() {
     try {
-      const w = document.documentElement.clientWidth || document.body.clientWidth || 999;
-      document.body.classList.toggle("compact", w < 360);
+      const tabs = document.querySelector(".tabs");
+      if (!tabs) return;
+      const items = Array.prototype.slice.call(tabs.querySelectorAll(".tab[data-tab]"));
+      items.forEach(function (t) { t.classList.remove("ico-only"); });
+      const order = items.slice().sort(function (a, b) {
+        return (+a.getAttribute("data-prio") || 0) - (+b.getAttribute("data-prio") || 0);
+      });
+      let i = 0;
+      while (tabs.scrollWidth > tabs.clientWidth + 1 && i < order.length) {
+        order[i].classList.add("ico-only");
+        i++;
+      }
     } catch (e) {}
   }
   try { new ResizeObserver(applyCompact).observe(document.documentElement); } catch (e) {}
-  applyCompact();
 
   send("ready");
 </script>
