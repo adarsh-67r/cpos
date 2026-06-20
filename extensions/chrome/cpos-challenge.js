@@ -329,16 +329,17 @@
       (c.status === C.STATUS.PENDING || c.status === C.STATUS.ACTIVE));
 
     const co = await themeColors();
-    const base = "display:inline-flex;align-items:center;justify-content:center;vertical-align:middle;margin-left:10px;" +
-      "width:30px;height:30px;border-radius:8px;cursor:pointer;padding:0;line-height:0;";
+    const base = "display:inline-flex!important;align-items:center!important;justify-content:center!important;vertical-align:middle;" +
+      "margin-left:10px!important;width:30px!important;height:30px!important;min-width:30px!important;box-sizing:border-box!important;" +
+      "border-radius:8px!important;cursor:pointer!important;padding:0!important;line-height:0!important;";
     const btn = el("button");
     btn.id = "cpos-chal-btn";
 
     if (mine) {
-      btn.style.cssText = base + "background:transparent;color:" + co.bad + ";border:1px solid " + co.bad + ";";
+      btn.style.cssText = base + "background:transparent!important;color:" + co.bad + "!important;border:1px solid " + co.bad + "!important;";
       btn.title = "Cancel your challenge to this problem";
       btn.setAttribute("aria-label", "Cancel challenge");
-      btn.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg>';
+      btn.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="' + co.bad + '" stroke-width="2.6" stroke-linecap="round" style="display:block!important;fill:none!important;stroke:' + co.bad + '!important"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg>';
       btn.onclick = async (e) => {
         e.preventDefault(); e.stopPropagation();
         const m = (await get([C.STORE_KEY]))[C.STORE_KEY] || {};
@@ -350,10 +351,16 @@
         toast("Challenge cancelled");
       };
     } else {
-      btn.style.cssText = base + "background:" + co.accent + ";color:" + co.accentOn + ";border:0;";
+      btn.style.cssText = base + "background:" + co.accent + "!important;color:" + co.accentOn + "!important;border:0!important;";
       btn.title = "Challenge someone to this problem";
       btn.setAttribute("aria-label", "Challenge");
       btn.innerHTML = SWORDS;
+      const swords = btn.querySelector("svg");
+      if (swords) {
+        swords.style.setProperty("display", "block", "important");
+        swords.style.setProperty("fill", "none", "important");
+        swords.style.setProperty("stroke", co.accentOn, "important");
+      }
       btn.onclick = (e) => {
         e.preventDefault(); e.stopPropagation();
         if (document.getElementById("cpos-chal-pop")) closePopover();
@@ -363,7 +370,10 @@
 
     if (titleEl) titleEl.appendChild(btn);
     else {
-      btn.style.cssText += "position:fixed;bottom:18px;right:18px;z-index:2147483600;width:38px;height:38px;";
+      btn.style.cssText += "position:fixed!important;bottom:18px!important;right:18px!important;z-index:2147483600!important;";
+      btn.style.setProperty("width", "38px", "important");
+      btn.style.setProperty("height", "38px", "important");
+      btn.style.setProperty("min-width", "38px", "important");
       (document.body || document.documentElement).appendChild(btn);
     }
   }

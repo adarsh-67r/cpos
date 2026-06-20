@@ -6,12 +6,17 @@ All notable changes to CPOS are documented here. Components are versioned indepe
 | --- | --- | --- |
 | Terminal app | 0.2.0 | `Cargo.toml` |
 | VS Code extension | 0.5.0 | `extensions/vscode/package.json` |
-| Browser companion (Chrome) | 0.15.0 | `extensions/chrome/manifest.json` |
-| Browser companion (Firefox) | 0.15.0 | `extensions/firefox/manifest.json` |
+| Browser companion (Chrome) | 0.15.1 | `extensions/chrome/manifest.json` |
+| Browser companion (Firefox) | 0.15.1 | `extensions/firefox/manifest.json` |
 
 Format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
+
+## Browser companions 0.15.1 — 2026-06-20
+
+### Fixed
+- The on-page Compete sword icon now keeps its intended size, colors, and SVG stroke when Modernize or a site theme applies global button styles.
 
 ## CPOS 0.2.0 / VS Code 0.5.0 / Browser companions 0.15.0 — 2026-06-20
 

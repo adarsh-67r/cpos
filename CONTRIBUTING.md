@@ -12,8 +12,8 @@ For how the pieces fit together, see [ARCHITECTURE.md](ARCHITECTURE.md). Release
 | --- | --- |
 | Terminal app | 0.2.0 (`Cargo.toml`) |
 | VS Code extension | 0.5.0 (`extensions/vscode/package.json`) |
-| Browser companion (Chrome) | 0.15.0 (`extensions/chrome/manifest.json`) |
-| Browser companion (Firefox) | 0.15.0 (`extensions/firefox/manifest.json`) |
+| Browser companion (Chrome) | 0.15.1 (`extensions/chrome/manifest.json`) |
+| Browser companion (Firefox) | 0.15.1 (`extensions/firefox/manifest.json`) |
 
 ## Ways to help
 
