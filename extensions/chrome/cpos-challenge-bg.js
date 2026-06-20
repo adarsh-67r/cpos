@@ -310,22 +310,28 @@
       }
       if (dirty) await saveChallenges(map);
       if (app.cf) {
-        const cur = await get(["cpos.challenge.publicOn", "cpos.challenge.range"]);
+        const cur = await get(["cpos.challenge.publicOn", "cpos.challenge.range", C.HANDLE_KEY, "cpos.cf.handleManual"]);
         const upd = {};
         if (typeof app.cf.publicOn === "boolean" && app.cf.publicOn !== (cur["cpos.challenge.publicOn"] === true)) upd["cpos.challenge.publicOn"] = app.cf.publicOn;
         if (app.cf.range && JSON.stringify(app.cf.range) !== JSON.stringify(cur["cpos.challenge.range"] || null)) upd["cpos.challenge.range"] = app.cf.range;
+        // A handle set explicitly in an app (manual) wins and propagates here.
+        if (app.cf.handleManual && app.cf.handle && app.cf.handle !== cur[C.HANDLE_KEY]) {
+          upd[C.HANDLE_KEY] = app.cf.handle;
+          upd["cpos.cf.handleManual"] = true;
+        }
         if (Object.keys(upd).length) await set(upd);
       }
 
       // push browser -> app
-      const after = await get([C.STORE_KEY, "cpos.challenge.publicOn", "cpos.challenge.range"]);
+      const after = await get([C.STORE_KEY, "cpos.challenge.publicOn", "cpos.challenge.range", C.HANDLE_KEY, "cpos.cf.handleManual"]);
       try {
         await fetch(base + "/challenges", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             challenges: after[C.STORE_KEY] || {},
-            handle: me,
+            handle: after[C.HANDLE_KEY] || me,
+            handleManual: after["cpos.cf.handleManual"] === true,
             publicOn: after["cpos.challenge.publicOn"] === true,
             range: after["cpos.challenge.range"] || { min: 800, max: 3500 }
           })

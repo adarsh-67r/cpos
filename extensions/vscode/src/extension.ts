@@ -259,7 +259,8 @@ type Challenge = {
   createdAt: number; durationMin: number; nonce: string; status: string;
   myAcSec: number | null; oppAcSec: number | null; polled: boolean; notified: boolean; online: boolean;
 };
-type ChallengeCf = { handle: string; publicOn: boolean; range: { min: number; max: number } };
+type ChallengeCf = { handle: string; handleManual?: boolean; publicOn: boolean; range: { min: number; max: number } };
+const SHOW_COMPETE = "cpos.showCompete"; // VS Code-local: whether the Compete tab is shown
 
 function loadChallenges(): Record<string, Challenge> {
   return extContext?.globalState.get<Record<string, Challenge>>(CHALLENGE_STORE) ?? {};
@@ -268,10 +269,22 @@ async function saveChallenges(map: Record<string, Challenge>): Promise<void> {
   await extContext?.globalState.update(CHALLENGE_STORE, map);
 }
 function loadChallengeCf(): ChallengeCf {
-  return extContext?.globalState.get<ChallengeCf>(CHALLENGE_CF) ?? { handle: "", publicOn: false, range: { min: 800, max: 3500 } };
+  return extContext?.globalState.get<ChallengeCf>(CHALLENGE_CF) ?? { handle: "", handleManual: false, publicOn: false, range: { min: 800, max: 3500 } };
 }
 async function saveChallengeCf(cf: ChallengeCf): Promise<void> {
   await extContext?.globalState.update(CHALLENGE_CF, cf);
+}
+function loadShowCompete(): boolean {
+  return extContext?.globalState.get<boolean>(SHOW_COMPETE) ?? true;
+}
+async function setShowCompete(v: boolean): Promise<void> {
+  await extContext?.globalState.update(SHOW_COMPETE, v);
+}
+async function challengeSetHandle(handle: string): Promise<void> {
+  const cf = loadChallengeCf();
+  cf.handle = (handle || "").trim();
+  cf.handleManual = !!cf.handle; // explicit handle wins over auto-detection everywhere
+  await saveChallengeCf(cf);
 }
 function chRandId(n: number): string {
   let s = ""; while (s.length < n) s += Math.random().toString(36).slice(2);
@@ -441,10 +454,13 @@ async function handleRequest(req: http.IncomingMessage, res: http.ServerResponse
   }
   if (req.method === "POST" && req.url === "/challenges") {
     try {
-      const body = await readJson<{ challenges?: Record<string, Challenge>; handle?: string; publicOn?: boolean; range?: { min: number; max: number } }>(req);
+      const body = await readJson<{ challenges?: Record<string, Challenge>; handle?: string; handleManual?: boolean; publicOn?: boolean; range?: { min: number; max: number } }>(req);
       if (body.challenges) await saveChallenges(mergeChallenges(body.challenges));
       const cf = loadChallengeCf();
-      if (typeof body.handle === "string" && body.handle) cf.handle = body.handle;
+      if (typeof body.handle === "string" && body.handle) {
+        if (body.handleManual === true) { cf.handle = body.handle; cf.handleManual = true; }
+        else if (!cf.handleManual) { cf.handle = body.handle; } // auto-detect only fills, never overrides a manual handle
+      }
       if (typeof body.publicOn === "boolean") cf.publicOn = body.publicOn;
       if (body.range) cf.range = body.range;
       await saveChallengeCf(cf);
@@ -1607,6 +1623,7 @@ type PanelState = {
   };
   challenges: Record<string, Challenge>;
   cf: ChallengeCf;
+  showCompete: boolean;
 };
 
 async function currentState(): Promise<PanelState> {
@@ -1634,7 +1651,8 @@ async function currentState(): Promise<PanelState> {
       languages: Object.keys(DEFAULT_COMMANDS)
     },
     challenges: loadChallenges(),
-    cf: loadChallengeCf()
+    cf: loadChallengeCf(),
+    showCompete: loadShowCompete()
   };
 }
 
@@ -1781,6 +1799,7 @@ class CposActionsProvider implements vscode.WebviewViewProvider {
     on?: boolean;
     min?: number;
     max?: number;
+    handle?: string;
   }): Promise<void> {
     switch (message.type) {
       case "ready":
@@ -1804,6 +1823,14 @@ class CposActionsProvider implements vscode.WebviewViewProvider {
         break;
       case "chSetPublic":
         await challengeSetPublic(!!message.on, message.min ?? 800, message.max ?? 3500);
+        await this.postState();
+        break;
+      case "chSetHandle":
+        await challengeSetHandle(message.handle ?? "");
+        await this.postState();
+        break;
+      case "chShowCompete":
+        await setShowCompete(message.on !== false);
         await this.postState();
         break;
       case "saveTheme":
@@ -2500,12 +2527,13 @@ class CposActionsProvider implements vscode.WebviewViewProvider {
   .tab.ico-only { padding: 6px 9px; }
   .tab.ico-only .tab-label { display: none; }
   .tab.ico-only .tab-ico { display: inline-flex; }
-  /* Header: keep the Sponsor/Theme button text; let the brand truncate first so
-     the buttons never clip. */
+  /* Header: "CPOS" stays full; the Sponsor/Theme labels collapse to icons
+     (lowest priority first) only when the row actually overflows. */
   .head .row { flex-wrap: nowrap; }
-  .brandrow { flex: 1 1 auto; min-width: 0; overflow: hidden; }
-  .brandrow .title { overflow: hidden; text-overflow: ellipsis; }
+  .brandrow { flex: 0 0 auto; min-width: 0; }
   .headtools { flex: 0 0 auto; }
+  .iconbtn.ico-only { padding: 4px 6px; }
+  .iconbtn.ico-only .btn-label { display: none; }
   .settings-tab {
     display: inline-flex; align-items: center; justify-content: center;
     padding: 5px 8px; color: #fff;
@@ -2532,7 +2560,7 @@ class CposActionsProvider implements vscode.WebviewViewProvider {
   .cmp-row2 { display: flex; gap: 7px; }
   .cmp-row2 > * { flex: 1; min-width: 0; }
   .cmp-send { width: 100%; padding: 9px; border: 0; border-radius: 7px; background: var(--accent); color: var(--accent-on); font: inherit; font-weight: 700; font-size: 12px; cursor: pointer; }
-  .cmp-send:hover { filter: brightness(1.06); }
+  .cmp-send:hover { opacity: .9; }
   .cmp-send:disabled { opacity: .5; cursor: default; filter: none; }
   .cmp-msg { font-size: 11px; color: var(--dim); min-height: 14px; }
   .cmp-pub { display: flex; align-items: center; gap: 8px; font-size: 12px; }
@@ -2563,6 +2591,10 @@ class CposActionsProvider implements vscode.WebviewViewProvider {
     border: 1px solid var(--border); border-radius: 6px; font: inherit;
   }
   .config-field select { padding: 7px 8px; }
+  .config-field input { width: 100%; box-sizing: border-box; color: var(--fg); background: var(--input-bg); border: 1px solid var(--border); border-radius: 6px; font: inherit; padding: 7px 8px; }
+  .config-field input:focus { outline: none; border-color: var(--accent); }
+  .config-toggle { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--fg); cursor: pointer; }
+  .config-toggle input { width: auto; }
   .config-field textarea { min-height: 260px; padding: 9px; resize: vertical; line-height: 1.45; tab-size: 4; }
   .config-buttons { display: flex; gap: 6px; flex-wrap: wrap; }
   .config-buttons button {
@@ -3271,9 +3303,9 @@ class CposActionsProvider implements vscode.WebviewViewProvider {
       + '<div class="row">'
       + '<span class="brandrow"><img class="logo" src="' + CPOS_LOGO + '" alt="CPOS" /><span class="title">CPOS</span></span>'
       + '<span class="headtools">'
-      + '<button class="iconbtn sponsor" data-act="openSponsor" title="Sponsor CPOS — keep it free and local-first">' + HEART_ICON + '<span class="btn-label">Sponsor</span></button>'
+      + '<button class="iconbtn sponsor" data-prio="2" data-act="openSponsor" title="Sponsor CPOS — keep it free and local-first">' + HEART_ICON + '<span class="btn-label">Sponsor</span></button>'
       + '<button class="iconbtn gh icononly" data-act="openGithub" title="CPOS on GitHub" aria-label="CPOS on GitHub">' + GH_ICON + '</button>'
-      + '<button class="iconbtn theme" data-act="toggleThemes" title="Themes">◑<span class="btn-label"> theme</span></button>'
+      + '<button class="iconbtn theme" data-prio="1" data-act="toggleThemes" title="Themes">◑<span class="btn-label"> theme</span></button>'
       + '</span>'
       + '</div>'
       + '<div class="rule"></div>'
@@ -3404,7 +3436,7 @@ class CposActionsProvider implements vscode.WebviewViewProvider {
     if (state.meta && state.meta.statementHtml) tabs.push({ id: 'statement', label: 'Statement', prio: 3 });
     // Solution tab is hidden while the problem's contest is still running.
     if (state.meta && !state.solutionBlocked) tabs.push({ id: 'solution', label: 'Solution', prio: 2 });
-    tabs.push({ id: 'compete', label: 'Compete', prio: 1 });
+    if (state.showCompete !== false) tabs.push({ id: 'compete', label: 'Compete', prio: 1 });
     return '<div class="tabs" role="tablist">'
       + tabs.map(function(t) {
         return '<button role="tab" aria-selected="' + (activeTab === t.id ? "true" : "false")
@@ -3427,7 +3459,15 @@ class CposActionsProvider implements vscode.WebviewViewProvider {
       return '<option value="' + esc(lang) + '"' + (lang === chosen ? ' selected' : '') + '>' + esc(lang) + '</option>';
     }).join('');
     const content = (cfg.templates && cfg.templates[chosen]) || '';
+    const cfh = (state.cf && state.cf.handle) || '';
+    const showCompete = state.showCompete !== false;
     return '<div class="config-wrapper">'
+      + '<details class="box config-card config-collapse"><summary class="config-summary">Challenges</summary>'
+      + '<div class="config-note">Synced with Chrome &amp; the terminal.</div>'
+      + '<div class="config-field"><label for="config-cf-handle">Codeforces handle</label>'
+      + '<input id="config-cf-handle" type="text" value="' + esc(cfh) + '" placeholder="your handle" spellcheck="false" /></div>'
+      + '<label class="config-toggle"><input id="config-show-compete" type="checkbox"' + (showCompete ? ' checked' : '') + ' /><span>Show the Compete tab in VS Code</span></label>'
+      + '</details>'
       + '<details class="box config-card config-collapse">'
       + '<summary class="config-summary">Shared templates</summary>'
       + '<div class="config-note">Shared by Chrome, VS Code &amp; TUI.</div>'
@@ -3625,7 +3665,7 @@ class CposActionsProvider implements vscode.WebviewViewProvider {
       +   '<input id="cmp-rating" class="cmp-in" type="number" value="1400" min="800" max="3500" step="100" title="difficulty for a random problem" />'
       +   '<select id="cmp-dur" class="cmp-in"><option value="30">30 min</option><option value="60" selected>1 hour</option><option value="120">2 hours</option><option value="1440">1 day</option></select>'
       + '</div>'
-      + '<button class="cmp-send" data-act="chCreate"' + (handle ? '' : ' disabled') + '>Send challenge</button>'
+      + '<button class="cmp-send" data-act="chCreate">Send challenge</button>'
       + '<div id="cmp-msg" class="cmp-msg"></div>'
       + '</div>';
 
@@ -3699,6 +3739,10 @@ class CposActionsProvider implements vscode.WebviewViewProvider {
     app.innerHTML = chrome + body;
     renderedSource = state.source;
     bind();
+    const cfHandleInput = document.getElementById("config-cf-handle");
+    if (cfHandleInput) cfHandleInput.onchange = () => send("chSetHandle", { handle: cfHandleInput.value.trim() });
+    const showCompeteChk = document.getElementById("config-show-compete");
+    if (showCompeteChk) showCompeteChk.onchange = () => send("chShowCompete", { on: showCompeteChk.checked });
     applyIoSplit(ioSplit);
     bindIoSplitters(app);
     app.querySelectorAll(".test").forEach(function (card) {
@@ -3847,11 +3891,15 @@ class CposActionsProvider implements vscode.WebviewViewProvider {
           return;
         }
         if (act === "chCreate") {
+          const msg = document.getElementById("cmp-msg");
+          if (!state.cf || !state.cf.handle) {
+            if (msg) msg.textContent = "Open a Codeforces page (with the CPOS companion) so CPOS can detect your handle.";
+            return;
+          }
           const opp = (document.getElementById("cmp-opp") || {}).value || "";
           const prob = (document.getElementById("cmp-prob") || {}).value || "";
           const rating = +((document.getElementById("cmp-rating") || {}).value || 1400);
           const durationMin = +((document.getElementById("cmp-dur") || {}).value || 60);
-          const msg = document.getElementById("cmp-msg");
           if (msg) msg.textContent = "Sending…";
           send("chCreate", { opponent: opp.trim(), problem: prob.trim(), rating: rating, durationMin: durationMin });
           return;
@@ -3933,20 +3981,23 @@ class CposActionsProvider implements vscode.WebviewViewProvider {
 
   // Collapse the lowest-priority tabs to icons ONLY when the row actually
   // overflows, so Tests/Statement keep their labels as long as they fit.
+  function collapseToFit(container, els) {
+    els.forEach(function (e) { e.classList.remove("ico-only"); });
+    const order = els.slice().sort(function (a, b) {
+      return (+a.getAttribute("data-prio") || 0) - (+b.getAttribute("data-prio") || 0);
+    });
+    let i = 0;
+    while (container.scrollWidth > container.clientWidth + 1 && i < order.length) {
+      order[i].classList.add("ico-only");
+      i++;
+    }
+  }
   function applyCompact() {
     try {
       const tabs = document.querySelector(".tabs");
-      if (!tabs) return;
-      const items = Array.prototype.slice.call(tabs.querySelectorAll(".tab[data-tab]"));
-      items.forEach(function (t) { t.classList.remove("ico-only"); });
-      const order = items.slice().sort(function (a, b) {
-        return (+a.getAttribute("data-prio") || 0) - (+b.getAttribute("data-prio") || 0);
-      });
-      let i = 0;
-      while (tabs.scrollWidth > tabs.clientWidth + 1 && i < order.length) {
-        order[i].classList.add("ico-only");
-        i++;
-      }
+      if (tabs) collapseToFit(tabs, Array.prototype.slice.call(tabs.querySelectorAll(".tab[data-tab]")));
+      const hrow = document.querySelector(".head .row");
+      if (hrow) collapseToFit(hrow, Array.prototype.slice.call(hrow.querySelectorAll(".headtools .iconbtn[data-prio]")));
     } catch (e) {}
   }
   try { new ResizeObserver(applyCompact).observe(document.documentElement); } catch (e) {}

@@ -39,7 +39,7 @@
       "#cpos-challenges-section .ch-form{display:flex;flex-direction:column;gap:7px}" +
       "#cpos-challenges-section .ch-2{display:flex;gap:7px}" +
       "#cpos-challenges-section .ch-send{width:100%;padding:9px;border:0;border-radius:9px;background:var(--accent);color:var(--accent-on);font-weight:700;font-size:13px;cursor:pointer}" +
-      "#cpos-challenges-section .ch-send:hover{filter:brightness(1.06)}" +
+      "#cpos-challenges-section .ch-send:hover{opacity:.9}" +
       "#cpos-challenges-section .ch-send:disabled{opacity:.5;cursor:default;filter:none}" +
       "#cpos-challenges-section .ch-mini{padding:5px 11px;border:1px solid var(--border);border-radius:7px;background:transparent;color:var(--fg);font:inherit;font-size:12px;font-weight:600;cursor:pointer}" +
       "#cpos-challenges-section .ch-mini:hover{border-color:var(--accent);color:var(--accent)}" +
@@ -144,7 +144,6 @@
     const durWrap = el("div"); durWrap.style.flex = "1"; durWrap.appendChild(durSel);
     row2.appendChild(ratingWrap); row2.appendChild(durWrap);
     const sendBtn = el("button", { class: "ch-send", type: "button" }, "Send challenge");
-    if (!handle) sendBtn.disabled = true;
     const msg = el("div", { class: "ch-msg" });
     form.appendChild(oppInput); form.appendChild(probInput); form.appendChild(row2); form.appendChild(sendBtn); form.appendChild(msg);
     mount.appendChild(form);
@@ -154,7 +153,7 @@
     probInput.addEventListener("input", syncRating); syncRating();
 
     sendBtn.addEventListener("click", async () => {
-      if (!handle) return;
+      if (!handle) { msg.style.color = "var(--dim)"; msg.textContent = "Open a Codeforces page so CPOS can detect your handle."; return; }
       sendBtn.disabled = true; msg.style.color = "var(--dim)"; msg.textContent = "Sending…";
       try {
         let problem;

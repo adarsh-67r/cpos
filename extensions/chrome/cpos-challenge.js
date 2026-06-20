@@ -20,17 +20,30 @@
 
   // ---- detect + persist the logged-in handle ---------------------------------
   function detectHandle() {
-    const link =
-      document.querySelector('#header a[href^="/profile/"]') ||
-      document.querySelector('.lang-chooser a[href^="/profile/"]');
-    if (!link) return null;
-    const m = (link.getAttribute("href") || "").match(/\/profile\/([^/?#]+)/);
-    return m ? decodeURIComponent(m[1]) : null;
+    // The logged-in handle is the profile link beside the "Logout" control in the
+    // top bar. Keying off Logout avoids grabbing the profile you happen to be
+    // VIEWING (e.g. /profile/someone-else).
+    const logout =
+      document.querySelector('#header a[href*="/logout"]') ||
+      document.querySelector('a[href*="action=logout"]') ||
+      document.querySelector('a[href*="/logout"]');
+    if (!logout) return null; // not logged in (or can't tell) — never guess
+    let scope = logout.parentElement;
+    for (let i = 0; i < 4 && scope; i++) {
+      const a = scope.querySelector('a[href^="/profile/"]');
+      if (a) {
+        const m = (a.getAttribute("href") || "").match(/\/profile\/([^/?#]+)/);
+        if (m) return decodeURIComponent(m[1]);
+      }
+      scope = scope.parentElement;
+    }
+    return null;
   }
   async function rememberHandle() {
     const h = detectHandle();
     if (!h) return;
-    const raw = await get([C.HANDLE_KEY]);
+    const raw = await get([C.HANDLE_KEY, "cpos.cf.handleManual"]);
+    if (raw["cpos.cf.handleManual"]) return; // user set it explicitly (e.g. in VS Code) — don't override
     if (raw[C.HANDLE_KEY] !== h) await set({ [C.HANDLE_KEY]: h });
   }
 
@@ -204,14 +217,37 @@
   }
 
   // ---- on-page "Challenge" button (Codeforces problem pages) -----------------
-  function toast(text) {
+  // crossed-swords icon (Lucide), tinted with the active theme's accent.
+  const SWORDS = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="14.5 17.5 3 6 3 3 6 3 17.5 14.5"/><line x1="13" y1="19" x2="19" y2="13"/><line x1="16" y1="16" x2="20" y2="20"/><line x1="19" y1="21" x2="21" y2="19"/><polyline points="14.5 6.5 18 3 21 3 21 6 17.5 9.5"/><line x1="5" y1="14" x2="9" y2="18"/><line x1="7" y1="17" x2="4" y2="20"/><line x1="3" y1="19" x2="5" y2="21"/></svg>';
+
+  // Resolve the active CPOS theme tokens so the button/popover match the site theme.
+  async function themeColors() {
+    const T = self.CPOS_THEMES, CFG = self.CPOS;
+    let tk = null;
+    try { if (T && CFG) tk = T.get(await (CFG.activePageThemeId ? CFG.activePageThemeId() : CFG.activeThemeId())); } catch (_) {}
+    const g = (k, d) => (tk && tk[k]) || d;
+    return {
+      accent: g("--accent", "#7c5cff"),
+      accentOn: g("--accent-on", "#ffffff"),
+      bg: g("--panel", g("--bg", "#1d1b29")),
+      fg: g("--fg", "#ececf4"),
+      dim: g("--dim", "#9a9ab0"),
+      border: g("--border", "#3a3550"),
+      panel2: g("--panel-2", "#2c2a3a"),
+      bad: g("--bad", "#e5534b"),
+      shadow: g("--shadow", "0 10px 30px rgba(0,0,0,.4)")
+    };
+  }
+
+  async function toast(text) {
+    const co = await themeColors();
     const old = document.getElementById("cpos-chal-toast");
     if (old) old.remove();
     const t = el(
       "div",
-      "position:fixed;bottom:22px;left:50%;transform:translateX(-50%);z-index:2147483600;" +
-        "background:#1d1b29;color:#ececf4;border:1px solid #7c5cff;border-radius:10px;padding:10px 16px;" +
-        "font:13px/1.4 -apple-system,Segoe UI,Roboto,sans-serif;box-shadow:0 8px 26px rgba(0,0,0,.4);",
+      "position:fixed;bottom:22px;left:50%;transform:translateX(-50%);z-index:2147483600;border-radius:10px;padding:10px 16px;" +
+        "background:" + co.bg + ";color:" + co.fg + ";border:1px solid " + co.accent + ";" +
+        "font:13px/1.4 -apple-system,Segoe UI,Roboto,sans-serif;",
       text
     );
     t.id = "cpos-chal-toast";
@@ -239,25 +275,29 @@
 
   function closePopover() { const p = document.getElementById("cpos-chal-pop"); if (p) p.remove(); }
 
-  function openPopover(prob, anchor) {
+  async function openPopover(prob, anchor) {
     closePopover();
+    const co = await themeColors();
     const r = anchor.getBoundingClientRect();
     const pop = el(
       "div",
-      "position:fixed;z-index:2147483601;width:236px;background:#1d1b29;color:#ececf4;border:1px solid #7c5cff;" +
-        "border-radius:12px;padding:12px;box-shadow:0 10px 30px rgba(0,0,0,.45);font:13px/1.45 -apple-system,Segoe UI,Roboto,sans-serif;"
+      "position:fixed;z-index:2147483601;width:236px;border-radius:12px;padding:12px;" +
+        "background:" + co.bg + ";color:" + co.fg + ";border:1px solid " + co.accent + ";" +
+        "font:13px/1.45 -apple-system,Segoe UI,Roboto,sans-serif;"
     );
     pop.id = "cpos-chal-pop";
     pop.style.top = Math.min(window.innerHeight - 190, r.bottom + 6) + "px";
     pop.style.left = Math.max(8, Math.min(window.innerWidth - 244, r.left)) + "px";
-    pop.appendChild(el("div", "font-weight:700;margin-bottom:9px;", "⚔️ Challenge — " + prob.id));
-    const bcss = "width:100%;padding:8px;border:0;border-radius:8px;cursor:pointer;font-weight:600;font-size:13px;margin-bottom:6px;";
-    const friend = el("button", bcss + "background:#7c5cff;color:#fff;", "Challenge a friend");
-    const random = el("button", bcss + "background:#2c2a3a;color:#cfcfe0;", "Random opponent");
+    const head = el("div", "font-weight:700;margin-bottom:9px;display:flex;align-items:center;gap:7px;");
+    head.innerHTML = '<span style="display:inline-flex;color:' + co.accent + '">' + SWORDS + '</span><span>Challenge — ' + prob.id + '</span>';
+    pop.appendChild(head);
+    const bcss = "width:100%;padding:8px;border:0;border-radius:8px;cursor:pointer;font-weight:600;font-size:13px;margin-bottom:6px;font-family:inherit;";
+    const friend = el("button", bcss + "background:" + co.accent + ";color:" + co.accentOn + ";", "Challenge a friend");
+    const random = el("button", bcss + "background:" + co.panel2 + ";color:" + co.fg + ";", "Random opponent");
     const inputWrap = el("div", "display:none;");
-    const inp = el("input", "width:100%;box-sizing:border-box;padding:7px 9px;border-radius:8px;border:1px solid #3a3550;background:#15131f;color:#ececf4;font:inherit;");
+    const inp = el("input", "width:100%;box-sizing:border-box;padding:7px 9px;border-radius:8px;border:1px solid " + co.border + ";background:" + co.bg + ";color:" + co.fg + ";font:inherit;");
     inp.placeholder = "friend's handle";
-    const sendBtn = el("button", bcss + "background:#7c5cff;color:#fff;margin-top:6px;margin-bottom:0;", "Send");
+    const sendBtn = el("button", bcss + "background:" + co.accent + ";color:" + co.accentOn + ";margin-top:6px;margin-bottom:0;", "Send");
     inputWrap.appendChild(inp); inputWrap.appendChild(sendBtn);
     friend.onclick = () => { inputWrap.style.display = "block"; random.style.display = "none"; friend.style.display = "none"; inp.focus(); };
     random.onclick = async () => { await createOnPageChallenge(prob, ""); closePopover(); };
@@ -272,32 +312,55 @@
     }, 0);
   }
 
-  function injectChallengeButton() {
+  // Small icon button to the right of the problem title. Flips to a Cancel state
+  // when you already have a live challenge out for this problem. Themed + flat.
+  async function renderChallengeButton() {
     const prob = C.parseProblem(location.href);
     if (!prob) return; // not a problem page
-    if (document.getElementById("cpos-chal-btn")) return;
     const titleEl = document.querySelector(".problem-statement .title") || document.querySelector(".title");
-    prob.name = titleEl ? titleEl.textContent.replace(/^[A-Z]\d*\.\s*/, "").trim() : "";
+    const old = document.getElementById("cpos-chal-btn");
+    if (old) old.remove();
+    if (titleEl) prob.name = titleEl.textContent.replace(/^[A-Z]\d*\.\s*/, "").trim();
     prob.rating = 0;
-    const btn = el(
-      "button",
-      "display:inline-flex;align-items:center;gap:5px;margin-left:10px;vertical-align:middle;" +
-        "background:#7c5cff;color:#fff;border:0;border-radius:7px;padding:4px 10px;font-weight:600;font-size:12px;cursor:pointer;",
-      "⚔ Challenge"
-    );
+
+    const map = (await get([C.STORE_KEY]))[C.STORE_KEY] || {};
+    const mine = Object.keys(map).map((k) => map[k]).find((c) =>
+      c && c.role === "out" && c.problem && c.problem.id === prob.id &&
+      (c.status === C.STATUS.PENDING || c.status === C.STATUS.ACTIVE));
+
+    const co = await themeColors();
+    const base = "display:inline-flex;align-items:center;justify-content:center;vertical-align:middle;margin-left:10px;" +
+      "width:30px;height:30px;border-radius:8px;cursor:pointer;padding:0;line-height:0;";
+    const btn = el("button");
     btn.id = "cpos-chal-btn";
-    btn.onclick = (e) => {
-      e.preventDefault();
-      if (document.getElementById("cpos-chal-pop")) closePopover();
-      else openPopover(prob, btn);
-    };
-    const header = document.querySelector(".problem-statement .header");
-    if (titleEl && titleEl.parentNode) {
-      titleEl.parentNode.insertBefore(btn, titleEl.nextSibling);
-    } else if (header) {
-      header.appendChild(btn);
+
+    if (mine) {
+      btn.style.cssText = base + "background:transparent;color:" + co.bad + ";border:1px solid " + co.bad + ";";
+      btn.title = "Cancel your challenge to this problem";
+      btn.setAttribute("aria-label", "Cancel challenge");
+      btn.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg>';
+      btn.onclick = async (e) => {
+        e.preventDefault(); e.stopPropagation();
+        const m = (await get([C.STORE_KEY]))[C.STORE_KEY] || {};
+        delete m[mine.id];
+        await set({ [C.STORE_KEY]: m });
+        toast("Challenge cancelled");
+      };
     } else {
-      btn.style.cssText += "position:fixed;bottom:18px;right:18px;z-index:2147483600;padding:8px 14px;border-radius:9px;box-shadow:0 6px 20px rgba(0,0,0,.35);";
+      btn.style.cssText = base + "background:" + co.accent + ";color:" + co.accentOn + ";border:0;";
+      btn.title = "Challenge someone to this problem";
+      btn.setAttribute("aria-label", "Challenge");
+      btn.innerHTML = SWORDS;
+      btn.onclick = (e) => {
+        e.preventDefault(); e.stopPropagation();
+        if (document.getElementById("cpos-chal-pop")) closePopover();
+        else openPopover(prob, btn);
+      };
+    }
+
+    if (titleEl) titleEl.appendChild(btn);
+    else {
+      btn.style.cssText += "position:fixed;bottom:18px;right:18px;z-index:2147483600;width:38px;height:38px;";
       (document.body || document.documentElement).appendChild(btn);
     }
   }
@@ -306,7 +369,7 @@
   async function run() {
     if (!(await featureOn())) return;
     await rememberHandle();
-    try { injectChallengeButton(); } catch (_) {}
+    renderChallengeButton().catch(() => {});
 
     const payload = readLinkPayload();
     if (!payload) return;
@@ -319,6 +382,16 @@
 
     const myHandle = detectHandle();
     showBanner(dec, myHandle);
+  }
+
+  // Re-render the on-page button when challenges or the theme change.
+  if (chrome.storage && chrome.storage.onChanged) {
+    chrome.storage.onChanged.addListener((changes, area) => {
+      if (area !== "local") return;
+      if (changes[C.STORE_KEY] || changes["cpos.ui.theme"] || changes["cpos.features"] || changes["cpos.siteThemeId"]) {
+        renderChallengeButton().catch(() => {});
+      }
+    });
   }
 
   run().catch(() => {});
