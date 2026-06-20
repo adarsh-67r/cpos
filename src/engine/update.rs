@@ -370,10 +370,14 @@ fn homebrew_update() -> Result<()> {
 
 fn scoop_update() -> Result<()> {
     eprintln!("Detected Scoop install.");
+    // Refresh buckets first so the newest cpos manifest is visible, then upgrade.
     run_scoop(&["update"]).context("failed to refresh Scoop buckets")?;
     run_scoop(&["update", "cpos"]).context("failed to update CPOS with Scoop")
 }
 
+/// Run the `scoop` command. On Windows `scoop` is a `.cmd`/`.ps1` shim that
+/// `CreateProcess` can't launch directly (it only resolves `.exe`), so it must
+/// go through `cmd /C`, which honours `PATHEXT`.
 fn run_scoop(args: &[&str]) -> Result<()> {
     if cfg!(windows) {
         let mut full = vec!["/C", "scoop"];
@@ -402,35 +406,11 @@ fn binary_update(exe: &Path) -> Result<()> {
     eprintln!("Detected standalone binary at {}", exe.display());
     eprintln!("Installing latest release into {}", bin_dir.display());
 
-    let backup = exe.with_extension("old");
-    std::fs::rename(exe, &backup).with_context(|| {
-        format!(
-            "could not move current binary aside — do you have write permission to {}?",
-            bin_dir.display()
-        )
-    })?;
-
     let cmd = format!(
         "curl -fsSL {INSTALL_SH} | CPOS_INSTALL_DIR=\"{}\" sh",
         bin_dir.display()
     );
-
-    match run_shell(&cmd).context("failed to update from GitHub Releases") {
-        Ok(()) => {
-            let _ = std::fs::remove_file(&backup);
-            Ok(())
-        }
-        Err(e) => {
-            if let Err(restore_err) = std::fs::rename(&backup, exe) {
-                eprintln!(
-                    "warning: update failed and could not restore backup: {restore_err}\n\
-                     Your previous binary is at {}",
-                    backup.display()
-                );
-            }
-            Err(e)
-        }
-    }
+    run_shell(&cmd).context("failed to update from GitHub Releases")
 }
 
 fn run_cargo(args: &[&str]) -> Result<()> {
