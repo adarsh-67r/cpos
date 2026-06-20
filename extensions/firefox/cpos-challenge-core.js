@@ -36,6 +36,7 @@
   // but we never put anything sensitive in them. Off by default; the user opts in.
   const ONLINE_KEY = "cpos.challenge.online"; // bool, default false
   const NET_SINCE_KEY = "cpos.challenge.netSince"; // { [topic]: lastSeenSec }
+  const INVITE_TTL_MIN = 4; // a pending invite lapses if not accepted within this many minutes
   const NTFY_BASE = "https://ntfy.sh";
   const TOPIC_PREFIX = "cpos-chal-v1-";
   const LOBBY_TOPIC = "cpos-chal-v1-lobby";
@@ -183,6 +184,16 @@
     return (ch.createdAt || 0) + (ch.durationMin || 0) * 60000;
   }
 
+  // A pending invite that nobody accepted within INVITE_TTL_MIN has lapsed.
+  function inviteExpired(ch, now) {
+    if (ch.status !== STATUS.PENDING) return false;
+    return (now || 0) - (ch.createdAt || 0) > INVITE_TTL_MIN * 60000;
+  }
+  function inviteSecondsLeft(ch, now) {
+    const left = (ch.createdAt || 0) + INVITE_TTL_MIN * 60000 - (now || 0);
+    return left > 0 ? Math.ceil(left / 1000) : 0;
+  }
+
   // ---- referee: earliest accepted submission in the challenge window ----------
   // `submissions` is the array from user.status. Returns the earliest
   // creationTimeSeconds (a number) with verdict OK on the exact problem at or
@@ -221,9 +232,9 @@
 
   root.CPOSChallenge = {
     STORE_KEY, HANDLE_KEY, NOTIFY_KEY, PROBLEMS_KEY, FEATURE, STATUS, TERMINAL, LINK_PARAM,
-    ONLINE_KEY, NET_SINCE_KEY, NTFY_BASE, TOPIC_PREFIX, LOBBY_TOPIC, NET_TAG,
+    ONLINE_KEY, NET_SINCE_KEY, NTFY_BASE, TOPIC_PREFIX, LOBBY_TOPIC, NET_TAG, INVITE_TTL_MIN,
     b64urlEncode, b64urlDecode, makeId, genNonce,
-    parseProblem, problemLabel, encode, decode, link, deadlineAt,
+    parseProblem, problemLabel, encode, decode, link, deadlineAt, inviteExpired, inviteSecondsLeft,
     firstAcSeconds, resolve,
     topicForHandle, buildInvite, buildReply, parseNetBody
   };

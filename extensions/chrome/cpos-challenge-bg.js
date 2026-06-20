@@ -124,10 +124,20 @@
   async function pollAll() {
     if (!(await featureEnabled())) return;
     const map = await loadChallenges();
-    const active = Object.values(map).filter((c) => c && c.status === C.STATUS.ACTIVE);
-    if (!active.length) return;
+    const all = Object.values(map);
     let dirty = false;
-    for (const ch of active) {
+    const now = Date.now();
+    // Expire pending invites that were never accepted in time.
+    for (const ch of all) {
+      if (ch && ch.status === C.STATUS.PENDING && C.inviteExpired(ch, now)) {
+        ch.status = C.STATUS.EXPIRED;
+        map[ch.id] = ch;
+        dirty = true;
+      }
+    }
+    // Referee active challenges against Codeforces.
+    for (const ch of all) {
+      if (!ch || ch.status !== C.STATUS.ACTIVE) continue;
       try {
         const changed = await pollChallenge(ch);
         if (changed) { map[ch.id] = ch; dirty = true; }

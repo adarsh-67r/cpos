@@ -97,26 +97,35 @@
     mount.textContent = "";
     const root = css(el("div"), "display:flex;flex-direction:column;gap:10px;");
 
-    // Your handle
-    const hRow = css(el("div"), "display:flex;align-items:center;gap:8px;");
-    hRow.appendChild(css(el("span", null, "You"), "font-size:12px;opacity:.7;min-width:26px;"));
+    // Your handle — auto-detected from any Codeforces page you're logged into.
     const hInput = el("input", { type: "text", placeholder: "your Codeforces handle", value: handle });
     css(hInput, INPUT);
     hInput.addEventListener("change", async () => { await set({ [C.HANDLE_KEY]: hInput.value.trim() }); });
-    hRow.appendChild(hInput);
-    root.appendChild(hRow);
+    if (handle) {
+      const hRow = css(el("div"), "display:flex;align-items:center;gap:6px;font-size:12px;");
+      const lbl = css(el("span"), "flex:1;opacity:.8;");
+      lbl.appendChild(document.createTextNode("Racing as "));
+      lbl.appendChild(el("b", null, handle));
+      hInput.style.display = "none";
+      const edit = css(el("button", { type: "button" }, "change"), "border:0;background:transparent;color:#7c5cff;cursor:pointer;font-size:12px;padding:0;");
+      edit.addEventListener("click", () => { lbl.style.display = "none"; edit.style.display = "none"; hInput.style.display = ""; hInput.focus(); });
+      hRow.appendChild(lbl); hRow.appendChild(edit); hRow.appendChild(hInput);
+      root.appendChild(hRow);
+    } else {
+      root.appendChild(css(el("div", null, "Open any Codeforces page and I'll detect your handle — or type it:"), "font-size:11px;opacity:.6;"));
+      root.appendChild(hInput);
+    }
 
-    // Online toggle
+    // Online delivery toggle (detail in tooltip — keep the panel clean)
     const oRow = css(el("label"), "display:flex;align-items:center;gap:8px;font-size:12px;cursor:pointer;");
+    oRow.title = "Notify your opponent by handle via ntfy.sh (free, no account). Off = share a private link instead.";
     const oChk = el("input", { type: "checkbox" });
     oChk.checked = online;
     oChk.addEventListener("change", async () => { await set({ [C.ONLINE_KEY]: oChk.checked }); send({ type: "cpos-challenge-poll" }); });
     oRow.appendChild(oChk);
     const oTxt = el("span");
     oTxt.appendChild(el("b", null, "Online delivery"));
-    oTxt.appendChild(el("span", null, " — challenge by handle, no link. "));
-    const oNote = css(el("span", null, "Uses ntfy.sh (public relay)."), "opacity:.6;");
-    oTxt.appendChild(oNote);
+    oTxt.appendChild(css(el("span", null, " — notify by handle, no link"), "opacity:.7;"));
     oRow.appendChild(oTxt);
     root.appendChild(oRow);
 
@@ -179,7 +188,9 @@
         if (online) {
           send({ type: "cpos-challenge-net", action: "invite", challengeId: ch.id });
           msg.style.color = "#2f9e44";
-          msg.textContent = opponent ? `Sent to ${opponent} — they'll get a notification when CPOS is running.` : "Posted to the open lobby — anyone can accept.";
+          msg.textContent = opponent
+            ? `Sent to ${opponent} — they have ${C.INVITE_TTL_MIN} min to accept.`
+            : `Posted to the open lobby — expires in ${C.INVITE_TTL_MIN} min.`;
           showLink(linkBox, ch, "or share a direct link:");
         } else {
           showLink(linkBox, ch, "");
