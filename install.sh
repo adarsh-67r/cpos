@@ -77,7 +77,11 @@ else
 fi
 
 tmp="$(mktemp -d 2>/dev/null || mktemp -d -t cpos)"
+staged=""
 cleanup() {
+  if [ -n "$staged" ]; then
+    rm -f "$staged"
+  fi
   rm -rf "$tmp"
 }
 trap cleanup EXIT INT TERM
@@ -116,8 +120,11 @@ if [ ! -f "$tmp/cpos" ]; then
 fi
 
 mkdir -p "$bin_dir"
-cp "$tmp/cpos" "$bin_dir/cpos"
-chmod 755 "$bin_dir/cpos"
+staged="$(mktemp "$bin_dir/.cpos.XXXXXX")"
+cp "$tmp/cpos" "$staged"
+chmod 755 "$staged"
+mv -f "$staged" "$bin_dir/cpos"
+staged=""
 
 echo "Installed CPOS to $bin_dir/cpos"
 
