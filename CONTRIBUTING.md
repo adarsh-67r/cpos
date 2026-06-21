@@ -2,7 +2,7 @@
 
 Thanks for taking the time to contribute. CPOS is open source (MIT) — bug reports, ideas, docs fixes, and code are all welcome.
 
-Want to chat first? Join the [CPOS Discord](https://discord.gg/CZ3UdPDs5k) to ask questions, float an idea, or get help with dev setup.
+Want to chat first? Join the [CPOS Discord](https://discord.gg/QkdmcRKz) to ask questions, float an idea, or get help with dev setup.
 
 For security issues, see [SECURITY.md](SECURITY.md) — do not open public issues for vulnerabilities.
 
@@ -11,7 +11,7 @@ For how the pieces fit together, see [ARCHITECTURE.md](ARCHITECTURE.md). Release
 | Component | Current version |
 | --- | --- |
 | Terminal app | 0.2.0 (`Cargo.toml`) |
-| VS Code extension | 0.5.0 (`extensions/vscode/package.json`) |
+| VS Code extension | 0.5.1 (`extensions/vscode/package.json`) |
 | Browser companion (Chrome) | 0.15.1 (`extensions/chrome/manifest.json`) |
 | Browser companion (Firefox) | 0.15.1 (`extensions/firefox/manifest.json`) |
 

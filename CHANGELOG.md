@@ -5,13 +5,21 @@ All notable changes to CPOS are documented here. Components are versioned indepe
 | Component | Current version | Version file |
 | --- | --- | --- |
 | Terminal app | 0.2.0 | `Cargo.toml` |
-| VS Code extension | 0.5.0 | `extensions/vscode/package.json` |
+| VS Code extension | 0.5.1 | `extensions/vscode/package.json` |
 | Browser companion (Chrome) | 0.15.1 | `extensions/chrome/manifest.json` |
 | Browser companion (Firefox) | 0.15.1 | `extensions/firefox/manifest.json` |
 
 Format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
+
+## VS Code extension 0.5.1 — 2026-06-21
+
+### Added
+- **Discord shortcut in the panel header.** The new button opens the CPOS Discord invite directly from VS Code.
+
+### Changed
+- **Responsive community links.** The header now orders its actions as Sponsor, Theme, Discord, and GitHub. As the sidebar narrows, labels collapse by priority while every icon remains available; GitHub collapses first, followed by Discord, Theme, and Sponsor.
 
 ## Browser companions 0.15.1 — 2026-06-20
 

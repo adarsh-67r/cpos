@@ -1714,6 +1714,10 @@ async function openSponsor(): Promise<void> {
   await vscode.env.openExternal(vscode.Uri.parse("https://github.com/sponsors/Soham109"));
 }
 
+async function openDiscord(): Promise<void> {
+  await vscode.env.openExternal(vscode.Uri.parse("https://discord.gg/QkdmcRKz"));
+}
+
 type PanelState = {
   source?: string;
   fileName: string;
@@ -1994,6 +1998,9 @@ class CposActionsProvider implements vscode.WebviewViewProvider {
       case "openSponsor":
         await openSponsor();
         break;
+      case "openDiscord":
+        await openDiscord();
+        break;
       case "retryServer":
         await startCaptureServer().catch((error) => warnServer(error));
         await this.postState();
@@ -2264,6 +2271,16 @@ class CposActionsProvider implements vscode.WebviewViewProvider {
     background: color-mix(in srgb, #db61a2 30%, transparent);
     border-color: #db61a2;
     color: #fbcfe5;
+  }
+  .iconbtn.discord {
+    background: color-mix(in srgb, #5865f2 16%, transparent);
+    border-color: color-mix(in srgb, #5865f2 46%, var(--border));
+    color: #aeb5ff;
+  }
+  .iconbtn.discord:hover {
+    background: color-mix(in srgb, #5865f2 28%, transparent);
+    border-color: #5865f2;
+    color: #fff;
   }
   .iconbtn.theme {
     background: color-mix(in srgb, var(--accent-dim) 32%, transparent);
@@ -3007,6 +3024,7 @@ class CposActionsProvider implements vscode.WebviewViewProvider {
   const CPOS_LOGO = ${JSON.stringify(logoUri)};
   const GH_ICON = '<svg aria-hidden="true" viewBox="0 0 16 16" width="12" height="12" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.18.82.63-.18 1.31-.27 1.98-.27.67 0 1.35.09 1.98.27 1.51-1.04 2.18-.82 2.18-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>';
   const HEART_ICON = '<svg aria-hidden="true" viewBox="0 0 16 16" width="12" height="12" fill="currentColor"><path d="M8 14.25.345 6.595a3.75 3.75 0 1 1 5.305-5.305L8 3.64l2.35-2.35a3.75 3.75 0 1 1 5.305 5.305L8 14.25z"/></svg>';
+  const DISCORD_ICON = '<svg aria-hidden="true" viewBox="0 0 24 24" width="12" height="12" fill="currentColor"><path d="M19.54 5.34A16.3 16.3 0 0 0 15.44 4l-.5 1.02a15.2 15.2 0 0 0-5.87 0L8.55 4a16.5 16.5 0 0 0-4.1 1.35C1.85 9.17 1.15 12.9 1.5 16.58a16.7 16.7 0 0 0 5.03 2.55l1.23-1.67a10.7 10.7 0 0 1-1.93-.93l.47-.36c3.72 1.72 7.75 1.72 11.43 0l.48.36c-.62.37-1.27.68-1.94.93l1.23 1.67a16.6 16.6 0 0 0 5.02-2.55c.42-4.27-.72-7.97-2.98-11.24ZM8.68 14.3c-1.12 0-2.04-1.03-2.04-2.3s.9-2.3 2.04-2.3c1.15 0 2.06 1.04 2.04 2.3 0 1.27-.9 2.3-2.04 2.3Zm6.64 0c-1.12 0-2.04-1.03-2.04-2.3s.9-2.3 2.04-2.3c1.15 0 2.06 1.04 2.04 2.3 0 1.27-.89 2.3-2.04 2.3Z"/></svg>';
   const SETTINGS_ICON = '<svg aria-hidden="true" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="2.2"/><path d="M6.8 1.8h2.4l.5 1.7 1.4.8 1.7-.5L14 5.9l-1.2 1.3v1.6l1.2 1.3-1.2 2.1-1.7-.5-1.4.8-.5 1.7H6.8l-.5-1.7-1.4-.8-1.7.5L2 10.1l1.2-1.3V7.2L2 5.9l1.2-2.1 1.7.5 1.4-.8.5-1.7Z"/></svg>';
   // Per-tab glyphs shown when the panel is too narrow for text labels.
   const TAB_ICONS = {
@@ -3478,9 +3496,10 @@ class CposActionsProvider implements vscode.WebviewViewProvider {
       + '<div class="row">'
       + '<span class="brandrow"><img class="logo" src="' + CPOS_LOGO + '" alt="CPOS" /><span class="title">CPOS</span></span>'
       + '<span class="headtools">'
-      + '<button class="iconbtn sponsor" data-prio="2" data-act="openSponsor" title="Sponsor CPOS — keep it free and local-first">' + HEART_ICON + '<span class="btn-label">Sponsor</span></button>'
-      + '<button class="iconbtn gh icononly" data-act="openGithub" title="CPOS on GitHub" aria-label="CPOS on GitHub">' + GH_ICON + '</button>'
-      + '<button class="iconbtn theme" data-prio="1" data-act="toggleThemes" title="Themes">◑<span class="btn-label"> theme</span></button>'
+      + '<button class="iconbtn sponsor" data-prio="3" data-act="openSponsor" title="Sponsor CPOS — keep it free and local-first">' + HEART_ICON + '<span class="btn-label">Sponsor</span></button>'
+      + '<button class="iconbtn theme" data-prio="2" data-act="toggleThemes" title="Themes">◑<span class="btn-label"> theme</span></button>'
+      + '<button class="iconbtn discord" data-prio="1" data-act="openDiscord" title="Join CPOS on Discord" aria-label="Join CPOS on Discord">' + DISCORD_ICON + '<span class="btn-label">Discord</span></button>'
+      + '<button class="iconbtn gh" data-prio="0" data-act="openGithub" title="CPOS on GitHub" aria-label="CPOS on GitHub">' + GH_ICON + '<span class="btn-label">GitHub</span></button>'
       + '</span>'
       + '</div>'
       + '<div class="rule"></div>'

@@ -38,7 +38,7 @@ Open the **CPOS** view in the activity bar:
 - **Run All** — compile and run every sample; verdicts shown inline (`AC`, `WA`, `TLE`, `RE`, `CE`)
 - **Submit** — queue submission for the browser companion; if it is not picked up quickly, CPOS offers an **Open submit page** fallback
 - **Problem ID link** — open the problem statement from the Tests header
-- **GitHub** — open the CPOS repository
+- **Header links** — Sponsor, Theme, Discord, and GitHub stay available at every sidebar width; labels collapse to icons from GitHub upward as space gets tight
 - **Test cases** — edit, add, or remove samples; Codeforces multi-case inputs can show linked input/output blocks
 - **Themes** — CPOS, Midnight, Amber, Paper, or Native (matches your VS Code theme; Run All uses VS Code button styling)
 - **Settings gear** — beside the Solution tab; configure the default language and paste or upload per-language templates shared with the TUI and browser companion
@@ -64,6 +64,7 @@ See **[TROUBLESHOOTING.md](../../TROUBLESHOOTING.md)** — Run All (`spawn sh EN
 ## Links
 
 - [Full demo on YouTube](https://youtu.be/5HTatBfpK5A)
+- [Join the CPOS Discord](https://discord.gg/QkdmcRKz)
 - [CPOS on GitHub](https://github.com/Soham109/cpos)
 - [TROUBLESHOOTING.md](../../TROUBLESHOOTING.md)
 - [Changelog](../../CHANGELOG.md)
