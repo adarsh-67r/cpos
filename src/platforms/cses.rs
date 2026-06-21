@@ -174,6 +174,9 @@ fn parse_cses_samples(body: &str) -> Vec<TestCase> {
         .map(|pair| TestCase {
             input: pair[0].clone(),
             expected_output: pair[1].clone(),
+            input_block_sizes: Vec::new(),
+            output_block_sizes: Vec::new(),
+            input_output_offset: 0,
         })
         .collect()
 }

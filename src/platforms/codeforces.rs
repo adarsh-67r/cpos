@@ -138,6 +138,9 @@ fn parse_cf_samples(body: &str) -> Vec<TestCase> {
         .map(|(input, expected_output)| TestCase {
             input,
             expected_output,
+            input_block_sizes: Vec::new(),
+            output_block_sizes: Vec::new(),
+            input_output_offset: 0,
         })
         .collect()
 }

@@ -4,7 +4,7 @@ All notable changes to CPOS are documented here. Components are versioned indepe
 
 | Component | Current version | Version file |
 | --- | --- | --- |
-| Terminal app | 0.2.0 | `Cargo.toml` |
+| Terminal app | 0.2.1 | `Cargo.toml` |
 | VS Code extension | 0.5.1 | `extensions/vscode/package.json` |
 | Browser companion (Chrome) | 0.15.1 | `extensions/chrome/manifest.json` |
 | Browser companion (Firefox) | 0.15.1 | `extensions/firefox/manifest.json` |
@@ -12,6 +12,21 @@ All notable changes to CPOS are documented here. Components are versioned indepe
 Format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
+
+## Unreleased
+
+## Terminal app 0.2.1 — 2026-06-21
+
+### Changed
+- **Target rating is now explicit.** The Target tab separates the official synced Codeforces rating from its solve-derived Practice estimate. Practice still tunes the problem ramp, but only the official rating determines the goal gap or whether a goal is reached.
+- Users without rated Codeforces history now start with a 1200 target instead of silently inheriting a fabricated 1200 current rating and a 1400 target.
+- **Complete problem statements in the TUI.** `v` now opens a semantic Codeforces/CSES statement view with title and limits, sections, lists, code blocks, native terminal LaTeX rendering, captured diagrams, and responsive sample input/output panels. Codeforces multi-test block grouping is preserved, and `T` runs samples without leaving the statement.
+- Statement diagrams use detected Kitty, Sixel, or iTerm2 graphics and fall back to Unicode half-block rendering on other terminals.
+- Statement images are cached locally after their first download, while captured statement HTML remains available offline.
+
+### Fixed
+- **TUI redraw corruption after opening problems.** Browser and desktop launchers no longer inherit the alternate screen's input/output streams, and CPOS performs a clean redraw after launches or terminal resizes so stale tab rows and borders cannot remain duplicated.
+- **Legacy Codeforces math delimiters.** Polygon statements using `$$$...$$$` inline math or `$$$$$$...$$$$$$` display math now render correctly, including aliases such as `\le` and superscripts such as `10^4`, instead of exposing dollar signs or parser errors.
 
 ## VS Code extension 0.5.1 — 2026-06-21
 

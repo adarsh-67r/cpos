@@ -97,7 +97,7 @@ fn dump_buffer(buf: &Buffer) -> ScreenOut {
     }
 }
 
-fn render(app: &App, width: u16, height: u16) -> ScreenOut {
+fn render(app: &mut App, width: u16, height: u16) -> ScreenOut {
     let backend = TestBackend::new(width, height);
     let mut terminal = Terminal::new(backend).unwrap();
     terminal.draw(|frame| ui::draw(frame, app)).unwrap();
@@ -334,7 +334,7 @@ fn main() {
         if tab == Tab::Problems {
             app.problem_selected = 7;
         }
-        let screen = render(&app, width, height);
+        let screen = render(&mut app, width, height);
         let json = serde_json::to_string(&screen).unwrap();
         let path = format!("{out_dir}/{name}.json");
         fs::write(&path, json).unwrap();
@@ -347,7 +347,7 @@ fn main() {
         app.active_tab = Tab::Dashboard;
         app.config.theme = theme_name.to_string();
         app.theme = cpos::ui::theme::Theme::from_name(theme_name);
-        let screen = render(&app, width, 20);
+        let screen = render(&mut app, width, 20);
         let json = serde_json::to_string(&screen).unwrap();
         let path = format!("{out_dir}/theme_{theme_name}.json");
         fs::write(&path, json).unwrap();

@@ -17,7 +17,7 @@ use crate::app::{App, Tab};
 /// Rotating-arc spinner shown while data is syncing.
 pub const SPINNER: [&str; 6] = ["◜", "◠", "◝", "◞", "◡", "◟"];
 
-pub fn draw(frame: &mut Frame, app: &App) {
+pub fn draw(frame: &mut Frame, app: &mut App) {
     // Paint the whole background first so themed panels sit on a flat canvas.
     frame.render_widget(
         Block::default().style(Style::default().bg(app.theme.bg)),

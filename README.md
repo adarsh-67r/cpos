@@ -99,6 +99,7 @@ cpos
 | Key | What it does |
 | --- | --- |
 | `o` / `Enter` | Open a problem — creates the file in your project folder when VS Code has synced a path, otherwise in `~/cpos` or your configured workspace |
+| `v` | Open the complete browser-captured statement inside the TUI |
 | `T` | Run against samples |
 | `s` | Submit |
 | `b` | Open problem in browser |
@@ -110,6 +111,19 @@ cpos
 Keep the terminal running while you code in VS Code — same captures, same submits, same progress.
 
 Terminal editor users can set `editor` to commands such as `nvim {file}`, `vim {file}`, `nano {file}`, `hx {file}`, or `emacs -nw {file}`. CPOS temporarily steps out of the full-screen TUI while that editor runs, then restores the dashboard when the editor exits.
+
+The Target tab shows the official synced **CF rating** separately from its
+solve-derived **Practice** estimate. Practice controls the difficulty ramp; it
+never substitutes for the real rating when CPOS calculates the gap to a goal.
+
+Press `v` on the Problems tab for the full in-TUI problem view. CPOS preserves
+the title, limits, sections, lists, code, terminal-rendered LaTeX, and captured
+diagrams, then inserts the sample inputs/outputs in the same place as the VS
+Code Statement tab. Samples use linked Codeforces block shading when available
+and switch between side-by-side and stacked layouts with terminal width.
+Kitty, Sixel, and iTerm2 graphics are detected automatically; other terminals
+receive a colored Unicode half-block rendering. Press `T` from the statement to
+run the samples, or `b` to open the original page.
 
 ---
 

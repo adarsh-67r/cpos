@@ -152,6 +152,13 @@ pub struct RatingChange {
 pub struct TestCase {
     pub input: String,
     pub expected_output: String,
+    /// Optional Codeforces multi-test grouping captured from the sample markup.
+    #[serde(default)]
+    pub input_block_sizes: Vec<usize>,
+    #[serde(default)]
+    pub output_block_sizes: Vec<usize>,
+    #[serde(default)]
+    pub input_output_offset: usize,
 }
 
 #[derive(Debug, Clone)]
@@ -190,6 +197,9 @@ pub struct CapturedProblem {
     pub category: Option<String>,
     #[serde(default)]
     pub tests: Vec<TestCase>,
+    /// Sanitized problem-statement HTML captured by the browser companion.
+    #[serde(default, alias = "statementHtml")]
+    pub statement_html: Option<String>,
     /// When VS Code captures into the user's open folder, it forwards this path
     /// so the TUI can run/submit against the same file.
     #[serde(default)]
@@ -286,11 +296,16 @@ mod tests {
             "rating": 800,
             "tags": ["math"],
             "category": "Introductory Problems",
+            "statementHtml": "<div><p>Compute the sequence.</p></div>",
             "tests": []
         }"#;
         let cap: CapturedProblem = serde_json::from_str(json).unwrap();
         assert_eq!(cap.platform, "cses");
         assert_eq!(cap.rating, Some(800));
+        assert_eq!(
+            cap.statement_html.as_deref(),
+            Some("<div><p>Compute the sequence.</p></div>")
+        );
         let problem = cap.into_problem();
         assert_eq!(problem.platform, Platform::Cses);
         assert_eq!(problem.category, Some("Introductory Problems".to_string()));

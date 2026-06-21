@@ -1,7 +1,7 @@
 (function () {
   const captions = {
     dashboard: "Rating, streak, progress, and what to solve next.",
-    problems: "Browse the full catalog — search, filter, open. No Codeforces tab needed.",
+    problems: "Browse, filter, and open complete statements with math, diagrams, and samples inside the TUI.",
     contests: "Upcoming and live Codeforces contests with countdowns.",
     analytics: "Rating graph, topic breakdown, and activity heatmap.",
     recommend: "Unsolved problems picked around your rating and weak tags.",

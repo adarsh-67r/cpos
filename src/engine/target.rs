@@ -136,10 +136,14 @@ pub struct TargetStep {
 pub struct TargetPlan {
     pub target_rating: u32,
     pub target_rank: &'static str,
-    pub current_level: u32,
-    pub current_rank: &'static str,
-    /// `target - current_level` (can be negative if already past the goal).
-    pub gap: i64,
+    /// Latest official Codeforces rating, when the configured handle has rated
+    /// contest history. This is the only value used to claim a goal is reached.
+    pub user_rating: Option<u32>,
+    /// Solve-derived practice estimate. Useful for choosing problem difficulty,
+    /// but deliberately not presented as the user's actual Codeforces rating.
+    pub practice_level: Option<u32>,
+    /// `target - user_rating`; unknown until official rating history is synced.
+    pub gap: Option<i64>,
     /// 0..100 — weighted share of relevant topics that are ready.
     pub readiness_pct: u32,
     /// Topics that need attention for the goal, most important first.
@@ -253,11 +257,17 @@ pub fn analyze_target(
         }
     }
 
-    // Effective level: floor at the user's known rating, lift toward the 70th
-    // percentile of what they've actually solved.
-    let base = user_rating.unwrap_or(1200).max(800);
-    let solved_level = percentile(&solved_ratings, 70).unwrap_or(base);
-    let current_level = base.max(solved_level);
+    // Keep official rating and solve-derived practice level separate. The
+    // latter helps choose useful problems, but must never masquerade as the
+    // user's current Codeforces rating or mark a rating goal as completed.
+    let practice_level = percentile(&solved_ratings, 70);
+    let planning_level = match (user_rating, practice_level) {
+        (Some(rating), Some(practice)) => rating.max(practice),
+        (Some(rating), None) => rating,
+        (None, Some(practice)) => practice,
+        (None, None) => TARGET_MIN,
+    }
+    .max(800);
 
     let band_floor = target.saturating_sub(200);
     let solved_in_band = solved_ratings
@@ -352,16 +362,16 @@ pub fn analyze_target(
         all_problems,
         &solved_ids,
         &topic_priority,
-        current_level,
+        planning_level,
         target,
     );
 
     TargetPlan {
         target_rating: target,
         target_rank: rank_name(target),
-        current_level,
-        current_rank: rank_name(current_level),
-        gap: target as i64 - current_level as i64,
+        user_rating,
+        practice_level,
+        gap: user_rating.map(|rating| target as i64 - rating as i64),
         readiness_pct,
         focus_topics,
         steps,
@@ -677,5 +687,28 @@ mod tests {
         assert!(plan.readiness_pct <= 100);
         // No solves at all → not ready.
         assert!(plan.readiness_pct < 50);
+    }
+
+    #[test]
+    fn official_rating_alone_determines_goal_gap() {
+        let subs = vec![
+            ac("easy", 900, &["implementation"]),
+            ac("hard", 1200, &["implementation"]),
+        ];
+        let plan = analyze_target(&subs, &[], Some(900), 900);
+
+        assert_eq!(plan.user_rating, Some(900));
+        assert_eq!(plan.practice_level, Some(1200));
+        assert_eq!(plan.gap, Some(0));
+    }
+
+    #[test]
+    fn missing_rating_is_not_invented_from_practice_history() {
+        let subs = vec![ac("hard", 1400, &["implementation"])];
+        let plan = analyze_target(&subs, &[], None, 1200);
+
+        assert_eq!(plan.user_rating, None);
+        assert_eq!(plan.practice_level, Some(1400));
+        assert_eq!(plan.gap, None);
     }
 }

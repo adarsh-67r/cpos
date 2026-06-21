@@ -122,7 +122,7 @@ mod tests {
         let server = start_on_port(tx, 0).expect("server should start on an ephemeral port");
         let port = server.port;
 
-        let body = r#"{"platform":"codeforces","id":"4A","name":"Watermelon","url":"https://codeforces.com/problemset/problem/4/A","tests":[{"input":"8","expected_output":"YES"}]}"#;
+        let body = r#"{"platform":"codeforces","id":"4A","name":"Watermelon","url":"https://codeforces.com/problemset/problem/4/A","statementHtml":"<div class=\"problem-statement\"><p>Split it.</p></div>","tests":[{"input":"8","expected_output":"YES","input_block_sizes":[1],"output_block_sizes":[1],"input_output_offset":0}]}"#;
         let resp = ureq_lite_post(port, "/capture/problem", body);
         assert!(resp.contains("\"ok\":true"));
 
@@ -131,6 +131,8 @@ mod tests {
             CaptureMsg::Problem(cap) => {
                 assert_eq!(cap.id, "4A");
                 assert_eq!(cap.tests.len(), 1);
+                assert!(cap.statement_html.as_deref().unwrap().contains("Split it"));
+                assert_eq!(cap.tests[0].input_block_sizes, vec![1]);
             }
             _ => panic!("expected Problem message"),
         }

@@ -255,6 +255,31 @@ The terminal app queues submit for the **browser companion** only (same as VS Co
 
 Use terminal app **0.1.8+**. CPOS now suspends the full-screen TUI before launching interactive terminal editors such as `vim`, `nvim`, `nano`, `micro`, Helix, Kakoune, or `emacs -nw`, then restores the UI after the editor exits.
 
+Current builds also detach browser/desktop launcher output from the alternate
+screen and force a clean redraw after launches and terminal resizes. This
+prevents stale tab rows or borders from appearing twice. If you use a terminal
+editor, configure it directly (for example `editor = "nvim {file}"`) so CPOS
+runs it in the same terminal session instead of asking the OS to open the file.
+
+### Target says my rating is higher than my Codeforces rating
+
+The Target tab distinguishes **CF rating** from **Practice**, a solve-derived
+difficulty estimate. Only the official rating synced from the configured
+Codeforces handle determines the goal gap or whether a goal has been reached.
+If CF rating is shown as `—`, verify the handle in Config and press `r` to sync.
+
+### The TUI says no captured statement is available
+
+Open or refresh the Codeforces/CSES problem page with the current browser
+companion enabled. The companion sends statement HTML alongside samples; CPOS
+stores the complete sanitized statement locally. Return to Problems and press
+`v`. The statement view includes sections, math, diagrams, and sample I/O.
+Older captures made before statement support need one browser refresh.
+
+Diagram quality depends on the terminal protocol. Kitty, Sixel, and iTerm2
+graphics are used when detected; otherwise CPOS renders the image with Unicode
+half-block cells. Formula rendering does not require a graphics protocol.
+
 ### CSES progress not syncing
 
 Set `cses_session` in config (see README) and use the browser companion on the CSES problem list.
@@ -278,4 +303,4 @@ Update to **0.3.20+** or reinstall from the latest VSIX/Marketplace build.
 1. Note your versions (VS Code extension, browser companion, terminal app if used).
 2. Copy the **full error** from **Output → CPOS** or your terminal.
 3. Say which step failed: TUI install, capture, Run All, submit, or source install.
-4. [Open an issue](https://github.com/Soham109/cpos/issues) or ask in the [CPOS Discord](https://discord.gg/CZ3UdPDs5k) with that info.
+4. [Open an issue](https://github.com/Soham109/cpos/issues) or ask in the [CPOS Discord](https://discord.gg/QkdmcRKz) with that info.

@@ -91,34 +91,54 @@ fn draw_goal_header(frame: &mut Frame, app: &App, area: Rect) {
     let Some(plan) = app.target_plan.as_ref() else {
         return;
     };
-    let gap_span = if plan.gap > 0 {
-        Span::styled(
-            format!("+{} to go", plan.gap),
+    let gap_span = match plan.gap {
+        Some(gap) if gap > 0 => Span::styled(
+            format!("+{gap} to go"),
             Style::default().fg(t.warning).add_modifier(Modifier::BOLD),
-        )
-    } else {
-        Span::styled(
-            "goal reached — push higher".to_string(),
+        ),
+        Some(0) => Span::styled(
+            "at goal".to_string(),
             Style::default().fg(t.success).add_modifier(Modifier::BOLD),
-        )
+        ),
+        Some(gap) => Span::styled(
+            format!("{} above goal", gap.unsigned_abs()),
+            Style::default().fg(t.success).add_modifier(Modifier::BOLD),
+        ),
+        None => Span::styled(
+            "unknown — sync a rated CF handle".to_string(),
+            Style::default().fg(t.dim),
+        ),
     };
-    frame.render_widget(
-        Paragraph::new(Line::from(vec![
-            Span::styled(" Now  ", Style::default().fg(t.dim)),
-            Span::styled(
-                format!("~{}", plan.current_level),
-                Style::default().fg(app.theme.rating_color(Some(plan.current_level))),
-            ),
-            Span::styled(format!(" {}", plan.current_rank), Style::default().fg(t.dim)),
-            Span::styled("    Gap ", Style::default().fg(t.dim)),
-            gap_span,
-            Span::styled(
-                format!("    {} solved in {}–{} band", plan.solved_in_band, plan.band_floor, plan.target_rating),
+    let mut standing = vec![Span::styled(" CF rating  ", Style::default().fg(t.dim))];
+    match plan.user_rating {
+        Some(rating) => {
+            standing.push(Span::styled(
+                rating.to_string(),
+                Style::default().fg(app.theme.rating_color(Some(rating))),
+            ));
+            standing.push(Span::styled(
+                format!(" {}", crate::engine::target::rank_name(rating)),
                 Style::default().fg(t.dim),
-            ),
-        ])),
-        rows[1],
-    );
+            ));
+        }
+        None => standing.push(Span::styled("—", Style::default().fg(t.dim))),
+    }
+    standing.push(Span::styled("    Gap ", Style::default().fg(t.dim)));
+    standing.push(gap_span);
+    if let Some(practice) = plan.practice_level {
+        standing.push(Span::styled(
+            format!("    Practice ~{practice}"),
+            Style::default().fg(t.accent_dim),
+        ));
+    }
+    standing.push(Span::styled(
+        format!(
+            "    {} solved in {}–{} band",
+            plan.solved_in_band, plan.band_floor, plan.target_rating
+        ),
+        Style::default().fg(t.dim),
+    ));
+    frame.render_widget(Paragraph::new(Line::from(standing)), rows[1]);
 
     // Line 3 — overall readiness bar.
     let ratio = plan.readiness_pct as f64 / 100.0;
@@ -311,5 +331,52 @@ fn truncate(s: &str, max: usize) -> String {
     } else {
         let truncated: String = s.chars().take(max.saturating_sub(1)).collect();
         format!("{truncated}…")
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::data::config::Config;
+    use ratatui::Terminal;
+    use ratatui::backend::TestBackend;
+    use ratatui::layout::Position;
+
+    #[test]
+    fn goal_header_separates_cf_rating_from_practice_estimate() {
+        let mut app = App::new(Config::default());
+        app.target_rating = 900;
+        app.target_plan = Some(TargetPlan {
+            target_rating: 900,
+            target_rank: "Newbie",
+            user_rating: Some(900),
+            practice_level: Some(1200),
+            gap: Some(0),
+            readiness_pct: 60,
+            focus_topics: Vec::new(),
+            steps: Vec::new(),
+            solved_in_band: 7,
+            band_floor: 700,
+        });
+
+        let backend = TestBackend::new(120, 5);
+        let mut terminal = Terminal::new(backend).unwrap();
+        terminal
+            .draw(|frame| draw_goal_header(frame, &app, frame.area()))
+            .unwrap();
+
+        let row: String = (0..120)
+            .filter_map(|x| {
+                terminal
+                    .backend()
+                    .buffer()
+                    .cell(Position::new(x, 2))
+                    .map(|cell| cell.symbol())
+            })
+            .collect();
+        assert!(row.contains("CF rating  900 Newbie"));
+        assert!(row.contains("Gap at goal"));
+        assert!(row.contains("Practice ~1200"));
+        assert!(!row.contains("Now  ~1200"));
     }
 }

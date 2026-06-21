@@ -30,20 +30,35 @@ use crate::data::models::{Platform, Problem, SolveStatus, TestCase};
 /// cross-platform. On Windows the statement opens in the user's default browser,
 /// which is where the CPOS companion captures sample tests from.
 pub fn os_open(target: &str) {
+    use std::process::Stdio;
+
     #[cfg(target_os = "windows")]
     {
         // `start` is a cmd builtin; the empty "" is the (required) window title.
         let _ = std::process::Command::new("cmd")
             .args(["/C", "start", "", target])
+            .stdin(Stdio::null())
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
             .spawn();
     }
     #[cfg(target_os = "macos")]
     {
-        let _ = std::process::Command::new("open").arg(target).spawn();
+        let _ = std::process::Command::new("open")
+            .arg(target)
+            .stdin(Stdio::null())
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .spawn();
     }
     #[cfg(all(unix, not(target_os = "macos")))]
     {
-        let _ = std::process::Command::new("xdg-open").arg(target).spawn();
+        let _ = std::process::Command::new("xdg-open")
+            .arg(target)
+            .stdin(Stdio::null())
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .spawn();
     }
 }
 
@@ -186,7 +201,7 @@ pub fn active_user_save_dir(
         return None;
     }
 
-    if let Some((_, Some(path), _)) = load_latest_session() {
+    if let Some((_, Some(path), _, _)) = load_latest_session() {
         if !is_default_cpos_tree(&path, config) {
             return path.parent().map(|p| p.to_path_buf());
         }
@@ -234,6 +249,40 @@ pub fn load_tests(config: &Config, problem: &Problem) -> Vec<TestCase> {
         .ok()
         .and_then(|s| serde_json::from_str::<Vec<TestCase>>(&s).ok())
         .unwrap_or_default()
+}
+
+fn statement_path(problem: &Problem) -> PathBuf {
+    Config::data_dir()
+        .join("statements")
+        .join(platform_slug(problem.platform))
+        .join(format!("{}.html", safe_id(&problem.id)))
+}
+
+pub fn save_statement(problem: &Problem, html: &str) -> Result<()> {
+    let path = statement_path(problem);
+    if let Some(dir) = path.parent() {
+        std::fs::create_dir_all(dir)?;
+    }
+    if html.trim().is_empty() {
+        return Ok(());
+    }
+    std::fs::write(path, html)?;
+    Ok(())
+}
+
+pub fn load_statement_html(problem: &Problem) -> Option<String> {
+    std::fs::read_to_string(statement_path(problem))
+        .ok()
+        .filter(|html| !html.trim().is_empty())
+}
+
+pub fn statement_image_cache_path(url: &str) -> PathBuf {
+    use std::hash::{Hash, Hasher};
+    let mut hasher = std::collections::hash_map::DefaultHasher::new();
+    url.hash(&mut hasher);
+    Config::data_dir()
+        .join("statement-images")
+        .join(format!("{:016x}.bin", hasher.finish()))
 }
 
 /// Sort key for the Problems list — newer Codeforces contests first, then A→Z
@@ -284,6 +333,8 @@ struct StoredSession {
     solution_path: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none", alias = "capturedAt")]
     captured_at: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none", alias = "statementHtml")]
+    statement_html: Option<String>,
 }
 
 impl StoredSession {
@@ -295,6 +346,7 @@ impl StoredSession {
             url: problem.url.clone(),
             solution_path: solution_path.map(|p| p.to_string_lossy().into_owned()),
             captured_at: Some(chrono::Utc::now().to_rfc3339()),
+            statement_html: None,
         }
     }
 
@@ -349,8 +401,8 @@ fn read_session_file(path: &std::path::Path) -> Option<StoredSession> {
 }
 
 /// Most recently captured/opened problem from the TUI or VS Code extension.
-pub fn load_latest_session() -> Option<(Problem, Option<PathBuf>, String)> {
-    let mut candidates: Vec<(Problem, Option<PathBuf>, String)> = Vec::new();
+pub fn load_latest_session() -> Option<(Problem, Option<PathBuf>, String, Option<String>)> {
+    let mut candidates: Vec<(Problem, Option<PathBuf>, String, Option<String>)> = Vec::new();
 
     if let Some(s) = read_session_file(&session_path()) {
         candidates.push(session_tuple(s));
@@ -361,13 +413,16 @@ pub fn load_latest_session() -> Option<(Problem, Option<PathBuf>, String)> {
         candidates.push(session_tuple(s));
     }
 
-    candidates.into_iter().max_by_key(|(_, _, ts)| ts.clone())
+    candidates
+        .into_iter()
+        .max_by_key(|(_, _, ts, _)| ts.clone())
 }
 
-fn session_tuple(s: StoredSession) -> (Problem, Option<PathBuf>, String) {
+fn session_tuple(s: StoredSession) -> (Problem, Option<PathBuf>, String, Option<String>) {
     let ts = s.timestamp_key();
     let path = s.solution_path.as_deref().map(PathBuf::from);
-    (s.into_problem(), path, ts)
+    let statement = s.statement_html.clone();
+    (s.into_problem(), path, ts, statement)
 }
 
 /// Resolve the template to scaffold with: the user's configured template file
@@ -522,11 +577,20 @@ mod tests {
     }
 
     #[test]
+    fn statement_image_cache_keys_are_stable_and_url_specific() {
+        let first = statement_image_cache_path("https://example.com/a.png");
+        let again = statement_image_cache_path("https://example.com/a.png");
+        let other = statement_image_cache_path("https://example.com/b.png");
+        assert_eq!(first, again);
+        assert_ne!(first, other);
+    }
+
+    #[test]
     fn session_roundtrip() {
         let p = cses_problem("1068", "Weird Algorithm");
         let path = PathBuf::from("/tmp/WeirdAlgorithm.cpp");
         save_session(&p, Some(&path)).unwrap();
-        let (restored, restored_path, _) = load_latest_session().unwrap();
+        let (restored, restored_path, _, _) = load_latest_session().unwrap();
         assert_eq!(restored.id, "1068");
         assert_eq!(restored_path, Some(path));
         let _ = std::fs::remove_file(session_path());

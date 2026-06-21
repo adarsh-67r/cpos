@@ -94,6 +94,10 @@ async fn run_tui() -> Result<()> {
     io::stdout().execute(EnableBracketedPaste)?;
     let backend = CrosstermBackend::new(io::stdout());
     let mut terminal = Terminal::new(backend)?;
+    let mut image_picker = ratatui_image::picker::Picker::from_query_stdio()
+        .unwrap_or_else(|_| ratatui_image::picker::Picker::from_fontsize((10, 20)));
+    image_picker.set_background_color([0, 0, 0, 0]);
+    app.set_statement_picker(image_picker);
 
     // Sync in the background on launch when cache is empty, contests missing,
     // or the last sync is older than a few hours.
@@ -168,7 +172,13 @@ async fn run_app(
         drain_refresh(app).await;
         drain_aux(app);
         drain_tests(app);
-        drain_captures(app);
+        app.drain_statement_images();
+        if drain_captures(app) {
+            // A browser capture can switch tabs while the terminal is also
+            // reflowing after the browser/editor gains focus. Repaint the full
+            // alternate screen so the previous tab row cannot remain behind.
+            redraw_tui(terminal)?;
+        }
 
         if app.loading || app.testing {
             app.spinner_frame = app.spinner_frame.wrapping_add(1);
@@ -238,6 +248,12 @@ async fn run_app(
                     }
 
                     handle_input(terminal, app, key.code);
+                }
+                // A terminal resize can leave cells from the previous frame
+                // visible outside Ratatui's new diff area. Clear once so tabs,
+                // borders, and status rows cannot appear duplicated.
+                Event::Resize(_, _) => {
+                    redraw_tui(terminal)?;
                 }
                 _ => {}
             }
@@ -495,9 +511,9 @@ fn drain_tests(app: &mut App) {
 }
 
 /// Process captured problems/progress sent by the browser companion.
-fn drain_captures(app: &mut App) {
+fn drain_captures(app: &mut App) -> bool {
     let Some(rx) = app.capture_rx.take() else {
-        return;
+        return false;
     };
 
     let mut msgs = Vec::new();
@@ -506,15 +522,21 @@ fn drain_captures(app: &mut App) {
     }
     app.capture_rx = Some(rx);
 
+    let mut problem_captured = false;
     for msg in msgs {
         match msg {
             CaptureMsg::Problem(cap) => {
+                problem_captured = true;
                 let tests = cap.tests.clone();
+                let statement_html = cap.statement_html.clone();
                 let external = cap.solution_path.clone();
                 let problem = cap.into_problem();
 
                 if !tests.is_empty() {
                     let _ = workspace::save_tests(&app.config, &problem, &tests);
+                }
+                if let Some(html) = statement_html {
+                    let _ = workspace::save_statement(&problem, &html);
                 }
                 if let Some(ref path) = external {
                     app.set_solution_path(&problem, PathBuf::from(path));
@@ -568,6 +590,7 @@ fn drain_captures(app: &mut App) {
             }
         }
     }
+    problem_captured
 }
 
 /// Pull any pending messages from the background refresh task.
@@ -674,6 +697,10 @@ fn launch_started(
     let config = app.config.clone();
     tokio::spawn(app::fetch_samples_task(problem, config, tx));
     open_in_editor(app.config.editor.as_deref(), &solution_path, Some(terminal));
+    // OS launchers and GUI editors should not write to our terminal, but some
+    // terminal/desktop combinations still disturb the alternate-screen frame.
+    // Force the next draw to repaint from a clean slate.
+    let _ = redraw_tui(terminal);
 }
 
 /// Run the selected problem's solution against its cached sample tests.
@@ -725,6 +752,21 @@ fn submit_selected(app: &mut App) {
 
 fn open_url(url: &str) {
     workspace::os_open(url);
+}
+
+fn redraw_tui(
+    terminal: &mut Terminal<CrosstermBackend<io::Stdout>>,
+) -> io::Result<()> {
+    terminal.autoresize()?;
+    terminal.clear()
+}
+
+fn open_url_from_tui(
+    terminal: &mut Terminal<CrosstermBackend<io::Stdout>>,
+    url: &str,
+) {
+    open_url(url);
+    let _ = redraw_tui(terminal);
 }
 
 /// Run a shell command line, discarding output. Uses `cmd /C` on Windows and
@@ -1008,15 +1050,19 @@ fn handle_input(
 
     match app.active_tab {
         Tab::Problems => handle_problems_input(terminal, app, key),
-        Tab::Config => handle_config_input(app, key),
+        Tab::Config => handle_config_input(terminal, app, key),
         Tab::Recommend => handle_recommend_input(terminal, app, key),
         Tab::Target => handle_target_input(terminal, app, key),
-        Tab::Contests => handle_contests_input(app, key),
+        Tab::Contests => handle_contests_input(terminal, app, key),
         Tab::Dashboard | Tab::Analytics => {}
     }
 }
 
-fn handle_contests_input(app: &mut App, key: KeyCode) {
+fn handle_contests_input(
+    terminal: &mut Terminal<CrosstermBackend<io::Stdout>>,
+    app: &mut App,
+    key: KeyCode,
+) {
     match key {
         KeyCode::Char('j') | KeyCode::Down => app.contest_scroll_down(),
         KeyCode::Char('k') | KeyCode::Up => app.contest_scroll_up(),
@@ -1025,7 +1071,7 @@ fn handle_contests_input(app: &mut App, key: KeyCode) {
         KeyCode::Enter | KeyCode::Char('o') => {
             if app.open_contest_problems() == 0 {
                 if let Some(url) = app.selected_contest_url() {
-                    open_url(&url);
+                    open_url_from_tui(terminal, &url);
                     app.status_message =
                         "No problems yet (not started?) — opened the contest page".to_string();
                 }
@@ -1033,7 +1079,7 @@ fn handle_contests_input(app: &mut App, key: KeyCode) {
         }
         KeyCode::Char('b') => {
             if let Some(url) = app.selected_contest_url() {
-                open_url(&url);
+                open_url_from_tui(terminal, &url);
                 app.status_message = "Opened contest in your browser".to_string();
             }
         }
@@ -1138,6 +1184,26 @@ fn handle_problems_input(
     app: &mut App,
     key: KeyCode,
 ) {
+    if app.statement_view_active {
+        match key {
+            KeyCode::Char('j') | KeyCode::Down => app.statement_scroll_down(1),
+            KeyCode::Char('k') | KeyCode::Up => app.statement_scroll_up(1),
+            KeyCode::Char('d') | KeyCode::PageDown => app.statement_scroll_down(12),
+            KeyCode::Char('u') | KeyCode::PageUp => app.statement_scroll_up(12),
+            KeyCode::Char('v') | KeyCode::Esc => app.toggle_statement_view(),
+            KeyCode::Char('T') => run_selected_tests(app),
+            KeyCode::Char('o') | KeyCode::Enter => start_selected_problem(terminal, app),
+            KeyCode::Char('s') => submit_selected(app),
+            KeyCode::Char('b') => {
+                if let Some(url) = app.selected_problem().map(|problem| problem.url.clone()) {
+                    open_url_from_tui(terminal, &url);
+                }
+            }
+            _ => {}
+        }
+        return;
+    }
+
     match key {
         KeyCode::Char('j') | KeyCode::Down => app.scroll_down(),
         KeyCode::Char('k') | KeyCode::Up => app.scroll_up(),
@@ -1146,11 +1212,16 @@ fn handle_problems_input(
         KeyCode::Char('d') => app.page_down(),
         KeyCode::Char('u') => app.page_up(),
         KeyCode::Char('o') => start_selected_problem(terminal, app),
+        KeyCode::Char('v') => app.toggle_statement_view(),
         KeyCode::Char('U') => {
             app.url_input_active = true;
             app.url_input_buf.clear();
         }
-        KeyCode::Char('b') => app.open_selected_problem(),
+        KeyCode::Char('b') => {
+            if let Some(url) = app.selected_problem().map(|problem| problem.url.clone()) {
+                open_url_from_tui(terminal, &url);
+            }
+        }
         KeyCode::Char('T') => run_selected_tests(app),
         KeyCode::Char('s') => submit_selected(app),
         KeyCode::Char('/') => {
@@ -1348,7 +1419,7 @@ fn generate_content_js(port: u16) -> String {
 
     // --- Problem page: capture problem + samples ---
     const url = location.href;
-    let platform, id, name;
+    let platform, id, name, statementHtml;
 
     if (location.hostname === 'codeforces.com') {{
         platform = 'codeforces';
@@ -1357,6 +1428,18 @@ fn generate_content_js(port: u16) -> String {
         id = m[1] + m[2];
         const title = document.querySelector('.title');
         name = title ? title.textContent.replace(/^[A-Z]\d*\.\s*/, '').trim() : id;
+        const statement = document.querySelector('.problem-statement');
+        if (statement) {{
+            const clone = statement.cloneNode(true);
+            clone.querySelector('.sample-tests')?.remove();
+            clone.querySelectorAll('.input-file, .output-file, .MathJax_Preview, .MathJax, mjx-container, .mjx-chtml, .MathJax_CHTML')
+                .forEach(el => el.remove());
+            clone.querySelectorAll("script[type^='math/tex']").forEach(el => {{
+                const block = (el.getAttribute('type') || '').includes('mode=display');
+                el.replaceWith(document.createTextNode(block ? `$$${{el.textContent}}$$` : `\\(${{el.textContent}}\\)`));
+            }});
+            statementHtml = clone.outerHTML;
+        }}
     }} else if (location.hostname === 'cses.fi') {{
         platform = 'cses';
         const m = url.match(/task\/(\d+)/);
@@ -1364,6 +1447,28 @@ fn generate_content_js(port: u16) -> String {
         id = m[1];
         const h1 = document.querySelector('.title-block h1, h1');
         name = h1 ? h1.textContent.trim() : id;
+        const content = document.querySelector('.content');
+        if (content) {{
+            const clone = content.cloneNode(true);
+            clone.querySelectorAll('.math').forEach(el => {{
+                const annotation = el.querySelector('annotation');
+                if (annotation?.textContent) {{
+                    const block = el.classList.contains('math-display');
+                    el.textContent = block ? `$$${{annotation.textContent}}$$` : `\\(${{annotation.textContent}}\\)`;
+                }}
+            }});
+            clone.querySelectorAll('link, script, style').forEach(el => el.remove());
+            const example = clone.querySelector('#example');
+            if (example) {{
+                let node = example;
+                while (node) {{
+                    const next = node.nextSibling;
+                    node.remove();
+                    node = next;
+                }}
+            }}
+            statementHtml = clone.outerHTML;
+        }}
     }} else {{
         return;
     }}
@@ -1408,7 +1513,7 @@ fn generate_content_js(port: u16) -> String {
         return out.replace(/^\n+|\n+$/g, '');
     }}
 
-    const payload = {{ platform, id, name, url, tests }};
+    const payload = {{ platform, id, name, url, tests, statementHtml }};
     post('/capture/problem', payload).then(({{ endpoint }}) => {{
         showToast(`CPOS: captured ${{tests.length}} sample(s) in ${{endpoint.name}}`);
     }}).catch(() => {{
@@ -1435,7 +1540,7 @@ fn generate_content_js(port: u16) -> String {
 fn generate_bookmarklet(port: u16) -> String {
     // Minimal bookmarklet that extracts samples from CF/CSES and POSTs to CPOS.
     format!(
-        r#"javascript:void(function(){{var h=location.hostname,u=location.href,p,id,n,ts=[];function pt(e){{var o='';e.childNodes.forEach(function(n){{n.nodeType===3?o+=n.textContent:n.nodeName==='BR'?o+='\n':o+=n.textContent}});return o.replace(/^\n+|\n+$/g,'')}}if(h==='codeforces.com'){{p='codeforces';var m=u.match(/problem(?:set\/problem)?\/(\d+)\/([A-Za-z0-9]+)/);if(!m)return alert('Not a CF problem page');id=m[1]+m[2];n=(document.querySelector('.title')||{{}}).textContent||id;document.querySelectorAll('.sample-test .input pre').forEach(function(e,i){{var o=document.querySelectorAll('.sample-test .output pre')[i];if(o)ts.push({{input:pt(e),expected_output:pt(o)}})}})}}else if(h==='cses.fi'){{p='cses';var m=u.match(/task\/(\d+)/);if(!m)return alert('Not a CSES task page');id=m[1];n=(document.querySelector('h1')||{{}}).textContent||id;var pp=document.querySelectorAll('pre');for(var i=0;i+1<pp.length;i+=2)ts.push({{input:pt(pp[i]),expected_output:pt(pp[i+1])}})}}else return alert('Open a Codeforces or CSES problem first');fetch('http://127.0.0.1:{port}/capture/problem',{{method:'POST',headers:{{'Content-Type':'application/json'}},body:JSON.stringify({{platform:p,id:id,name:n,url:u,tests:ts}})}}).then(function(r){{return r.json()}}).then(function(d){{alert(d.ok?'CPOS: captured '+ts.length+' sample(s)':'CPOS: error')}}).catch(function(){{alert('CPOS not running — start cpos first')}})}}())"#
+        r#"javascript:void(function(){{var h=location.hostname,u=location.href,p,id,n,sh,ts=[];function pt(e){{var o='';e.childNodes.forEach(function(n){{n.nodeType===3?o+=n.textContent:n.nodeName==='BR'?o+='\n':o+=n.textContent}});return o.replace(/^\n+|\n+$/g,'')}}if(h==='codeforces.com'){{p='codeforces';var m=u.match(/problem(?:set\/problem)?\/(\d+)\/([A-Za-z0-9]+)/);if(!m)return alert('Not a CF problem page');id=m[1]+m[2];n=(document.querySelector('.title')||{{}}).textContent||id;var s=document.querySelector('.problem-statement');if(s){{s=s.cloneNode(true);var z=s.querySelector('.sample-tests');if(z)z.remove();s.querySelectorAll("script[type^='math/tex']").forEach(function(e){{e.replaceWith(document.createTextNode('\\('+e.textContent+'\\)'))}});s.querySelectorAll('.MathJax_Preview,.MathJax,mjx-container,.mjx-chtml,script,style').forEach(function(e){{e.remove()}});sh=s.outerHTML}}document.querySelectorAll('.sample-test .input pre').forEach(function(e,i){{var o=document.querySelectorAll('.sample-test .output pre')[i];if(o)ts.push({{input:pt(e),expected_output:pt(o)}})}})}}else if(h==='cses.fi'){{p='cses';var m=u.match(/task\/(\d+)/);if(!m)return alert('Not a CSES task page');id=m[1];n=(document.querySelector('h1')||{{}}).textContent||id;var s=document.querySelector('.content');if(s){{s=s.cloneNode(true);s.querySelectorAll('.math').forEach(function(e){{var a=e.querySelector('annotation');if(a)e.textContent='\\('+a.textContent+'\\)'}});s.querySelectorAll('script,style,link').forEach(function(e){{e.remove()}});var x=s.querySelector('#example');while(x){{var y=x.nextSibling;x.remove();x=y}}sh=s.outerHTML}}var pp=document.querySelectorAll('pre');for(var i=0;i+1<pp.length;i+=2)ts.push({{input:pt(pp[i]),expected_output:pt(pp[i+1])}})}}else return alert('Open a Codeforces or CSES problem first');fetch('http://127.0.0.1:{port}/capture/problem',{{method:'POST',headers:{{'Content-Type':'application/json'}},body:JSON.stringify({{platform:p,id:id,name:n,url:u,tests:ts,statementHtml:sh}})}}).then(function(r){{return r.json()}}).then(function(d){{alert(d.ok?'CPOS: captured '+ts.length+' sample(s)':'CPOS: error')}}).catch(function(){{alert('CPOS not running — start cpos first')}})}}())"#
     )
 }
 
@@ -1530,7 +1635,11 @@ fn generate_setup_html(port: u16, ext_dir: &std::path::Path, bookmarklet: &str) 
     )
 }
 
-fn handle_config_input(app: &mut App, key: KeyCode) {
+fn handle_config_input(
+    terminal: &mut Terminal<CrosstermBackend<io::Stdout>>,
+    app: &mut App,
+    key: KeyCode,
+) {
     match key {
         KeyCode::Char('j') | KeyCode::Down => {
             let max = app.config_fields().len().saturating_sub(1);
@@ -1549,7 +1658,7 @@ fn handle_config_input(app: &mut App, key: KeyCode) {
         KeyCode::Char('S') => app.begin_setup(),
         // Open CSES login so you can grab your session cookie to connect.
         KeyCode::Char('L') => {
-            open_url("https://cses.fi/login");
+            open_url_from_tui(terminal, "https://cses.fi/login");
             app.status_message =
                 "Log in, then paste your PHPSESSID cookie into 'CSES Session'".to_string();
         }

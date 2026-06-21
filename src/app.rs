@@ -1,16 +1,19 @@
 use std::path::{Path, PathBuf};
-use std::sync::mpsc::Sender;
+use std::sync::mpsc::{Receiver, Sender};
 
 use crate::data::cache::Cache;
 use crate::data::config::Config;
 use crate::data::models::*;
 use crate::engine::recommender::{self, Recommendation};
+use crate::engine::statement::{StatementBlock, StatementDocument};
 use crate::engine::weakness;
 use crate::engine::workspace;
 use crate::platforms::PlatformClient;
 use crate::platforms::codeforces::CodeforcesClient;
 use crate::platforms::cses::CsesClient;
 use crate::ui::theme::Theme;
+use ratatui_image::picker::Picker;
+use ratatui_image::protocol::StatefulProtocol;
 
 /// Messages sent from the background refresh task back to the UI thread.
 pub enum RefreshMsg {
@@ -23,6 +26,18 @@ pub enum RefreshMsg {
 pub enum TestMsg {
     Done(Vec<TestResult>),
     Failed(String),
+}
+
+pub struct StatementImage {
+    pub url: String,
+    pub alt: String,
+    pub protocol: Option<StatefulProtocol>,
+    pub error: Option<String>,
+}
+
+struct StatementImageMsg {
+    index: usize,
+    bytes: Result<Vec<u8>, String>,
 }
 
 /// Persisted CSES progress (solved/attempted task ids) from a logged-in session.
@@ -327,6 +342,12 @@ pub struct App {
     pub rating_input_buf: String,
     pub url_input_active: bool,
     pub url_input_buf: String,
+    pub statement_view_active: bool,
+    pub statement_scroll: u16,
+    pub statement_document: Option<StatementDocument>,
+    pub statement_images: Vec<StatementImage>,
+    pub statement_picker: Option<Picker>,
+    statement_image_rx: Option<Receiver<StatementImageMsg>>,
 
     pub submissions: Vec<Submission>,
     pub rating_history: Vec<RatingChange>,
@@ -430,6 +451,12 @@ impl App {
             rating_input_buf: String::new(),
             url_input_active: false,
             url_input_buf: String::new(),
+            statement_view_active: false,
+            statement_scroll: 0,
+            statement_document: None,
+            statement_images: Vec::new(),
+            statement_picker: None,
+            statement_image_rx: None,
             submissions: Vec::new(),
             rating_history: Vec::new(),
             tag_stats: Vec::new(),
@@ -681,7 +708,7 @@ impl App {
         use crate::engine::target;
         let user_rating = self.rating_history.last().map(|r| r.new_rating);
         if !self.target_user_set {
-            let basis = user_rating.unwrap_or(1200).max(1100);
+            let basis = user_rating.unwrap_or(target::TARGET_MIN);
             self.target_rating = target::next_milestone_above(basis);
         }
         let plan = target::analyze_target(
@@ -777,9 +804,13 @@ impl App {
 
     /// Restore the last problem captured in the browser / VS Code extension.
     pub fn restore_session(&mut self) {
-        let Some((problem, solution_path, _)) = workspace::load_latest_session() else {
+        let Some((problem, solution_path, _, statement_html)) = workspace::load_latest_session()
+        else {
             return;
         };
+        if let Some(html) = statement_html {
+            let _ = workspace::save_statement(&problem, &html);
+        }
 
         if let Some(path) = solution_path {
             let can_restore_path = !workspace::has_explicit_workspace_dir(&self.config)
@@ -892,6 +923,173 @@ impl App {
 
     pub fn selected_problem(&self) -> Option<&Problem> {
         self.filtered_problems.get(self.problem_selected)
+    }
+
+    pub fn set_statement_picker(&mut self, picker: Picker) {
+        self.statement_picker = Some(picker);
+    }
+
+    pub fn toggle_statement_view(&mut self) {
+        if self.statement_view_active {
+            self.close_statement_view();
+            return;
+        }
+
+        let Some(problem) = self.selected_problem().cloned() else {
+            return;
+        };
+        let Some(html) = workspace::load_statement_html(&problem) else {
+            self.status_message =
+                "No captured statement yet — refresh the problem page with CPOS Companion enabled"
+                    .to_string();
+            return;
+        };
+
+        let mut document = crate::engine::statement::parse(&html, &problem.url);
+        if !document
+            .blocks
+            .iter()
+            .any(|block| matches!(block, StatementBlock::Title(_)))
+        {
+            document
+                .blocks
+                .insert(0, StatementBlock::Title(problem.name.clone()));
+        }
+        self.statement_images = document
+            .blocks
+            .iter()
+            .filter_map(|block| match block {
+                StatementBlock::Image { url, alt } => Some(StatementImage {
+                    url: url.clone(),
+                    alt: alt.clone(),
+                    protocol: None,
+                    error: None,
+                }),
+                _ => None,
+            })
+            .collect();
+        self.statement_document = Some(document);
+        self.statement_view_active = true;
+        self.statement_scroll = 0;
+        self.start_statement_image_downloads();
+    }
+
+    fn close_statement_view(&mut self) {
+        self.statement_view_active = false;
+        self.statement_scroll = 0;
+        self.statement_document = None;
+        self.statement_images.clear();
+        self.statement_image_rx = None;
+    }
+
+    fn start_statement_image_downloads(&mut self) {
+        if self.statement_images.is_empty() {
+            return;
+        }
+        let urls: Vec<String> = self
+            .statement_images
+            .iter()
+            .map(|image| image.url.clone())
+            .collect();
+        let (tx, rx) = std::sync::mpsc::channel();
+        self.statement_image_rx = Some(rx);
+        tokio::spawn(async move {
+            let client = match reqwest::Client::builder()
+                .user_agent("CPOS/0.2 statement viewer")
+                .build()
+            {
+                Ok(client) => client,
+                Err(error) => {
+                    for index in 0..urls.len() {
+                        let _ = tx.send(StatementImageMsg {
+                            index,
+                            bytes: Err(error.to_string()),
+                        });
+                    }
+                    return;
+                }
+            };
+            for (index, url) in urls.into_iter().enumerate() {
+                let cache_path = workspace::statement_image_cache_path(&url);
+                if let Ok(bytes) = std::fs::read(&cache_path) {
+                    let _ = tx.send(StatementImageMsg {
+                        index,
+                        bytes: Ok(bytes),
+                    });
+                    continue;
+                }
+                let bytes = async {
+                    let response = client
+                        .get(&url)
+                        .send()
+                        .await
+                        .map_err(|error| error.to_string())?
+                        .error_for_status()
+                        .map_err(|error| error.to_string())?;
+                    response
+                        .bytes()
+                        .await
+                        .map(|bytes| bytes.to_vec())
+                        .map_err(|error| error.to_string())
+                }
+                .await;
+                if let Ok(downloaded) = &bytes {
+                    if let Some(parent) = cache_path.parent() {
+                        let _ = std::fs::create_dir_all(parent);
+                    }
+                    let _ = std::fs::write(cache_path, downloaded);
+                }
+                let _ = tx.send(StatementImageMsg { index, bytes });
+            }
+        });
+    }
+
+    pub fn drain_statement_images(&mut self) {
+        let Some(rx) = self.statement_image_rx.take() else {
+            return;
+        };
+        let mut connected = true;
+        loop {
+            match rx.try_recv() {
+                Ok(message) => {
+                    let Some(statement_image) = self.statement_images.get_mut(message.index) else {
+                        continue;
+                    };
+                    match message.bytes {
+                        Ok(bytes) => match image::load_from_memory(&bytes) {
+                            Ok(image) => {
+                                if let Some(picker) = &self.statement_picker {
+                                    statement_image.protocol =
+                                        Some(picker.new_resize_protocol(image));
+                                    statement_image.error = None;
+                                } else {
+                                    statement_image.error =
+                                        Some("terminal graphics unavailable".to_string());
+                                }
+                            }
+                            Err(error) => statement_image.error = Some(error.to_string()),
+                        },
+                        Err(error) => statement_image.error = Some(error),
+                    }
+                }
+                Err(std::sync::mpsc::TryRecvError::Empty) => break,
+                Err(std::sync::mpsc::TryRecvError::Disconnected) => {
+                    connected = false;
+                    break;
+                }
+            }
+        }
+        if connected {
+            self.statement_image_rx = Some(rx);
+        }
+    }
+
+    pub fn statement_scroll_down(&mut self, amount: u16) {
+        self.statement_scroll = self.statement_scroll.saturating_add(amount);
+    }
+
+    pub fn statement_scroll_up(&mut self, amount: u16) {
+        self.statement_scroll = self.statement_scroll.saturating_sub(amount);
     }
 
     pub fn open_selected_problem(&self) {
@@ -1016,6 +1214,7 @@ impl App {
     /// Ensure a problem is present in the list, clear filters, and select it so
     /// subsequent actions (test/submit) target it.
     fn focus_problem(&mut self, problem: &Problem) {
+        self.close_statement_view();
         if !self
             .problems
             .iter()
@@ -1857,5 +2056,18 @@ mod tests {
         ));
 
         assert_eq!(app.current_streak(), 10);
+    }
+
+    #[test]
+    fn target_defaults_to_first_rank_goal_without_rating_history() {
+        let mut app = App::new(Config::default());
+        app.compute_target_plan();
+
+        assert_eq!(app.current_rating(), None);
+        assert_eq!(app.target_rating, 1200);
+        assert_eq!(
+            app.target_plan.as_ref().and_then(|plan| plan.user_rating),
+            None
+        );
     }
 }

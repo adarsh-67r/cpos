@@ -1,6 +1,6 @@
 [package]
 name = "cpos"
-version = "0.2.0"
+version = "0.2.1"
 edition = "2024"
 description = "Competitive Programming Operating System — terminal app, VS Code extension, and browser companion for Codeforces and CSES"
 license = "MIT"
@@ -10,6 +10,9 @@ categories = ["command-line-utilities"]
 
 [dependencies]
 ratatui = "0.29"
+ratatui-image = { version = "8.0.1", default-features = false, features = ["crossterm"] }
+tui-math = "0.1.1"
+image = { version = "0.25.6", default-features = false, features = ["jpeg", "png", "gif", "webp"] }
 crossterm = "0.28"
 tokio = { version = "1", features = ["full"] }
 reqwest = { version = "0.12", features = ["json", "cookies"] }
@@ -17,6 +20,7 @@ serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 rusqlite = { version = "0.32", features = ["bundled"] }
 scraper = "0.22"
+ego-tree = "0.10"
 chrono = { version = "0.4", features = ["serde"] }
 anyhow = "1"
 dirs = "6"
