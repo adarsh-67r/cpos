@@ -54,6 +54,20 @@ No copying samples. No manually creating files.
 
 ---
 
+## Explore the architecture
+
+CPOS spans a Rust TUI, two browser companions, a VS Code extension, and a docs
+site. To see how it all fits together, open the **interactive architecture
+graph** — every module and how it connects, with search, community clustering,
+and a link from each node to its source file:
+
+**→ [cpos.sohamaggarwal.com/architecture](https://cpos.sohamaggarwal.com/architecture)**
+
+It's generated from the code (`tools/build_graph.py`) and served as a single
+compact data file, so it stays in sync and adds no runtime dependency.
+
+---
+
 ## VS Code
 
 Write code in the editor. The CPOS panel runs samples and submits.
