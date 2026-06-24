@@ -2,7 +2,7 @@
     "manifest_version": 3,
     "name": "CPOS Companion",
     "version": "0.15.1",
-    "description": "Codeforces & CSES companion: capture & submit, in-browser editor, profile analytics, themes, and practice tools. Local-first.",
+    "description": "Codeforces, CSES & AtCoder companion: capture & submit, in-browser editor, profile analytics, themes, and practice tools. Local-first.",
     "icons": {
         "16": "icons/icon16.png",
         "48": "icons/icon48.png",
@@ -23,6 +23,7 @@
         "http://127.0.0.1:27122/*",
         "https://codeforces.com/*",
         "https://cses.fi/*",
+        "https://atcoder.jp/*",
         "https://ntfy.sh/*"
     ],
     "background": {
@@ -51,7 +52,9 @@
                 "https://cses.fi/problemset/task/*",
                 "https://cses.fi/problemset/submit/*",
                 "https://cses.fi/problemset/list*",
-                "https://cses.fi/problemset/list/*"
+                "https://cses.fi/problemset/list/*",
+                "https://atcoder.jp/contests/*/tasks/*",
+                "https://atcoder.jp/contests/*/submit*"
             ],
             "js": ["content.js"],
             "run_at": "document_idle"
