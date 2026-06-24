@@ -468,7 +468,7 @@ async function handleRequest(req: http.IncomingMessage, res: http.ServerResponse
     try {
       const body = await readJson<CapturedProblem>(req);
       const created = await captureProblem(body);
-      sendJson(res, 200, { ok: true, name: body.name, tests: body.tests?.length ?? 0, solutionPath: created.solutionPath });
+      sendJson(res, 200, { ok: true, name: body.name, tests: created.sampleCount, solutionPath: created.meta.solutionPath });
     } catch (error) {
       sendJson(res, 400, { ok: false, error: error instanceof Error ? error.message : String(error) });
     }
@@ -628,6 +628,10 @@ function setCors(res: http.ServerResponse): void {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+  // Chrome's Private Network Access: a page on a public origin (codeforces.com,
+  // atcoder.jp, …) fetching this 127.0.0.1 server must receive this header on the
+  // preflight, or the request is blocked even though CORS otherwise passes.
+  res.setHeader("Access-Control-Allow-Private-Network", "true");
 }
 
 function sendJson(res: http.ServerResponse, statusCode: number, body: unknown): void {
@@ -663,8 +667,9 @@ async function forwardCaptureToTui(
   }
 }
 
-async function captureProblem(problem: CapturedProblem): Promise<ProblemMeta> {
+async function captureProblem(problem: CapturedProblem): Promise<{ meta: ProblemMeta; sampleCount: number }> {
   validateProblem(problem);
+  if (!problem.name || !problem.name.trim()) problem.name = problem.id;
   const lang = resolveDefaultLanguage();
   const compileConfig = getCompileConfig(lang);
   const active = activeEditorFilePath();
@@ -681,7 +686,22 @@ async function captureProblem(problem: CapturedProblem): Promise<ProblemMeta> {
     }
   }
 
-  const tests = problem.tests ?? [];
+  let tests = problem.tests ?? [];
+  let statementHtml = problem.statementHtml;
+  // AtCoder samples/statement aren't reliably scraped in the browser, so fetch
+  // them here from the task page (static and authoritative) so capture lands
+  // working sample tests and a readable statement.
+  if (problem.platform.toLowerCase() === "atcoder") {
+    // The task page is static and reliable, so treat server-parsed samples as
+    // authoritative (the browser DOM scrape can vary across page layouts); only
+    // keep the browser-sent samples when the fetch fails entirely.
+    const page = await fetchAtcoderPage(problem.url);
+    if (page) {
+      const s = parseAtcoderSamples(page);
+      if (s.length > 0) tests = s;
+      if (!statementHtml) statementHtml = extractAtcoderStatement(page);
+    }
+  }
   await saveSamples(solutionPath, tests);
   runResults.delete(solutionPath);
 
@@ -693,7 +713,7 @@ async function captureProblem(problem: CapturedProblem): Promise<ProblemMeta> {
     rating: problem.rating,
     tags: problem.tags,
     category: problem.category,
-    statementHtml: problem.statementHtml,
+    statementHtml,
     solutionPath,
     capturedAt: new Date().toISOString()
   };
@@ -712,8 +732,8 @@ async function captureProblem(problem: CapturedProblem): Promise<ProblemMeta> {
     ? `${tests.length} sample(s) → ${path.basename(solutionPath)}`
     : `${tests.length} sample(s)`;
   vscode.window.showInformationMessage(`CPOS · ${problem.id} (${problem.name}) — ${detail}.`);
-  await forwardCaptureToTui(problem, solutionPath);
-  return lastProblem;
+  await forwardCaptureToTui({ ...problem, tests }, solutionPath);
+  return { meta: lastProblem, sampleCount: tests.length };
 }
 
 function activeEditorFilePath(): string | undefined {
@@ -722,8 +742,127 @@ function activeEditorFilePath(): string | undefined {
   return undefined;
 }
 
+// Fetch the AtCoder task page once; both samples and the statement are parsed
+// from this raw HTML (math is still TeX here, before MathJax runs in-browser).
+async function fetchAtcoderPage(url: string): Promise<string | undefined> {
+  try {
+    const res = await fetch(url, { headers: { "Accept-Language": "en", "User-Agent": "Mozilla/5.0" } });
+    if (!res.ok) return undefined;
+    return await res.text();
+  } catch (error) {
+    OUTPUT.appendLine(`Could not fetch AtCoder task page: ${String(error)}`);
+    return undefined;
+  }
+}
+
+// Extract the English statement section (#task-statement span.lang-en) by
+// balancing <span> tags, then map AtCoder's inline $…$ to MathJax's \( … \) so
+// the panel renders it (the panel only treats $$…$$ and \(…\) as math).
+function extractAtcoderStatement(html: string): string | undefined {
+  const inner = extractByClass(html, "lang-en") ?? extractById(html, "task-statement");
+  if (!inner) return undefined;
+  const cleaned = inner
+    .replace(/<script[\s\S]*?<\/script>/gi, "")
+    .replace(/<style[\s\S]*?<\/style>/gi, "")
+    .replace(/<link\b[^>]*>/gi, "");
+  return atcoderInlineMathToMathjax(cleaned).trim() || undefined;
+}
+
+// Inner HTML of the first <span> whose class contains `className`, matched by
+// counting nested <span>/</span> so embedded spans don't truncate it early.
+function extractByClass(html: string, className: string): string | undefined {
+  const open = new RegExp(`<span\\b[^>]*class="[^"]*\\b${className}\\b[^"]*"[^>]*>`, "i");
+  const m = open.exec(html);
+  if (!m) return undefined;
+  const start = m.index + m[0].length;
+  const spanRe = /<\/?span\b[^>]*>/gi;
+  spanRe.lastIndex = start;
+  let depth = 1;
+  let tag: RegExpExecArray | null;
+  while ((tag = spanRe.exec(html)) !== null) {
+    if (tag[0][1] === "/") {
+      depth--;
+      if (depth === 0) return html.slice(start, tag.index);
+    } else {
+      depth++;
+    }
+  }
+  return html.slice(start);
+}
+
+function extractById(html: string, id: string): string | undefined {
+  const m = new RegExp(`<([a-z0-9]+)\\b[^>]*id="${id}"[^>]*>`, "i").exec(html);
+  if (!m) return undefined;
+  return html.slice(m.index + m[0].length);
+}
+
+function atcoderInlineMathToMathjax(html: string): string {
+  const display: string[] = [];
+  // Protect $$…$$ display math, convert single $…$ to \(…\), then restore.
+  let out = html.replace(/\$\$([\s\S]*?)\$\$/g, (block) => {
+    display.push(block);
+    return `@@CPOSDISP${display.length - 1}@@`;
+  });
+  out = out.replace(/\$([^$\n]+?)\$/g, (_full, inner) => `\\(${inner}\\)`);
+  out = out.replace(/@@CPOSDISP(\d+)@@/g, (_full, i) => display[Number(i)] ?? "");
+  return out;
+}
+
+// AtCoder task pages render both Japanese and English statements. Heading-text
+// matching ("Sample Input N") naturally skips the Japanese copies; we still
+// scope to the English section first when it is present.
+function parseAtcoderSamples(html: string): TestCase[] {
+  const enStart = html.indexOf('class="lang-en"');
+  const scope = enStart >= 0 ? html.slice(enStart) : html;
+  const ins: string[] = [];
+  const outs: string[] = [];
+  let cur: "in" | "out" | null = null;
+  const tagRe = /<(h3|pre)\b[^>]*>([\s\S]*?)<\/\1>/gi;
+  let m: RegExpExecArray | null;
+  while ((m = tagRe.exec(scope)) !== null) {
+    if (m[1].toLowerCase() === "h3") {
+      const text = stripTags(m[2]).toLowerCase();
+      cur = text.includes("sample input") ? "in" : text.includes("sample output") ? "out" : null;
+    } else {
+      const text = normalizeSample(decodeEntities(stripTags(m[2])));
+      if (cur === "in") ins.push(text);
+      else if (cur === "out") outs.push(text);
+      cur = null;
+    }
+  }
+  const tests: TestCase[] = [];
+  for (let i = 0; i < Math.min(ins.length, outs.length); i++) {
+    tests.push({ input: ins[i], expected_output: outs[i] });
+  }
+  return tests;
+}
+
+function stripTags(html: string): string {
+  return html.replace(/<br\s*\/?>/gi, "\n").replace(/<[^>]+>/g, "");
+}
+
+function decodeEntities(text: string): string {
+  return text
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&#0?39;/g, "'")
+    .replace(/&apos;/g, "'")
+    .replace(/&nbsp;/g, " ")
+    .replace(/&amp;/g, "&");
+}
+
+// Mirror the browser companion's preText: normalize CRLF and strip leading and
+// trailing blank lines, leaving the inner sample content untouched.
+function normalizeSample(text: string): string {
+  return text.replace(/\r\n?/g, "\n").replace(/^\n+|\n+$/g, "");
+}
+
 function validateProblem(problem: CapturedProblem): void {
-  for (const key of ["platform", "id", "name", "url"] as const) {
+  // name is intentionally not required: it is a cosmetic field, and judges like
+  // AtCoder occasionally yield an empty title in the DOM. captureProblem() falls
+  // back to the id so a blank name never rejects an otherwise valid capture.
+  for (const key of ["platform", "id", "url"] as const) {
     if (!problem[key] || typeof problem[key] !== "string") {
       throw new Error(`missing ${key}`);
     }
@@ -1255,6 +1394,7 @@ function inferProblemMetaFromPath(source: string): ProblemMeta | undefined {
   let platform: string | undefined;
   if (parent === "codeforces" || parent === "cf") platform = "codeforces";
   else if (parent === "cses") platform = "cses";
+  else if (parent === "atcoder") platform = "atcoder";
   else if (/^\d+[A-Za-z]\d*$/.test(id)) platform = "codeforces";
 
   if (!platform) return undefined;
@@ -1263,7 +1403,13 @@ function inferProblemMetaFromPath(source: string): ProblemMeta | undefined {
     return undefined;
   }
 
-  const url = platform === "codeforces" ? codeforcesProblemUrl(id) : `https://cses.fi/problemset/task/${id}`;
+  let url: string | undefined;
+  if (platform === "codeforces") url = codeforcesProblemUrl(id);
+  else if (platform === "cses") url = `https://cses.fi/problemset/task/${id}`;
+  else if (platform === "atcoder") {
+    const prefix = id.match(/^([a-z0-9]+)_/i);
+    url = prefix ? `https://atcoder.jp/contests/${prefix[1]}/tasks/${id}` : undefined;
+  }
   if (!url) return undefined;
 
   return {
@@ -1588,6 +1734,22 @@ function submitUrlFor(meta: ProblemMeta): string | undefined {
     if (!taskId) return undefined;
     return `https://cses.fi/problemset/submit/${taskId}/`;
   }
+  if (platform === "atcoder") {
+    const at = atcoderContestTask(meta);
+    if (!at) return undefined;
+    return `https://atcoder.jp/contests/${at.contest}/submit?taskScreenName=${encodeURIComponent(at.task)}`;
+  }
+  return undefined;
+}
+
+// AtCoder ids are scoped to a contest (e.g. abc300_a in contest abc300). The
+// captured URL carries both; the id alone is not enough to build a submit URL.
+function atcoderContestTask(meta: ProblemMeta): { contest: string; task: string } | undefined {
+  const m = meta.url.match(/atcoder\.jp\/contests\/([^/]+)\/tasks\/([^/?#]+)/);
+  if (m) return { contest: m[1], task: m[2] };
+  // Fall back to the id's contest prefix (abc300_a → abc300) when the URL is absent.
+  const prefix = meta.id.match(/^([a-z0-9]+)_/i);
+  if (prefix) return { contest: prefix[1], task: meta.id };
   return undefined;
 }
 
@@ -1694,13 +1856,7 @@ async function searchProblem(): Promise<void> {
     vscode.window.showWarningMessage("Link a problem first to search for editorials.");
     return;
   }
-  const platformKey = meta.platform.toLowerCase();
-  const platformLabel =
-    platformKey === "codeforces" || platformKey === "cf"
-      ? "Codeforces"
-      : platformKey === "cses"
-        ? "CSES"
-        : meta.platform;
+  const platformLabel = platformDisplayName(meta.platform);
   const query = `${platformLabel} ${meta.id} ${meta.name} editorial solution`.trim();
   const url = `https://www.google.com/search?q=${encodeURIComponent(query)}`;
   await vscode.env.openExternal(vscode.Uri.parse(url));
@@ -1776,6 +1932,20 @@ function refreshActions(): void {
   actionsProvider?.refresh();
 }
 
+function platformDisplayName(platform: string): string {
+  switch (platform.toLowerCase()) {
+    case "codeforces":
+    case "cf":
+      return "Codeforces";
+    case "cses":
+      return "CSES";
+    case "atcoder":
+      return "AtCoder";
+    default:
+      return platform;
+  }
+}
+
 function buildSolutionQuery(meta: ProblemMeta): string {
   const platform = meta.platform.toLowerCase();
   if (platform === "codeforces" || platform === "cf") {
@@ -1783,6 +1953,9 @@ function buildSolutionQuery(meta: ProblemMeta): string {
   }
   if (platform === "cses") {
     return `cses ${meta.name} solution tutorial`;
+  }
+  if (platform === "atcoder") {
+    return `atcoder ${meta.id} ${meta.name} editorial solution`;
   }
   return `${meta.id} ${meta.name} editorial solution`;
 }
@@ -2333,6 +2506,7 @@ class CposActionsProvider implements vscode.WebviewViewProvider {
   }
   .tag.codeforces { color: var(--cf); border-color: var(--border); }
   .tag.cses { color: var(--ok); border-color: var(--border); }
+  .tag.atcoder { color: #b9c0c9; border-color: var(--border); }
   .pid { font-weight: 700; font-size: 14px; color: var(--fg); }
   .problem-link {
     border: none;
@@ -3486,7 +3660,7 @@ class CposActionsProvider implements vscode.WebviewViewProvider {
         + '<div class="pname">' + esc(m.name) + '</div>';
     } else {
       problemBlock = '<div class="pline"><span class="pid muted">no problem linked</span></div>'
-        + '<div class="pname">open a Codeforces/CSES problem in your browser to capture it</div>';
+        + '<div class="pname">open a Codeforces, CSES or AtCoder problem in your browser to capture it</div>';
     }
     const file = state.fileName
       ? '<span class="link" data-act="openSource">' + esc(state.fileName) + '</span>'
@@ -3713,8 +3887,11 @@ class CposActionsProvider implements vscode.WebviewViewProvider {
 
   function statementSection() {
     let inner = sanitizeHtml(state.meta.statementHtml);
-    const isCses = String(state.meta.platform || "").toLowerCase() === "cses";
-    if (isCses && state.meta.name) {
+    // Codeforces statements already carry their own title; CSES/AtCoder
+    // captured statements do not, so prepend the problem name as a heading.
+    const platLower = String(state.meta.platform || "").toLowerCase();
+    const needsTitle = platLower === "cses" || platLower === "atcoder";
+    if (needsTitle && state.meta.name && inner) {
       inner = '<h1 class="cses-title">' + esc(state.meta.name) + '</h1>' + inner;
     }
     // CF content.js strips .sample-tests before capturing, so hasSamples is
@@ -3805,8 +3982,13 @@ class CposActionsProvider implements vscode.WebviewViewProvider {
     const pname = String(m.name || '');
     const plat  = String(m.platform || '').toLowerCase();
     const isCf  = plat === 'codeforces' || plat === 'cf';
-    const ytQ = encodeURIComponent((isCf ? 'codeforces ' : '') + pid + ' ' + pname + ' editorial solution');
-    const gQ  = encodeURIComponent((isCf ? 'Codeforces ' : '') + pid + ' ' + pname + ' editorial solution');
+    const platLabel = plat === 'codeforces' || plat === 'cf' ? 'Codeforces'
+      : plat === 'cses' ? 'CSES'
+      : plat === 'atcoder' ? 'AtCoder'
+      : '';
+    const prefix = platLabel ? platLabel + ' ' : '';
+    const ytQ = encodeURIComponent(prefix + pid + ' ' + pname + ' editorial solution');
+    const gQ  = encodeURIComponent(prefix + pid + ' ' + pname + ' editorial solution');
 
     const linkDefs = [
       { icon: '▶', label: 'YouTube: ' + pid + ' editorial', href: 'https://www.youtube.com/results?search_query=' + ytQ },
@@ -3818,6 +4000,10 @@ class CposActionsProvider implements vscode.WebviewViewProvider {
         linkDefs.push({ icon: '◉', label: 'CF Problem page', href: 'https://codeforces.com/problemset/problem/' + cfMatch[1] + '/' + cfMatch[2].toUpperCase() });
         linkDefs.push({ icon: '◉', label: 'CF Editorial search', href: 'https://codeforces.com/blog/search?q=' + encodeURIComponent(pid) });
       }
+    }
+    if (plat === 'atcoder') {
+      linkDefs.push({ icon: '◉', label: 'AtCoder problem page', href: m.url });
+      linkDefs.push({ icon: '◉', label: 'AtCoder editorial', href: m.url + '/editorial' });
     }
     if (plat === 'cses') {
       linkDefs.push({ icon: '◉', label: 'CSES problem page', href: m.url });
