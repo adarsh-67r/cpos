@@ -233,6 +233,28 @@
     }
   }
 
+  // AtCoder's <span class="h2"> holds "A - Title" as a leading text node followed
+  // by an "Editorial" link, so textContent starts with a newline and a naive
+  // split("\n")[0] yields "". Walk to the first non-empty text node, then strip
+  // the "A - " index prefix. Returns "" when no title is found (caller falls back
+  // to the problem id) — never an empty string the server would reject.
+  function atcoderTitle() {
+    const h2 = document.querySelector("span.h2");
+    if (!h2) return "";
+    let title = "";
+    for (const node of h2.childNodes) {
+      if (node.nodeType === Node.TEXT_NODE) {
+        const t = node.textContent.replace(/\s+/g, " ").trim();
+        if (t) {
+          title = t;
+          break;
+        }
+      }
+    }
+    if (!title) title = (h2.textContent || "").replace(/\s+/g, " ").trim();
+    return title.replace(/^[A-Za-z0-9]+\s*[-–—]\s*/, "").trim() || title;
+  }
+
   function captureProblem() {
     const pageUrl = location.href;
     let platform;
@@ -301,6 +323,13 @@
         }
         statementHtml = clone.outerHTML;
       }
+    } else if (location.hostname.endsWith("atcoder.jp")) {
+      platform = "atcoder";
+      const match = pageUrl.match(/\/contests\/([^/]+)\/tasks\/([^/?#]+)/);
+      if (!match) return null;
+      id = match[2];
+      url = `https://atcoder.jp/contests/${match[1]}/tasks/${id}`;
+      name = atcoderTitle() || id;
     } else {
       return null;
     }
@@ -318,6 +347,33 @@
           row.input_output_offset = meta.input_output_offset;
         }
         tests.push(row);
+      }
+    } else if (platform === "atcoder") {
+      // AtCoder: pair each <pre> with its preceding "Sample Input/Output N"
+      // heading, scoped to the English section so the Japanese copy is skipped.
+      const root = document.querySelector("#task-statement");
+      const scope = (root && root.querySelector("span.lang-en")) || root;
+      const ins = [];
+      const outs = [];
+      if (scope) {
+        let cur = null;
+        scope.querySelectorAll("h3, pre").forEach((el) => {
+          if (el.nodeName === "H3") {
+            const t = (el.textContent || "").toLowerCase();
+            cur = t.includes("sample input")
+              ? "in"
+              : t.includes("sample output")
+                ? "out"
+                : null;
+          } else {
+            if (cur === "in") ins.push(preText(el));
+            else if (cur === "out") outs.push(preText(el));
+            cur = null;
+          }
+        });
+      }
+      for (let i = 0; i < Math.min(ins.length, outs.length); i++) {
+        tests.push({ input: ins[i], expected_output: outs[i] });
       }
     } else {
       // CSES: examples are consecutive <pre> blocks inside the statement content.
@@ -1198,7 +1254,14 @@
         return;
       }
 
-      // Codeforces problem page or CSES task page: keep a fast submit watcher running.
+      // AtCoder submit page: the background worker fills + posts the form, so we
+      // just keep nudging it awake until the queued submit is consumed.
+      if (location.hostname.endsWith("atcoder.jp") && location.pathname.includes("/submit")) {
+        startPendingSubmitNudge();
+        return;
+      }
+
+      // Codeforces problem page or CSES/AtCoder task page: keep a fast submit watcher running.
       startPendingSubmitNudge();
 
       const payload = captureProblem();
