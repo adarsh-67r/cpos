@@ -409,6 +409,166 @@ async function cposCsesSubmitOnPage(code, fileName, language) {
     return { ok: false, reason: 'cses-form-timeout' };
 }
 
+// Runs in the AtCoder submit page main world. AtCoder posts a plain form
+// (csrf_token / data.TaskScreenName / data.LanguageId / sourceCode), so a direct
+// POST is far more robust than driving the CodeMirror/Ace editor. We still drop
+// the code into the editor first so the user sees it if the POST is rejected.
+async function cposAtcoderSubmitOnPage(code, language) {
+  const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+  const LANG_HINTS = {
+    cpp: ["C++ 23", "C++ 20", "C++ 17", "C++"],
+    c: ["C (gcc", "C (Clang", "C ("],
+    python: ["Python (CPython 3", "Python 3", "Python (", "PyPy"],
+    pypy: ["Python (PyPy", "PyPy"],
+    java: ["Java (OpenJDK", "Java"],
+    kotlin: ["Kotlin"],
+    rust: ["Rust ("],
+    go: ["Go ("],
+    csharp: ["C# ", "C#("],
+    javascript: ["JavaScript", "Node.js"],
+    ruby: ["Ruby"]
+  };
+
+  function taskFromPage() {
+    try {
+      const u = new URL(location.href);
+      return (
+        u.searchParams.get("taskScreenName") ||
+        document.querySelector("#select-task")?.value ||
+        ""
+      );
+    } catch {
+      return document.querySelector("#select-task")?.value || "";
+    }
+  }
+
+  function visibleLangSelect(task) {
+    const escaped = window.CSS && CSS.escape ? CSS.escape(task) : task;
+    return (
+      document.querySelector(`#select-lang-${escaped} select[name="data.LanguageId"]`) ||
+      [...document.querySelectorAll('select[name="data.LanguageId"]')].find((s) => s.offsetParent !== null) ||
+      document.querySelector('select[name="data.LanguageId"]')
+    );
+  }
+
+  function pickLang(select) {
+    if (!select) return null;
+    const hints = LANG_HINTS[language] || [];
+    let best = null;
+    let bestScore = 0;
+    for (const opt of select.options) {
+      const text = opt.textContent || "";
+      for (let i = 0; i < hints.length; i++) {
+        if (text.includes(hints[i])) {
+          const score = hints.length - i;
+          if (score > bestScore) {
+            bestScore = score;
+            best = opt;
+          }
+          break;
+        }
+      }
+    }
+    if (best) {
+      select.value = best.value;
+      select.dispatchEvent(new Event("change", { bubbles: true }));
+    }
+    return select.value || null;
+  }
+
+  // The submit form is class="form-horizontal" (NOT form-code-submit) and its
+  // action attribute may be absent, so anchor on the language select and walk up
+  // to its form — that always identifies the right one once the page is ready.
+  let form = null;
+  for (let i = 0; i < 40; i++) {
+    const langSel = document.querySelector('select[name="data.LanguageId"]');
+    form =
+      (langSel && langSel.closest("form")) ||
+      document.querySelector("form.form-code-submit") ||
+      document.querySelector('form[action*="submit"], form[action=""]') ||
+      [...document.querySelectorAll("form")].find((f) => f.querySelector('[name="sourceCode"]')) ||
+      null;
+    if (form && form.querySelector('[name="data.LanguageId"]')) break;
+    await sleep(150);
+  }
+  if (!form) return { ok: false, reason: "atcoder-form-timeout" };
+
+  const task = taskFromPage();
+  if (!task) return { ok: false, reason: "no-task" };
+
+  const taskSelect = document.querySelector("#select-task");
+  if (taskSelect && taskSelect.value !== task) {
+    taskSelect.value = task;
+    taskSelect.dispatchEvent(new Event("change", { bubbles: true }));
+    await sleep(250);
+  }
+
+  const langId = pickLang(visibleLangSelect(task));
+  const csrf =
+    form.querySelector('input[name="csrf_token"]')?.value ||
+    document.querySelector('input[name="csrf_token"]')?.value ||
+    (typeof window.csrfToken === "string" ? window.csrfToken : "");
+
+  const ta = document.querySelector('textarea#sourceCode, textarea[name="sourceCode"], #plain-textarea');
+  if (ta) {
+    ta.value = code;
+    ta.dispatchEvent(new Event("input", { bubbles: true }));
+  }
+  try {
+    const cmEl = document.querySelector(".CodeMirror");
+    if (cmEl && cmEl.CodeMirror) cmEl.CodeMirror.setValue(code);
+    if (window.ace && typeof window.ace.edit === "function") {
+      const host = document.querySelector("#editor, .editor");
+      if (host) {
+        const ed = window.ace.edit(host);
+        if (ed && ed.setValue) {
+          ed.setValue(code, -1);
+          ed.clearSelection();
+        }
+      }
+    }
+  } catch {
+    /* editor is best-effort only */
+  }
+
+  if (!langId || !csrf) return { ok: false, reason: "missing-lang-or-csrf" };
+
+  try {
+    const body = new URLSearchParams();
+    body.set("csrf_token", csrf);
+    body.set("data.TaskScreenName", task);
+    body.set("data.LanguageId", langId);
+    body.set("sourceCode", code);
+    const res = await fetch(location.origin + location.pathname, {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8" },
+      body: body.toString(),
+      credentials: "include",
+      redirect: "follow"
+    });
+    // A real submit redirects to the submissions list; a validation failure
+    // re-renders the submit page (200, same URL). Only the former is success —
+    // otherwise fall through to a normal form submit so AtCoder shows the error.
+    let landed = "";
+    try { landed = new URL(res.url).pathname; } catch { landed = ""; }
+    if (res.redirected && /\/submissions(\/|$)/.test(landed)) {
+      const dest = res.url;
+      setTimeout(() => { location.href = dest; }, 60);
+      return { ok: true };
+    }
+  } catch {
+    /* fall through to a real form submit */
+  }
+
+  const btn = form.querySelector('#submit, button[type="submit"], input[type="submit"]');
+  if (btn) {
+    btn.disabled = false;
+    btn.click();
+    return { ok: true };
+  }
+  return { ok: false, reason: "atcoder-submit-failed" };
+}
+
 function cfSubmitFlags(pending) {
     let pathname = '';
     try {
@@ -488,6 +648,30 @@ async function handleCses(pending, _endpoint, key, activeTabIds) {
     return ok;
 }
 
+async function handleAtcoder(pending, _endpoint, key, activeTabIds) {
+    const tab = await findOrOpenTab(pending.submitUrl, activeTabIds.get(key));
+    if (!tab?.id) return false;
+    activeTabIds.set(key, tab.id);
+
+    let ok = false;
+    for (let attempt = 0; attempt < 8 && !ok; attempt++) {
+        if (attempt > 0) await new Promise((r) => setTimeout(r, 200));
+        try {
+            const results = await browser.scripting.executeScript({
+                target: { tabId: tab.id, allFrames: false },
+                world: 'MAIN',
+                func: cposAtcoderSubmitOnPage,
+                args: [pending.code, pending.language || 'cpp'],
+            });
+            ok = results?.[0]?.result?.ok === true;
+        } catch {
+            ok = false;
+        }
+    }
+    if (ok && tab.id != null) bringTabToFront(tab.id);
+    return ok;
+}
+
 const attemptCounts = new Map();
 const activeTabIds = new Map();
 
@@ -509,6 +693,8 @@ async function pollOnce() {
             ok = await handleCodeforces(pending, found.endpoint, key, activeTabIds);
         } else if (platform === 'cses') {
             ok = await handleCses(pending, found.endpoint, key, activeTabIds);
+        } else if (platform === 'atcoder') {
+            ok = await handleAtcoder(pending, found.endpoint, key, activeTabIds);
         }
 
         if (ok || attempts >= 15) {
