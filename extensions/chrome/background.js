@@ -441,6 +441,29 @@ async function cposAtcoderSubmitOnPage(code, language) {
     return select.value || null;
   }
 
+  // AtCoder gates submit with a Cloudflare Turnstile challenge whose token is
+  // written into a hidden <input name="cf-turnstile-response"> a beat after the
+  // page loads. Posting before it resolves is rejected with a generic "Error."
+  // (the cause of the first-attempt failure that succeeds on retry), so wait for
+  // the token whenever a Turnstile widget is present on the page.
+  async function waitForTurnstile() {
+    const widget = () =>
+      document.querySelector('.cf-turnstile, [name="cf-turnstile-response"], iframe[src*="challenges.cloudflare.com"]');
+    for (let i = 0; i < 12 && !widget(); i++) await sleep(150); // let the widget mount
+    if (!widget()) return null;
+    const tokenEl = () =>
+      document.querySelector('[name="cf-turnstile-response"]') ||
+      [...document.querySelectorAll('input[type="hidden"]')].find((n) => /turnstile/i.test(n.name || ""));
+    for (let i = 0; i < 80; i++) { // up to ~12s for the challenge to complete
+      const el = tokenEl();
+      if (el && el.value && el.value.length > 20) {
+        return { name: el.name || "cf-turnstile-response", value: el.value };
+      }
+      await sleep(150);
+    }
+    return null;
+  }
+
   // The submit form is class="form-horizontal" (NOT form-code-submit) and its
   // action attribute may be absent, so anchor on the language select and walk up
   // to its form — that always identifies the right one once the page is ready.
@@ -499,12 +522,18 @@ async function cposAtcoderSubmitOnPage(code, language) {
 
   if (!langId || !csrf) return { ok: false, reason: "missing-lang-or-csrf" };
 
+  // Wait for the Cloudflare Turnstile token so the very first submit isn't
+  // rejected. If it never resolves we fall through to a normal form submit,
+  // which Turnstile will block until it is ready anyway.
+  const cf = await waitForTurnstile();
+
   try {
     const body = new URLSearchParams();
     body.set("csrf_token", csrf);
     body.set("data.TaskScreenName", task);
     body.set("data.LanguageId", langId);
     body.set("sourceCode", code);
+    if (cf) body.set(cf.name, cf.value);
     const res = await fetch(location.origin + location.pathname, {
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8" },
