@@ -1,13 +1,23 @@
 // CPOS background worker — polls VS Code (:27122) and TUI (:27121) for pending
 // submissions, then injects into the logged-in browser tab.
 
-// Contest reminders run as an isolated module with their own alarms /
-// notifications / message listeners; this never touches the submit-pickup logic.
-importScripts("cpos-contests.js");
+// Contest reminders and challenge mode are isolated modules with their own
+// alarms / notifications / listeners; they never touch the submit-pickup logic
+// below. So their import must be non-fatal: Chrome can intermittently fail
+// importScripts with "An unknown error occurred when fetching the script" when
+// an unpacked extension is reloaded, and a top-level throw there would otherwise
+// take the WHOLE service worker (and submit pickup) down with it. Swallow it —
+// the modules reload on the next worker wake; submit pickup keeps working.
+function importOptional(...scripts) {
+  try {
+    importScripts(...scripts);
+  } catch (e) {
+    console.warn("CPOS: optional background module failed to load, continuing without it:", scripts, e);
+  }
+}
 
-// Challenge mode runs as its own isolated module (alarms / notifications /
-// CF-API polling), loaded after its shared core. Never touches submit pickup.
-importScripts("cpos-challenge-core.js", "cpos-challenge-bg.js");
+importOptional("cpos-contests.js");
+importOptional("cpos-challenge-core.js", "cpos-challenge-bg.js");
 
 const ENDPOINTS = [
   { name: "CPOS VS Code", baseUrl: "http://127.0.0.1:27122" },
