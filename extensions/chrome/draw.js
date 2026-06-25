@@ -122,8 +122,12 @@
     redraw();
   }
 
+  // Measure against the canvas's OWN box, not the container's — they're meant to
+  // coincide, but any positioning offset between them would otherwise show up as
+  // a constant gap between the cursor and the ink. clientX/Y are viewport coords
+  // and the canvas rect tracks scroll, so this stays exact while scrolling.
   function pointFor(e) {
-    const r = scope.container.getBoundingClientRect();
+    const r = canvas.getBoundingClientRect();
     return [e.clientX - r.left, e.clientY - r.top];
   }
 
