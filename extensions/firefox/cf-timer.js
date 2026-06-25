@@ -133,10 +133,10 @@
     if (pos && typeof pos.x === "number" && typeof pos.y === "number") {
       placeAt(pos.x, pos.y);
     } else {
-      // default: bottom-right
-      rootEl.style.right = "16px";
+      // default: bottom-left (bottom-right is taken by the pen launcher)
+      rootEl.style.left = "16px";
       rootEl.style.bottom = "16px";
-      rootEl.style.left = "auto";
+      rootEl.style.right = "auto";
       rootEl.style.top = "auto";
     }
   }

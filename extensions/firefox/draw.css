@@ -17,9 +17,10 @@
 /* ---- floating launcher / tool tray ---------------------------------------- */
 #cpos-draw-bar {
   position: fixed;
-  z-index: 2147483600;
+  z-index: 2147483601; /* one above the problem timer so the pen never blends in */
   bottom: 18px;
   right: 18px;
+  opacity: 1;
   display: flex;
   align-items: center;
   gap: 8px;
