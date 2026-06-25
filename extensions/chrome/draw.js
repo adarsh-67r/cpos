@@ -7,9 +7,9 @@
 //
 // One floating launcher (#cpos-draw-bar, bottom-right) starts collapsed as a
 // single pen icon; clicking it expands a tray with three tools: a freehand Pen,
-// an Eraser, and a Marker that highlights SELECTED statement text (driven by the
-// annotate engine, self.CPOS_ANNOTATE — same colours-on-selection behaviour the
-// old standalone marker bar had). Strokes persist per-problem in
+// an Eraser, and a Marker that auto-highlights any text you SELECT in the
+// statement, in the current colour (driven by the annotate engine,
+// self.CPOS_ANNOTATE). Strokes persist per-problem in
 // chrome.storage.local keyed by URL path. Gated on feature "draw"; everything
 // injected is removed when off. Additive only — never touches capture/submit.
 (function () {
@@ -263,16 +263,33 @@
       sw.style.backgroundColor = c.fill;
       sw.setAttribute("aria-pressed", c.id === AN.getActiveColor() ? "true" : "false");
       sw.addEventListener("click", () => {
-        AN.setActiveColor(c.id);
-        AN.applySelection();
+        AN.setActiveColor(c.id); // just sets the colour — selecting text auto-applies it
         renderBar();
       });
       bar.appendChild(sw);
     });
     const hint = document.createElement("span");
     hint.className = "cpos-dr-hint";
-    hint.textContent = "select text, then pick a colour";
+    hint.textContent = "select text to highlight";
     bar.appendChild(hint);
+  }
+
+  // With the Marker tool armed, finishing a text selection inside the statement
+  // immediately highlights it in the current colour — no extra click. Only fires
+  // on a live, non-collapsed selection (never on a plain click), and ignores
+  // mouseups inside our own toolbar. applySelection itself rejects selections
+  // outside the statement, so we don't need the scope check here.
+  function onDocMouseUp(e) {
+    if (activeTool !== "marker") return;
+    if (bar && bar.contains(e.target)) return;
+    setTimeout(() => {
+      if (activeTool !== "marker") return;
+      const AN = self.CPOS_ANNOTATE;
+      if (!AN || !AN.isReady()) return;
+      const sel = window.getSelection();
+      if (!sel || sel.isCollapsed || sel.rangeCount === 0) return;
+      AN.applySelection();
+    }, 0); // let the selection settle (double-click word-select, etc.)
   }
 
   function clearAll() {
@@ -385,6 +402,7 @@
     buildLayer();
     buildBar();
     window.addEventListener("resize", onResize);
+    document.addEventListener("mouseup", onDocMouseUp);
     layoutCanvas();
     restyle();
   }
@@ -393,6 +411,7 @@
     if (!built) return;
     built = false;
     window.removeEventListener("resize", onResize);
+    document.removeEventListener("mouseup", onDocMouseUp);
     if (resizeRAF) { cancelAnimationFrame(resizeRAF); resizeRAF = 0; }
     canvas?.remove(); canvas = null; ctx = null;
     bar?.remove(); bar = null;
