@@ -5,9 +5,12 @@
 // (shown as a tooltip; a small dot marks notes). Highlights persist per-problem
 // in chrome.storage.local keyed by URL path and are re-anchored on reload using
 // character offsets within a stable container (tolerant: a mark that can't be
-// resolved is skipped, never throws). Gated on feature "annotate"; the floating
-// toolbar (#cpos-annotate-bar) and all injected spans are removed when off.
-// Additive only — never touches capture/submit, never breaks selection/copy.
+// resolved is skipped, never throws).
+//
+// This is the highlight ENGINE only — it has no toolbar of its own. The single
+// "Marker" tool inside the unified draw launcher (draw.js) drives it through
+// self.CPOS_ANNOTATE. Gated on feature "draw" so it mounts/teardowns alongside
+// the pen. Additive only — never touches capture/submit, never breaks selection.
 (function () {
   const C = self.CPOS;
   const T = self.CPOS_THEMES;
@@ -262,57 +265,18 @@
     });
   }
 
-  // ---- toolbar ------------------------------------------------------------
+  // ---- selection state (the toolbar lives in the unified draw launcher) ----
   let activeColor = COLORS[0].id;
 
-  function buildBar() {
-    if (document.getElementById(BAR_ID)) return;
-    const bar = document.createElement("div");
-    bar.id = BAR_ID;
-
-    const label = document.createElement("span");
-    label.className = "cpos-an-label";
-    label.textContent = "Marker";
-    bar.appendChild(label);
-
-    COLORS.forEach((c) => {
-      const sw = document.createElement("button");
-      sw.className = "cpos-an-swatch";
-      sw.type = "button";
-      sw.title = "Marker colour";
-      sw.style.backgroundColor = c.fill;
-      sw.setAttribute("aria-pressed", c.id === activeColor ? "true" : "false");
-      sw.addEventListener("click", () => {
-        activeColor = c.id;
-        bar.querySelectorAll(".cpos-an-swatch").forEach((b) =>
-          b.setAttribute("aria-pressed", b === sw ? "true" : "false"));
-        applySelection();
-      });
-      bar.appendChild(sw);
-    });
-
-    const sep = document.createElement("span");
-    sep.className = "cpos-an-sep";
-    bar.appendChild(sep);
-
-    const markBtn = document.createElement("button");
-    markBtn.className = "cpos-an-btn cpos-an-primary";
-    markBtn.type = "button";
-    markBtn.textContent = "Mark selection";
-    markBtn.addEventListener("click", applySelection);
-    bar.appendChild(markBtn);
-
-    const hint = document.createElement("span");
-    hint.className = "cpos-an-hint";
-    hint.textContent = "select text first";
-    bar.appendChild(hint);
-
-    applyThemeVars(bar);
-    document.body.appendChild(bar);
-  }
-
-  function removeBar() {
-    document.getElementById(BAR_ID)?.remove();
+  // Is there something we could highlight right now — a live selection inside the
+  // statement, or a remembered one from just before the user clicked the bar?
+  function hasSelection() {
+    const sel = window.getSelection();
+    if (sel && !sel.isCollapsed && sel.rangeCount > 0) {
+      const range = sel.getRangeAt(0);
+      if (scope && scope.container && scope.container.contains(range.commonAncestorContainer)) return true;
+    }
+    return !!lastRange;
   }
 
   // ---- create a highlight from the current selection ----------------------
@@ -502,7 +466,6 @@
     const stored = await loadMarks();
     marks = stored.map((m) => ({ id: m.id, color: m.color || "y", note: m.note || "", start: m.start, end: m.end }));
     nextId = marks.reduce((mx, m) => Math.max(mx, m.id + 1), 1);
-    buildBar();
     bindEvents();
     repaintAll();
     restyle();
@@ -514,15 +477,27 @@
     closePopover();
     hideTip();
     unbindEvents();
-    removeBar();
     removeAllSpans();
     marks = [];
     lastRange = null;
   }
 
+  // ---- public API (driven by the unified draw launcher) -------------------
+  // The "Marker" tool in draw.js calls these; everything else stays private.
+  self.CPOS_ANNOTATE = {
+    COLORS,
+    getActiveColor: () => activeColor,
+    setActiveColor: (id) => { if (COLORS.some((c) => c.id === id)) activeColor = id; },
+    applySelection,                 // highlight the current/remembered selection
+    hasSelection,
+    isReady: () => built            // engine mounted on this page?
+  };
+
   // ---- lifecycle ----------------------------------------------------------
+  // Gated on "draw" so the highlight engine mounts/teardowns together with the
+  // pen — they share one launcher and one popup toggle now.
   async function sync() {
-    const on = await C.feature("annotate");
+    const on = await C.feature("draw");
     if (on) await build();
     else teardown();
   }

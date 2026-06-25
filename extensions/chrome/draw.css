@@ -100,3 +100,9 @@
   background: var(--cpos-dr-border, #2a2a3e);
   margin: 0 1px;
 }
+
+#cpos-draw-bar .cpos-dr-hint {
+  color: var(--cpos-dr-dim, #8a86a3);
+  font-size: 11px;
+  white-space: nowrap;
+}
