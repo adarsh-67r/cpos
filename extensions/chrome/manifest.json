@@ -104,8 +104,8 @@
         "https://codeforces.com/blog/entry/*",
         "https://cses.fi/problemset/task/*"
       ],
-      "js": ["cpos-config.js", "themes.js", "annotate.js"],
-      "css": ["annotate.css"],
+      "js": ["cpos-config.js", "themes.js", "annotate.js", "draw.js"],
+      "css": ["annotate.css", "draw.css"],
       "run_at": "document_idle"
     },
     {
