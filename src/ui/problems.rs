@@ -57,8 +57,20 @@ fn draw_filter_bar(frame: &mut Frame, app: &App, area: Rect) {
         ));
     }
 
-    if let Some(tag) = &app.tag_filter {
-        spans.push(Span::styled("   tag ", Style::default().fg(t.dim)));
+    if app.tag_input_active {
+        spans.push(Span::styled(
+            format!("   tag ({}) [tab to toggle] ", app.tag_filter_mode.label()),
+            Style::default().fg(t.dim),
+        ));
+        spans.push(Span::styled(
+            format!("{}_", app.tag_input_buf),
+            Style::default().fg(t.warning).add_modifier(Modifier::BOLD),
+        ));
+    } else if let Some(tag) = &app.tag_filter {
+        spans.push(Span::styled(
+            format!("   tag ({}) ", app.tag_filter_mode.label()),
+            Style::default().fg(t.dim),
+        ));
         spans.push(Span::styled(
             tag.clone(),
             Style::default().fg(t.warning),
@@ -269,6 +281,8 @@ fn draw_help_bar(frame: &mut Frame, app: &App, area: Rect) {
         lbl(" search  "),
         key("f"),
         lbl(" rating  "),
+        key("t"),
+        lbl(" tag  "),
         key("p"),
         lbl(" platform  "),
         key("r"),

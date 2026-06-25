@@ -224,6 +224,11 @@ async fn run_app(
                         continue;
                     }
 
+                    if app.tag_input_active {
+                        handle_tag_input(app, key.code);
+                        continue;
+                    }
+
                     if app.target_input_active {
                         handle_target_text_input(app, key.code);
                         continue;
@@ -1236,10 +1241,8 @@ fn handle_problems_input(
         KeyCode::Char('p') => app.cycle_platform(),
         KeyCode::Char('c') => app.clear_filters(),
         KeyCode::Char('t') => {
-            if let Some(tag) = app.selected_problem().and_then(|p| p.tags.first()).cloned() {
-                app.tag_filter = Some(tag);
-                app.apply_filters();
-            }
+            app.tag_input_active = true;
+            app.tag_input_buf.clear();
         }
         _ => {}
     }
@@ -1257,6 +1260,32 @@ fn handle_rating_input(app: &mut App, key: KeyCode) {
         }
         KeyCode::Char(c) if c.is_ascii_digit() || c == '-' || c == '+' => {
             app.rating_input_buf.push(c)
+        }
+        _ => {}
+    }
+}
+
+fn handle_tag_input(app: &mut App, key: KeyCode) {
+    match key {
+        KeyCode::Esc => app.tag_input_active = false,
+        KeyCode::Tab => {
+            app.tag_filter_mode = match app.tag_filter_mode {
+                crate::app::TagFilterMode::And => crate::app::TagFilterMode::Or,
+                crate::app::TagFilterMode::Or => crate::app::TagFilterMode::And,
+            };
+        }
+        KeyCode::Enter => {
+            app.tag_input_active = false;
+            let raw = app.tag_input_buf.trim().to_string();
+            app.tag_filter = if raw.is_empty() { None } else { Some(raw) };
+            app.problem_selected = 0;
+            app.apply_filters();
+        }
+        KeyCode::Backspace => {
+            app.tag_input_buf.pop();
+        }
+        KeyCode::Char(c) => {
+            app.tag_input_buf.push(c);
         }
         _ => {}
     }
