@@ -6,8 +6,10 @@
 // stay fully clickable; arming a tool flips it to capture strokes.
 //
 // One floating launcher (#cpos-draw-bar, bottom-right) starts collapsed as a
-// single pen icon; clicking it expands a tray with the pen, the marker, an
-// eraser, colour swatches, and clear. Strokes persist per-problem in
+// single pen icon; clicking it expands a tray with three tools: a freehand Pen,
+// an Eraser, and a Marker that highlights SELECTED statement text (driven by the
+// annotate engine, self.CPOS_ANNOTATE — same colours-on-selection behaviour the
+// old standalone marker bar had). Strokes persist per-problem in
 // chrome.storage.local keyed by URL path. Gated on feature "draw"; everything
 // injected is removed when off. Additive only — never touches capture/submit.
 (function () {
@@ -31,11 +33,9 @@
   ];
   const colorById = (id) => COLORS.find((c) => c.id === id) || COLORS[0];
 
-  // Two nibs: a thin solid pen and a thick translucent marker.
-  const TOOLS = {
-    pen: { width: 2.4, alpha: 1 },
-    marker: { width: 14, alpha: 0.32 }
-  };
+  // Freehand pen nib. The "Marker" tool isn't a canvas nib — it highlights
+  // selected statement text through the annotate engine (self.CPOS_ANNOTATE).
+  const TOOLS = { pen: { width: 2.4, alpha: 1 } };
   const ERASE_RADIUS = 14;
 
   // Inline 16px line-icons, same grid/stroke as the popup set for consistency.
@@ -122,8 +122,12 @@
     redraw();
   }
 
+  // Measure against the canvas's OWN box, not the container's — they're meant to
+  // coincide, but any positioning offset between them would otherwise show up as
+  // a constant gap between the cursor and the ink. clientX/Y are viewport coords
+  // and the canvas rect tracks scroll, so this stays exact while scrolling.
   function pointFor(e) {
-    const r = scope.container.getBoundingClientRect();
+    const r = canvas.getBoundingClientRect();
     return [e.clientX - r.left, e.clientY - r.top];
   }
 
@@ -167,13 +171,13 @@
   // rub-out is ever asked for.
 
   function onDown(e) {
-    if (!activeTool) return;
+    if (activeTool !== "pen" && activeTool !== "eraser") return;
     e.preventDefault();
     try { canvas.setPointerCapture(e.pointerId); } catch (x) { /* ok */ }
     drawing = true;
     const p = pointFor(e);
     if (activeTool === "eraser") { eraseAt(p); return; }
-    cur = { tool: activeTool, color: activeColor, size: TOOLS[activeTool].width, points: [p] };
+    cur = { tool: "pen", color: activeColor, size: TOOLS.pen.width, points: [p] };
     redraw();
   }
   function onMove(e) {
@@ -212,11 +216,63 @@
 
   function setTool(t) {
     activeTool = t;
+    // Only the freehand tools capture the canvas; "marker" must leave the page
+    // selectable so the user can highlight the text underneath it.
+    const armed = t === "pen" || t === "eraser";
     if (canvas) {
-      canvas.style.pointerEvents = t ? "auto" : "none";
-      canvas.classList.toggle("cpos-dr-drawing", !!t);
+      canvas.style.pointerEvents = armed ? "auto" : "none";
+      canvas.classList.toggle("cpos-dr-drawing", armed);
     }
     renderBar();
+  }
+
+  // Ink swatches for the freehand pen.
+  function penSwatches() {
+    COLORS.forEach((c) => {
+      const sw = document.createElement("button");
+      sw.type = "button";
+      sw.className = "cpos-dr-swatch";
+      sw.title = "Ink colour";
+      sw.style.backgroundColor = c.stroke;
+      sw.setAttribute("aria-pressed", c.id === activeColor ? "true" : "false");
+      sw.addEventListener("click", () => {
+        activeColor = c.id;
+        if (activeTool !== "pen") setTool("pen"); // picking a colour arms the pen
+        else renderBar();
+      });
+      bar.appendChild(sw);
+    });
+  }
+
+  // Marker swatches highlight the SELECTED statement text via the annotate
+  // engine — pick a colour and it paints whatever is selected.
+  function markerSwatches() {
+    const AN = self.CPOS_ANNOTATE;
+    if (!AN || !AN.isReady()) {
+      const note = document.createElement("span");
+      note.className = "cpos-dr-hint";
+      note.textContent = "highlighter loading…";
+      bar.appendChild(note);
+      return;
+    }
+    AN.COLORS.forEach((c) => {
+      const sw = document.createElement("button");
+      sw.type = "button";
+      sw.className = "cpos-dr-swatch";
+      sw.title = "Highlight selected text";
+      sw.style.backgroundColor = c.fill;
+      sw.setAttribute("aria-pressed", c.id === AN.getActiveColor() ? "true" : "false");
+      sw.addEventListener("click", () => {
+        AN.setActiveColor(c.id);
+        AN.applySelection();
+        renderBar();
+      });
+      bar.appendChild(sw);
+    });
+    const hint = document.createElement("span");
+    hint.className = "cpos-dr-hint";
+    hint.textContent = "select text, then pick a colour";
+    bar.appendChild(hint);
   }
 
   function clearAll() {
@@ -249,29 +305,24 @@
 
     bar.appendChild(sep());
 
-    COLORS.forEach((c) => {
-      const sw = document.createElement("button");
-      sw.type = "button";
-      sw.className = "cpos-dr-swatch";
-      sw.title = "Ink colour";
-      sw.style.backgroundColor = c.stroke;
-      sw.setAttribute("aria-pressed", c.id === activeColor ? "true" : "false");
-      sw.addEventListener("click", () => {
-        activeColor = c.id;
-        if (activeTool === "eraser" || !activeTool) setTool("pen");
-        else renderBar();
-      });
-      bar.appendChild(sw);
-    });
+    // Colours mean different things per tool: ink for the pen, highlight for the
+    // text marker.
+    if (activeTool === "marker") markerSwatches();
+    else penSwatches();
 
     bar.appendChild(sep());
 
-    const clear = document.createElement("button");
-    clear.type = "button";
-    clear.className = "cpos-dr-btn cpos-dr-danger";
-    clear.textContent = "Clear";
-    clear.addEventListener("click", clearAll);
-    bar.appendChild(clear);
+    // Clear only makes sense for freehand ink (highlights are removed per-mark
+    // via their own click popover), so hide it in marker mode.
+    if (activeTool !== "marker") {
+      const clear = document.createElement("button");
+      clear.type = "button";
+      clear.className = "cpos-dr-btn cpos-dr-danger";
+      clear.title = "Erase all freehand drawings";
+      clear.textContent = "Clear";
+      clear.addEventListener("click", clearAll);
+      bar.appendChild(clear);
+    }
 
     const done = iconBtn("done", "Done");
     done.addEventListener("click", () => { setTool(null); expanded = false; renderBar(); });
