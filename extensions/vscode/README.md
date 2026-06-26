@@ -1,6 +1,6 @@
 # CPOS
 
-**Competitive programming for Codeforces and CSES — in VS Code.**
+**Competitive programming for Codeforces, CSES, and AtCoder — in VS Code.**
 
 Open a problem in your browser. CPOS creates your solution file in the folder you have open, loads the sample tests, and provides a side panel to run samples and submit.
 
@@ -26,7 +26,7 @@ Part of the **CPOS** project — works with the [terminal app](https://github.co
 
 1. Install from the **[VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=sohamaggarwal.cpos-vscode)** and a browser companion: **[Chrome Web Store](https://chromewebstore.google.com/detail/gjnbapmjonegeeamdeahcoojgokeogmm)** or Firefox from source in the CPOS repo
 2. Open the folder where you want solution files
-3. Open a Codeforces or CSES problem in your browser
+3. Open a Codeforces, CSES, or AtCoder problem in your browser
 4. CPOS creates the solution file (for example `1982C.cpp`) with samples attached
 5. Write code and use the **CPOS panel** to **Run All** or **Submit**
 

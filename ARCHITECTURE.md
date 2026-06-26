@@ -66,7 +66,7 @@ Cross-origin headers are permissive because traffic never leaves the machine.
 
 ## Submit flow
 
-CPOS does **not** post solutions to Codeforces or CSES from the editor over HTTP. That approach conflicts with anti-bot protection and session handling. Instead, the editor queues submission data locally and the browser companion autofills the judge form in the user’s existing logged-in tab.
+CPOS does **not** post solutions to Codeforces, CSES, or AtCoder from the editor over HTTP. That approach conflicts with anti-bot protection and session handling. Instead, the editor queues submission data locally and the browser companion autofills the judge form in the user’s existing logged-in tab.
 
 1. The user runs **Submit** in VS Code or presses `s` in the terminal.
 2. The active app writes `{ code, language, submitUrl, contest, index, … }` and serves it at `GET /pending-submit`.

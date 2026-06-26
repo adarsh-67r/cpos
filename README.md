@@ -390,7 +390,7 @@ If CPOS saves you time on every problem, sponsoring keeps it that way and funds 
 - **More judges** — AtCoder and CodeChef support
 - **Contest mode** — per-problem timers and a focused contest workflow
 - **Verdicts in CPOS** — read submission results back without leaving the editor
-- **Maintenance** — keeping capture and submit working as Codeforces and CSES change
+- **Maintenance** — keeping capture and submit working as Codeforces, CSES, and AtCoder change
 
 <p align="center">
   <a href="https://github.com/sponsors/Soham109"><img alt="Sponsor CPOS on GitHub" src="https://img.shields.io/badge/Sponsor_CPOS-%E2%9D%A4-db61a2?style=for-the-badge&logo=githubsponsors&logoColor=white"></a>

@@ -15,7 +15,7 @@ CPOS Companion is a browser extension for competitive programming. It works toge
 
 ## Data the extension accesses
 
-When you open a supported problem page on **Codeforces** or **CSES**, the extension may read from that page:
+When you open a supported problem page on **Codeforces**, **CSES**, or **AtCoder**, the extension may read from that page:
 
 - Problem identifier and title
 - Public sample test inputs and expected outputs shown on the page
@@ -34,10 +34,10 @@ When you use the in-browser editor, the extension may:
 When you submit a solution from CPOS in VS Code or the CPOS app, the extension may:
 
 - Receive your source code from the local CPOS app via localhost
-- Fill the submit form on Codeforces or CSES in your already-logged-in browser tab
+- Fill the submit form on Codeforces, CSES, or AtCoder in your already-logged-in browser tab
 - Click Submit on your behalf (same as you would manually)
 
-The extension **does not** read passwords, cookies, or browsing history outside the matched Codeforces/CSES pages.
+The extension **does not** read passwords, cookies, or browsing history outside the matched Codeforces/CSES/AtCoder pages.
 
 ## Where data goes
 
@@ -88,7 +88,7 @@ This data stays in Chrome's local extension storage on your device. It is not se
 
 | Permission | Why it is needed |
 |------------|------------------|
-| `scripting` | Autofill submit forms on Codeforces/CSES when you submit from CPOS |
+| `scripting` | Autofill submit forms on Codeforces/CSES/AtCoder when you submit from CPOS |
 | `tabs` | Find or open the correct browser tab for submission autofill |
 | `alarms` | Wake the background worker for queued submissions, contest reminders, and current Compete invitations/results |
 | `storage` | Save local-only settings, editor drafts, timers, favorites, reminders, notes/highlights, and public-data caches |

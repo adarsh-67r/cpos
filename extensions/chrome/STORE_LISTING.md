@@ -72,7 +72,7 @@ APPEARANCE
 
 REQUIRES
 • The CPOS VS Code extension and/or terminal app running locally for capture, run, and submit
-• You must be logged in to Codeforces or CSES in this browser for submissions
+• You must be logged in to Codeforces, CSES, or AtCoder in this browser for submissions
 
 PRIVACY
 • No analytics or CPOS accounts
@@ -120,7 +120,7 @@ Injects autofill logic only on Codeforces, CSES, and AtCoder submit pages when C
 
 ### Permission: `tabs`
 ```
-Finds an existing Codeforces/CSES tab or opens one when the user submits from CPOS, so the submit form can be autofilled in the correct logged-in session.
+Finds an existing Codeforces/CSES/AtCoder tab or opens one when the user submits from CPOS, so the submit form can be autofilled in the correct logged-in session.
 ```
 
 ### Permission: `alarms`
