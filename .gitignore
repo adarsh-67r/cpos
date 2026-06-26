@@ -13,3 +13,6 @@ extensions/vscode/*.vsix
 extensions/chrome/node_modules/
 extensions/chrome/*.zip
 /*.zip
+
+# graphify working output — regenerate locally; only docs/architecture/ is committed
+graphify-out/

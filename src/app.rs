@@ -321,6 +321,21 @@ impl PlatformFilter {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum TagFilterMode {
+    And,
+    Or,
+}
+
+impl TagFilterMode {
+    pub fn label(&self) -> &str {
+        match self {
+            TagFilterMode::And => "AND",
+            TagFilterMode::Or => "OR",
+        }
+    }
+}
+
 pub struct App {
     pub running: bool,
     pub active_tab: Tab,
@@ -334,6 +349,9 @@ pub struct App {
     pub search_query: String,
     pub search_active: bool,
     pub tag_filter: Option<String>,
+    pub tag_filter_mode: TagFilterMode,
+    pub tag_input_active: bool,
+    pub tag_input_buf: String,
     /// When set, show only the problems of this Codeforces contest (by id prefix).
     pub contest_filter: Option<String>,
     pub rating_min: Option<u32>,
@@ -444,6 +462,9 @@ impl App {
             search_query: String::new(),
             search_active: false,
             tag_filter: None,
+            tag_filter_mode: TagFilterMode::And,
+            tag_input_active: false,
+            tag_input_buf: String::new(),
             contest_filter: None,
             rating_min: None,
             rating_max: None,
@@ -604,14 +625,36 @@ impl App {
                         .any(|t| t.to_lowercase().contains(&query_lower))
             })
             .filter(|p| {
-                if let Some(ref tag) = self.tag_filter {
-                    p.tags
-                        .iter()
-                        .any(|t| t.to_lowercase() == tag.to_lowercase())
-                        || p.category
-                            .as_ref()
-                            .map(|c| c.to_lowercase() == tag.to_lowercase())
-                            .unwrap_or(false)
+                if let Some(ref tag_query) = self.tag_filter {
+                    let target_tags: Vec<&str> = tag_query
+                        .split(',')
+                        .map(|s| s.trim())
+                        .filter(|s| !s.is_empty())
+                        .collect();
+                    if target_tags.is_empty() {
+                        true
+                    } else {
+                        match self.tag_filter_mode {
+                            TagFilterMode::And => {
+                                target_tags.iter().all(|&target| {
+                                    p.tags.iter().any(|t| t.to_lowercase() == target.to_lowercase())
+                                        || p.category
+                                            .as_ref()
+                                            .map(|c| c.to_lowercase() == target.to_lowercase())
+                                            .unwrap_or(false)
+                                })
+                            }
+                            TagFilterMode::Or => {
+                                target_tags.iter().any(|&target| {
+                                    p.tags.iter().any(|t| t.to_lowercase() == target.to_lowercase())
+                                        || p.category
+                                            .as_ref()
+                                            .map(|c| c.to_lowercase() == target.to_lowercase())
+                                            .unwrap_or(false)
+                                })
+                            }
+                        }
+                    }
                 } else {
                     true
                 }
@@ -1336,7 +1379,8 @@ impl App {
                 if let Some(parent) = external.parent() {
                     let _ = std::fs::create_dir_all(parent);
                 }
-                if std::fs::write(&external, &template).is_err() {
+                let source = workspace::materialize_template_for_path(&template, &ext, &external);
+                if std::fs::write(&external, source).is_err() {
                     self.status_message =
                         format!("Could not create solution file at {}", external.display());
                     return None;
@@ -1370,7 +1414,9 @@ impl App {
                 let _ = std::fs::create_dir_all(parent);
             }
             if !already_existed {
-                if std::fs::write(&solution_path, &template).is_err() {
+                let source =
+                    workspace::materialize_template_for_path(&template, &ext, &solution_path);
+                if std::fs::write(&solution_path, source).is_err() {
                     self.status_message = format!(
                         "Could not create solution file at {}",
                         solution_path.display()
@@ -1528,6 +1574,7 @@ impl App {
 
     pub fn clear_filters(&mut self) {
         self.tag_filter = None;
+        self.tag_filter_mode = TagFilterMode::And;
         self.contest_filter = None;
         self.search_query.clear();
         self.rating_min = None;

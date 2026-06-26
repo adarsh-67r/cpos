@@ -71,13 +71,13 @@ Restart the terminal if `cpos` is not found immediately.
 macOS and Linux:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/Soham109/cpos/main/install.sh | CPOS_VERSION=0.2.1 sh
+curl -fsSL https://raw.githubusercontent.com/Soham109/cpos/main/install.sh | CPOS_VERSION=0.2.2 sh
 ```
 
 Windows PowerShell:
 
 ```powershell
-$env:CPOS_VERSION = "0.2.1"
+$env:CPOS_VERSION = "0.2.2"
 irm https://raw.githubusercontent.com/Soham109/cpos/main/install.ps1 | iex
 ```
 
@@ -139,9 +139,9 @@ Release flow:
 4. Create and push a tag:
 
    ```bash
-   git tag v0.2.1
+   git tag v0.2.2
    git push origin main
-   git push origin v0.2.1
+   git push origin v0.2.2
    ```
 
 5. GitHub Actions builds the assets and publishes a GitHub Release.

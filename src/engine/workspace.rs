@@ -104,7 +104,13 @@ pub fn platform_dir(config: &Config, platform: Platform) -> PathBuf {
 /// but AtCoder and pasted ids can contain slashes/colons).
 fn safe_id(id: &str) -> String {
     id.chars()
-        .map(|c| if c.is_alphanumeric() || c == '-' || c == '_' { c } else { '_' })
+        .map(|c| {
+            if c.is_alphanumeric() || c == '-' || c == '_' {
+                c
+            } else {
+                '_'
+            }
+        })
         .collect()
 }
 
@@ -137,15 +143,46 @@ fn solution_basename(problem: &Problem) -> String {
     }
 }
 
+fn java_class_name(base: &str) -> String {
+    let safe: String = base
+        .chars()
+        .map(|c| {
+            if c.is_ascii_alphanumeric() || c == '_' {
+                c
+            } else {
+                '_'
+            }
+        })
+        .collect();
+    format!("Q{}", if safe.is_empty() { "Problem" } else { &safe })
+}
+
+fn solution_basename_for_ext(problem: &Problem, ext: &str) -> String {
+    let base = solution_basename(problem);
+    if ext.eq_ignore_ascii_case("java") {
+        java_class_name(&base)
+    } else {
+        base
+    }
+}
+
 /// Path to the solution source file for a problem in the given language —
 /// a single flat file like `codeforces/1095F.cpp` or `cses/WeirdAlgorithm.cpp`.
 pub fn solution_path(config: &Config, problem: &Problem, ext: &str) -> PathBuf {
-    platform_dir(config, problem.platform).join(format!("{}.{}", solution_basename(problem), ext))
+    platform_dir(config, problem.platform).join(format!(
+        "{}.{}",
+        solution_basename_for_ext(problem, ext),
+        ext
+    ))
 }
 
 /// Flat solution file inside a user-chosen directory (matches VS Code workspace layout).
 pub fn solution_path_in_dir(dir: &Path, problem: &Problem, ext: &str) -> PathBuf {
-    dir.join(format!("{}.{}", solution_basename(problem), ext))
+    dir.join(format!(
+        "{}.{}",
+        solution_basename_for_ext(problem, ext),
+        ext
+    ))
 }
 
 /// Whether `path` is under CPOS's default `~/cpos` tree (not the user's open project).
@@ -227,7 +264,7 @@ pub fn scaffold(config: &Config, problem: &Problem, ext: &str, template: &str) -
     std::fs::create_dir_all(&dir)?;
     let path = solution_path(config, problem, ext);
     if !path.exists() {
-        std::fs::write(&path, template)?;
+        std::fs::write(&path, materialize_template_for_path(template, ext, &path))?;
     }
     Ok(path)
 }
@@ -329,11 +366,19 @@ struct StoredSession {
     id: String,
     name: String,
     url: String,
-    #[serde(default, skip_serializing_if = "Option::is_none", alias = "solutionPath")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "solutionPath"
+    )]
     solution_path: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none", alias = "capturedAt")]
     captured_at: Option<String>,
-    #[serde(default, skip_serializing_if = "Option::is_none", alias = "statementHtml")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "statementHtml"
+    )]
     statement_html: Option<String>,
 }
 
@@ -444,10 +489,7 @@ pub fn template_for(lang: &str) -> String {
             .to_string(),
         "python" | "pypy" => "import sys\ninput = sys.stdin.readline\n\n\ndef main():\n    pass\n\n\nif __name__ == \"__main__\":\n    main()\n"
             .to_string(),
-        // The class is package-private (no `public`), so the file can be named
-        // anything (problem ids start with digits, which Java forbids for the
-        // file name only when the class is public).
-        "java" => "import java.util.*;\nimport java.io.*;\n\nclass Main {\n    public static void main(String[] args) throws IOException {\n        BufferedReader br = new BufferedReader(new InputStreamReader(System.in));\n\n    }\n}\n"
+        "java" => "import java.util.*;\nimport java.io.*;\n\npublic class {classname} {\n    public static void main(String[] args) throws IOException {\n        BufferedReader br = new BufferedReader(new InputStreamReader(System.in));\n\n    }\n}\n"
             .to_string(),
         "rust" => "use std::io::{self, Read, Write};\n\nfn main() {\n    let mut input = String::new();\n    io::stdin().read_to_string(&mut input).unwrap();\n    let mut it = input.split_whitespace();\n\n}\n"
             .to_string(),
@@ -465,6 +507,119 @@ pub fn template_for(lang: &str) -> String {
         "pascal" => "program solution;\nbegin\n\nend.\n".to_string(),
         _ => String::new(),
     }
+}
+
+pub fn materialize_template_for_path(template: &str, ext: &str, path: &Path) -> String {
+    if !ext.eq_ignore_ascii_case("java") {
+        return template.to_string();
+    }
+    let class_name = path
+        .file_stem()
+        .and_then(|s| s.to_str())
+        .unwrap_or("QProblem");
+    if template.contains("{classname}") {
+        return template.replace("{classname}", class_name);
+    }
+    if template.contains("class Main") {
+        return replace_java_identifier(template, "Main", class_name);
+    }
+    template.to_string()
+}
+
+fn replace_java_identifier(code: &str, from: &str, to: &str) -> String {
+    #[derive(Clone, Copy, PartialEq, Eq)]
+    enum State {
+        Code,
+        LineComment,
+        BlockComment,
+        String,
+        Char,
+        TextBlock,
+    }
+
+    fn is_start(b: u8) -> bool {
+        b.is_ascii_alphabetic() || b == b'_' || b == b'$'
+    }
+    fn is_part(b: u8) -> bool {
+        is_start(b) || b.is_ascii_digit()
+    }
+
+    let bytes = code.as_bytes();
+    let mut out = String::with_capacity(code.len());
+    let mut i = 0;
+    let mut state = State::Code;
+
+    while i < bytes.len() {
+        let ch = bytes[i];
+        let next = bytes.get(i + 1).copied();
+        let third = bytes.get(i + 2).copied();
+
+        if state == State::Code {
+            if ch == b'/' && next == Some(b'/') {
+                state = State::LineComment;
+                out.push_str("//");
+                i += 2;
+                continue;
+            }
+            if ch == b'/' && next == Some(b'*') {
+                state = State::BlockComment;
+                out.push_str("/*");
+                i += 2;
+                continue;
+            }
+            if ch == b'"' && next == Some(b'"') && third == Some(b'"') {
+                state = State::TextBlock;
+                out.push_str("\"\"\"");
+                i += 3;
+                continue;
+            }
+            if ch == b'"' {
+                state = State::String;
+            } else if ch == b'\'' {
+                state = State::Char;
+            } else if is_start(ch) {
+                let start = i;
+                i += 1;
+                while i < bytes.len() && is_part(bytes[i]) {
+                    i += 1;
+                }
+                let ident = &code[start..i];
+                out.push_str(if ident == from { to } else { ident });
+                continue;
+            }
+        } else if state == State::LineComment && ch == b'\n' {
+            state = State::Code;
+        } else if state == State::BlockComment && ch == b'*' && next == Some(b'/') {
+            state = State::Code;
+            out.push_str("*/");
+            i += 2;
+            continue;
+        } else if state == State::TextBlock
+            && ch == b'"'
+            && next == Some(b'"')
+            && third == Some(b'"')
+        {
+            state = State::Code;
+            out.push_str("\"\"\"");
+            i += 3;
+            continue;
+        } else if (state == State::String && ch == b'"') || (state == State::Char && ch == b'\'') {
+            let mut backslashes = 0;
+            let mut j = i;
+            while j > 0 && bytes[j - 1] == b'\\' {
+                backslashes += 1;
+                j -= 1;
+            }
+            if backslashes % 2 == 0 {
+                state = State::Code;
+            }
+        }
+
+        out.push(ch as char);
+        i += 1;
+    }
+
+    out
 }
 
 #[cfg(test)]
@@ -515,6 +670,53 @@ mod tests {
         };
         let path = solution_path(&Config::default(), &p, "cpp");
         assert!(path.ends_with(Path::new("codeforces").join("2232F.cpp")));
+    }
+
+    #[test]
+    fn java_solution_uses_q_prefixed_class_name() {
+        let cf = Problem {
+            platform: Platform::Codeforces,
+            id: "1120C".to_string(),
+            name: "Compress String".to_string(),
+            url: "https://codeforces.com/problemset/problem/1120/C".to_string(),
+            rating: None,
+            tags: vec![],
+            category: None,
+            solved_count: None,
+            status: SolveStatus::Unsolved,
+        };
+        let cses = cses_problem("1068", "Weird Algorithm");
+
+        assert!(
+            solution_path(&Config::default(), &cf, "java")
+                .ends_with(Path::new("codeforces").join("Q1120C.java"))
+        );
+        assert!(
+            solution_path(&Config::default(), &cses, "java")
+                .ends_with(Path::new("cses").join("QWeirdAlgorithm.java"))
+        );
+    }
+
+    #[test]
+    fn java_template_uses_solution_class_name() {
+        let path = Path::new("/tmp/Q1120C.java");
+
+        assert_eq!(
+            materialize_template_for_path("public class {classname} {}", "java", path),
+            "public class Q1120C {}"
+        );
+        assert_eq!(
+            materialize_template_for_path("class Main { Main() {} }", "java", path),
+            "class Q1120C { Q1120C() {} }"
+        );
+        assert_eq!(
+            materialize_template_for_path(
+                "// Main\nclass Main { String s = \"Main\"; }",
+                "java",
+                path
+            ),
+            "// Main\nclass Q1120C { String s = \"Main\"; }"
+        );
     }
 
     #[test]
@@ -572,7 +774,10 @@ mod tests {
             solved_count: None,
             status: SolveStatus::Unsolved,
         };
-        assert_eq!(compare_problems(&older, &newer), std::cmp::Ordering::Greater);
+        assert_eq!(
+            compare_problems(&older, &newer),
+            std::cmp::Ordering::Greater
+        );
         assert_eq!(compare_problems(&newer, &older), std::cmp::Ordering::Less);
     }
 

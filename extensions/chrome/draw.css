@@ -1,0 +1,257 @@
+/* CPOS freehand drawing tool. Theme-aware via inline --cpos-dr-* vars set from
+   the active CPOS palette (see draw.js). Flat, no gradients — matches the
+   marker/notes toolbar. Additive only. */
+
+/* ---- ink canvas: absolute over the page, scrolls with the document --------- */
+#cpos-draw-layer {
+  position: absolute;
+  z-index: 2147483000;
+  pointer-events: none; /* page stays clickable until a tool is armed */
+  touch-action: none;
+}
+#cpos-draw-layer.cpos-dr-drawing {
+  pointer-events: auto;
+  cursor: crosshair;
+}
+
+/* ---- floating launcher / tool tray ---------------------------------------- */
+#cpos-draw-bar {
+  position: fixed;
+  z-index: 2147483601; /* one above the problem timer so the pen never blends in */
+  bottom: 18px;
+  right: 18px;
+  opacity: 1;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  max-width: calc(100vw - 24px);
+  font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, system-ui, sans-serif;
+  font-size: 11px;
+  user-select: none;
+}
+
+/* collapsed: a single round pen button — big enough to read at a glance. The
+   launcher button also carries .cpos-dr-btn (from iconBtn), so these rules are
+   scoped to .cpos-dr-btn.cpos-dr-launch to out-specify the generic .cpos-dr-btn
+   block below — otherwise the round accent FAB would lose to the flat toolbar
+   button style by source order. */
+#cpos-draw-bar .cpos-dr-btn.cpos-dr-launch {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--cpos-dr-accent, #6b7280);
+  border: 1px solid var(--cpos-dr-accent, #6b7280);
+  color: var(--cpos-dr-bg, #14141f);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.25);
+  touch-action: none;
+}
+#cpos-draw-bar .cpos-dr-btn.cpos-dr-launch svg { width: 21px; height: 21px; }
+#cpos-draw-bar .cpos-dr-btn.cpos-dr-launch:hover { filter: brightness(1.05); }
+
+/* expanded: the tray gets the panel chrome */
+#cpos-draw-bar.cpos-dr-open {
+  padding: 5px 6px;
+  border-radius: 10px;
+  background: var(--cpos-dr-panel, #1b1b2b);
+  border: 1px solid var(--cpos-dr-border, #2a2a3e);
+  color: var(--cpos-dr-fg, #e8e6f0);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.25);
+  flex-wrap: nowrap;
+  cursor: grab;
+  touch-action: none;
+}
+#cpos-draw-bar.cpos-dr-open:active {
+  cursor: grabbing;
+}
+
+#cpos-draw-bar .cpos-dr-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: 1px solid var(--cpos-dr-border, #2a2a3e);
+  color: var(--cpos-dr-fg, #e8e6f0);
+  width: 28px;
+  height: 28px;
+  border-radius: 7px;
+  padding: 0;
+  cursor: pointer;
+  font: inherit;
+  line-height: 1.2;
+}
+#cpos-draw-bar .cpos-dr-btn svg { width: 15px; height: 15px; display: block; }
+#cpos-draw-bar .cpos-dr-drag-dot {
+  width: 5px;
+  height: 22px;
+  border-left: 1px solid var(--cpos-dr-border, #2a2a3e);
+  border-right: 1px solid var(--cpos-dr-border, #2a2a3e);
+  opacity: 0.75;
+  flex: 0 0 auto;
+}
+#cpos-draw-bar .cpos-dr-btn:hover {
+  border-color: var(--cpos-dr-accent, #6b7280);
+  color: var(--cpos-dr-accent, #6b7280);
+}
+/* armed tool */
+#cpos-draw-bar .cpos-dr-btn.cpos-dr-on {
+  background: var(--cpos-dr-accent, #6b7280);
+  border-color: var(--cpos-dr-accent, #6b7280);
+  color: var(--cpos-dr-bg, #14141f);
+}
+#cpos-draw-bar .cpos-dr-btn.cpos-dr-danger:hover {
+  border-color: var(--cpos-dr-bad, #ff7a93);
+  color: var(--cpos-dr-bad, #ff7a93);
+}
+#cpos-draw-bar .cpos-dr-btn.cpos-dr-disabled,
+#cpos-draw-bar .cpos-dr-btn:disabled {
+  opacity: 0.42;
+  cursor: default;
+  pointer-events: none;
+}
+
+#cpos-draw-bar .cpos-dr-swatch {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  cursor: pointer;
+  padding: 0;
+  outline: none;
+  box-sizing: border-box;
+}
+#cpos-draw-bar .cpos-dr-swatch[aria-pressed="true"] {
+  border-color: var(--cpos-dr-fg, #e8e6f0);
+}
+
+#cpos-draw-bar .cpos-dr-sep {
+  width: 1px;
+  align-self: stretch;
+  background: var(--cpos-dr-border, #2a2a3e);
+  margin: 0 1px;
+}
+
+#cpos-draw-bar .cpos-dr-size {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+#cpos-draw-bar .cpos-dr-size-btn {
+  width: 21px;
+  height: 24px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 7px;
+  border: 1px solid var(--cpos-dr-border, #2a2a3e);
+  background: transparent;
+  color: var(--cpos-dr-fg, #e8e6f0);
+  cursor: pointer;
+  padding: 0;
+  font: inherit;
+  line-height: 1;
+}
+#cpos-draw-bar .cpos-dr-size-btn:hover {
+  border-color: var(--cpos-dr-accent, #6b7280);
+  color: var(--cpos-dr-accent, #6b7280);
+}
+#cpos-draw-bar .cpos-dr-size-value {
+  min-width: 33px;
+  height: 24px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--cpos-dr-border, #2a2a3e);
+  border-radius: 7px;
+  background: transparent;
+  color: var(--cpos-dr-dim, #8a86a3);
+  cursor: pointer;
+  font: inherit;
+  font-size: 10px;
+  white-space: nowrap;
+  padding: 0 5px;
+}
+
+#cpos-draw-bar .cpos-dr-hint {
+  color: var(--cpos-dr-dim, #8a86a3);
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+/* ---- page-restyle shield --------------------------------------------------
+   CPOS "Modernize" and the site themes (cpos-style-core.js) inject page-wide
+   `button { … !important }` / `textarea { … !important }` rules to restyle
+   Codeforces. This launcher is appended to <body>, so without a guard those
+   rules leak in and the markup toolbar looks DIFFERENT with Modernize (or a
+   theme) on vs off — bloated padding, a hairline border, the wrong fill. These
+   ID-scoped declarations outrank the bare-element page rules (higher
+   specificity + !important), so the toolbar renders identically in every mode.
+   Values mirror the rules above; swatch fills stay inline-!important (draw.js)
+   because each swatch has its own colour. */
+#cpos-draw-bar button {
+  font-family: inherit !important;
+  font-weight: 500 !important;
+  letter-spacing: normal !important;
+  transition: none !important;
+}
+/* launcher carries .cpos-dr-btn too — match .cpos-dr-on's 2-class specificity so
+   it beats the generic .cpos-dr-btn shield below and keeps the round accent FAB. */
+#cpos-draw-bar .cpos-dr-btn.cpos-dr-launch {
+  padding: 0 !important;
+  border-radius: 50% !important;
+  border: 1px solid var(--cpos-dr-accent, #6b7280) !important;
+  background: var(--cpos-dr-accent, #6b7280) !important;
+  color: var(--cpos-dr-bg, #14141f) !important;
+}
+#cpos-draw-bar .cpos-dr-btn.cpos-dr-launch:hover {
+  background: var(--cpos-dr-accent, #6b7280) !important;
+  border-color: var(--cpos-dr-accent, #6b7280) !important;
+  color: var(--cpos-dr-bg, #14141f) !important;
+}
+#cpos-draw-bar .cpos-dr-btn {
+  padding: 0 !important;
+  border-radius: 7px !important;
+  border: 1px solid var(--cpos-dr-border, #2a2a3e) !important;
+  background: transparent !important;
+  color: var(--cpos-dr-fg, #e8e6f0) !important;
+}
+#cpos-draw-bar .cpos-dr-btn:hover {
+  border-color: var(--cpos-dr-accent, #6b7280) !important;
+  background: transparent !important;
+  color: var(--cpos-dr-accent, #6b7280) !important;
+}
+#cpos-draw-bar .cpos-dr-btn.cpos-dr-danger:hover {
+  border-color: var(--cpos-dr-bad, #ff7a93) !important;
+  color: var(--cpos-dr-bad, #ff7a93) !important;
+}
+#cpos-draw-bar .cpos-dr-btn.cpos-dr-on {
+  background: var(--cpos-dr-accent, #6b7280) !important;
+  border-color: var(--cpos-dr-accent, #6b7280) !important;
+  color: var(--cpos-dr-bg, #14141f) !important;
+}
+#cpos-draw-bar .cpos-dr-size-btn {
+  padding: 0 !important;
+  border-radius: 7px !important;
+  border: 1px solid var(--cpos-dr-border, #2a2a3e) !important;
+  background: transparent !important;
+  color: var(--cpos-dr-fg, #e8e6f0) !important;
+}
+#cpos-draw-bar .cpos-dr-size-btn:hover {
+  border-color: var(--cpos-dr-accent, #6b7280) !important;
+  color: var(--cpos-dr-accent, #6b7280) !important;
+}
+#cpos-draw-bar .cpos-dr-size-value {
+  padding: 0 5px !important;
+  border-radius: 7px !important;
+  border: 1px solid var(--cpos-dr-border, #2a2a3e) !important;
+  background: transparent !important;
+  color: var(--cpos-dr-dim, #8a86a3) !important;
+  font-size: 10px !important;
+}
+#cpos-draw-bar .cpos-dr-swatch {
+  padding: 0 !important;
+  border-radius: 50% !important;
+  border: 2px solid transparent !important;
+}
+#cpos-draw-bar .cpos-dr-swatch[aria-pressed="true"] {
+  border-color: var(--cpos-dr-fg, #e8e6f0) !important;
+}

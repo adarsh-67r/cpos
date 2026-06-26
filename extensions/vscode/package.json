@@ -1,8 +1,8 @@
 {
   "name": "cpos-vscode",
   "displayName": "CPOS",
-  "description": "Capture Codeforces & CSES problems, run sample tests, and submit — all from VS Code.",
-  "version": "0.5.1",
+  "description": "Capture Codeforces, CSES & AtCoder problems, run sample tests, and submit — all from VS Code.",
+  "version": "0.5.2",
   "publisher": "sohamaggarwal",
   "license": "MIT",
   "icon": "media/icon128.png",
@@ -21,6 +21,7 @@
     "competitive programming",
     "codeforces",
     "cses",
+    "atcoder",
     "cpc",
     "contests",
     "algorithm"
@@ -111,7 +112,7 @@
         "cpos.subfolderPerPlatform": {
           "type": "boolean",
           "default": false,
-          "description": "Group captured files into codeforces/ and cses/ subfolders. Off by default so files drop straight into your project."
+          "description": "Group captured files into codeforces/, cses/ and atcoder/ subfolders. Off by default so files drop straight into your project."
         },
         "cpos.defaultLanguage": {
           "type": "string",
@@ -136,7 +137,7 @@
         "cpos.templateFile": {
           "type": "string",
           "default": "",
-          "description": "Optional template file used when creating new solutions. If unset, inherits the template from your CPOS app config."
+          "description": "Optional template file used when creating new solutions. Java templates may use {classname} for the generated public class name. If unset, inherits the template from your CPOS app config."
         },
         "cpos.autoStartCaptureServer": {
           "type": "boolean",
@@ -161,7 +162,7 @@
         "cpos.compileCommands": {
           "type": "object",
           "default": {},
-          "description": "Language overrides. Each key maps to { compile, run, extension } with {source}, {output}, and {dir} placeholders. If unset, inherits compile commands from your CPOS app config."
+          "description": "Language overrides. Each key maps to { compile, run, extension } with {source}, {output}, {dir}, and {classname} placeholders. If unset, inherits compile commands from your CPOS app config."
         }
       }
     },
@@ -182,6 +183,7 @@
   },
   "scripts": {
     "compile": "tsc -p ./",
+    "test": "npm run compile && node --test out/java.test.js",
     "watch": "tsc -watch -p ./",
     "package": "npm run compile && vsce package",
     "publish": "vsce publish"

@@ -61,13 +61,13 @@ impl Default for Config {
 
         // The broad set of languages competitive-programming judges accept.
         // `{source}` is the absolute path to your file, `{output}` is the
-        // compiled binary name, `{dir}` is the build directory.
+        // compiled binary name, `{dir}` is the build directory, and
+        // `{classname}` is the source file stem.
         lang("c", Some("gcc -std=c11 -O2 -o {output} {source} -lm"), "./{output}", "c");
         lang("cpp", Some("g++ -std=c++17 -O2 -o {output} {source}"), "./{output}", "cpp");
         lang("python", None, "python3 {source}", "py");
         lang("pypy", None, "pypy3 {source}", "py");
-        // Class is `Main` (package-private) so the file can be named e.g. 1A.java.
-        lang("java", Some("javac -d {dir} {source}"), "java -cp {dir} Main", "java");
+        lang("java", Some("javac -d {dir} {source}"), "java -cp {dir} {classname}", "java");
         lang("kotlin", Some("kotlinc {source} -include-runtime -d {output}.jar"), "java -jar {output}.jar", "kt");
         lang("rust", Some("rustc -O -o {output} {source}"), "./{output}", "rs");
         lang("go", None, "go run {source}", "go");

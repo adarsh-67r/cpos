@@ -26,6 +26,7 @@
     problemTimer: true,
     profileCompare: true,
     annotate: false,
+    draw: false,
     modernize: true,
     siteTheme: false
   };

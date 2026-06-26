@@ -4,16 +4,27 @@ All notable changes to CPOS are documented here. Components are versioned indepe
 
 | Component | Current version | Version file |
 | --- | --- | --- |
-| Terminal app | 0.2.1 | `Cargo.toml` |
-| VS Code extension | 0.5.1 | `extensions/vscode/package.json` |
-| Browser companion (Chrome) | 0.15.1 | `extensions/chrome/manifest.json` |
-| Browser companion (Firefox) | 0.15.1 | `extensions/firefox/manifest.json` |
+| Terminal app | 0.2.2 | `Cargo.toml` |
+| VS Code extension | 0.5.2 | `extensions/vscode/package.json` |
+| Browser companion (Chrome) | 0.15.2 | `extensions/chrome/manifest.json` |
+| Browser companion (Firefox) | 0.15.2 | `extensions/firefox/manifest.json` |
 
 Format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
 ## Unreleased
+
+## CPOS 0.2.2 / VS Code 0.5.2 / Browser companions 0.15.2 — 2026-06-26
+
+### Added
+- **AtCoder capture and submit support.** Browser capture, local sample export, and submit autofill now include AtCoder workflows alongside Codeforces and CSES.
+- **Problem tag filtering.** The TUI Problems tab now supports custom comma-separated tag filters with AND/OR matching.
+- **Pen and marker tools.** Chrome and Firefox companions add a unified floating launcher for freehand drawing and text highlighting on supported problem pages.
+
+### Fixed
+- **Valid Java solution names.** New Java captures now use a `Q`-prefixed identifier such as `Q1120C.java` or `QWeirdAlgorithm.java`, and the built-in template creates the matching public class. Sample runs use that generated class name, while submissions transparently rename it to `Main` in the queued copy for judge compatibility without modifying the workspace file.
+- **Browser companion resilience.** Optional background module imports are non-fatal, and the problem timer defaults away from the new drawing launcher.
 
 ## Terminal app 0.2.1 — 2026-06-21
 

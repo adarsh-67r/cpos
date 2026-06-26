@@ -5,7 +5,7 @@ and submission communicate over `127.0.0.1`. The browser companion's Compete
 feature additionally uses public ntfy.sh topics for race delivery and matching;
 Codeforces public submissions act as the referee.
 
-**Current releases:** terminal app 0.2.0 · VS Code extension 0.5.0 · browser companion 0.15.1 (Chrome + Firefox) (see [CHANGELOG.md](CHANGELOG.md)).
+**Current releases:** terminal app 0.2.2 · VS Code extension 0.5.2 · browser companion 0.15.2 (Chrome + Firefox) (see [CHANGELOG.md](CHANGELOG.md)).
 
 ```
 ┌─────────────────┐     capture / submit      ┌──────────────────┐
@@ -57,7 +57,7 @@ Cross-origin headers are permissive because traffic never leaves the machine.
 
 ## Capture flow
 
-1. The user opens a Codeforces or CSES problem in the browser (logged in when they plan to submit later).
+1. The user opens a Codeforces, CSES, or AtCoder problem in the browser (logged in when they plan to submit later).
 2. A content script reads public sample input and output from the page DOM.
 3. On Codeforces, when the statement uses grouped sample lines, the companion also records per-block line counts (`input_block_sizes`) for the VS Code panel.
 4. The companion `POST`s JSON to `127.0.0.1:27122` and/or `27121`.

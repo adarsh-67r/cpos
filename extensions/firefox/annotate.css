@@ -190,3 +190,57 @@
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.28);
   pointer-events: none;
 }
+
+/* ---- page-restyle shield --------------------------------------------------
+   The recolour/note popover is appended to <body>, so "Modernize" and the site
+   themes (cpos-style-core.js) leak their page-wide `button`/`textarea`
+   !important rules into it. These ID-scoped declarations outrank the
+   bare-element page rules so the popover renders identically with Modernize (or
+   a theme) on or off. Swatch fills stay inline-!important (annotate.js). */
+#cpos-annotate-pop button {
+  font-family: inherit !important;
+  transition: none !important;
+}
+#cpos-annotate-pop .cpos-an-swatch {
+  padding: 0 !important;
+  border-radius: 50% !important;
+  border: 2px solid transparent !important;
+}
+#cpos-annotate-pop .cpos-an-swatch[aria-pressed="true"] {
+  border-color: var(--cpos-an-fg, #e8e6f0) !important;
+}
+#cpos-annotate-pop .cpos-an-btn {
+  padding: 4px 9px !important;
+  border-radius: 7px !important;
+  border: 1px solid var(--cpos-an-border, #2a2a3e) !important;
+  background: transparent !important;
+  color: var(--cpos-an-fg, #e8e6f0) !important;
+  font-weight: 500 !important;
+}
+#cpos-annotate-pop .cpos-an-btn:hover { border-color: var(--cpos-an-accent, #6b7280) !important; }
+#cpos-annotate-pop .cpos-an-btn.cpos-an-danger:hover {
+  border-color: var(--cpos-an-bad, #ff7a93) !important;
+  color: var(--cpos-an-bad, #ff7a93) !important;
+}
+#cpos-annotate-pop .cpos-an-btn.cpos-an-primary {
+  border-color: var(--cpos-an-accent, #6b7280) !important;
+  color: var(--cpos-an-accent, #6b7280) !important;
+}
+#cpos-annotate-pop textarea {
+  background: var(--cpos-an-bg, #14141f) !important;
+  color: var(--cpos-an-fg, #e8e6f0) !important;
+  border: 1px solid var(--cpos-an-border, #2a2a3e) !important;
+  border-radius: 7px !important;
+  padding: 6px 7px !important;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace !important;
+  font-size: 12px !important;
+  line-height: 1.4 !important;
+}
+#cpos-annotate-pop textarea:focus {
+  border-color: var(--cpos-an-accent, #6b7280) !important;
+  /* theme focus rules add box-shadow/outline to bare textarea:focus — neutralise
+     so the note field looks the same with a theme on or off. */
+  box-shadow: none !important;
+  outline: none !important;
+}
+#cpos-annotate-pop textarea::placeholder { color: var(--cpos-an-dim, #8a86a3) !important; }

@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CPOS · Architecture Graph</title>
+<meta name="description" content="Interactive architecture knowledge graph of the CPOS codebase — subsystems, modules, and how they connect.">
+<meta name="theme-color" content="#08090b">
+<link rel="icon" href="/assets/icon128.png">
+<script>
+  // Honor the site-wide theme choice (same key as the docs site).
+  try { document.documentElement.dataset.theme = localStorage.getItem("cpos-theme") || "dark"; }
+  catch { document.documentElement.dataset.theme = "dark"; }
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Instrument+Sans:wght@600;700&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/vis-network@9.1.6/standalone/umd/vis-network.min.js"
+        integrity="sha384-Ux6phic9PEHJ38YtrijhkzyJ8yQlH8i/+buBR8s3mAZOJrP1gwyvAcIYl3GWtpX1"
+        crossorigin="anonymous"></script>
+<style>
+  /* Design tokens lifted from the docs site (docs/css/style.css) so the graph
+     matches CPOS and follows the visitor's chosen theme. */
+  :root {
+    --bg: #08090b; --surface: #111419; --surface-2: #151a20; --surface-3: #1a2027;
+    --text: #f4f7f8; --muted: #a8b0b8; --dim: #727d87;
+    --line: #252c34; --line-strong: #38424c; --hover: rgba(255,255,255,0.05);
+    --accent: #c4b5fd; --on-accent: #08090b; --danger: #fb7185;
+    --font: "Inter", system-ui, sans-serif;
+    --display: "Instrument Sans", var(--font);
+    --mono: "JetBrains Mono", ui-monospace, monospace;
+    --net-bg: #0b0d11;
+  }
+  :root[data-theme="light"] {
+    --bg: #f7f9fb; --surface: #ffffff; --surface-2: #f3f7fa; --surface-3: #e8eef4;
+    --text: #10151b; --muted: #4f5f6d; --dim: #71808e;
+    --line: #d8e1ea; --line-strong: #b9c7d4; --hover: rgba(16,21,27,0.055);
+    --accent: #7c6fbd; --on-accent: #ffffff; --danger: #e11d48;
+    --net-bg: #eef3f7;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body { background: var(--bg); color: var(--text); font-family: var(--font);
+         display: flex; flex-direction: column; overflow: hidden; }
+  a { color: var(--accent); }
+
+  header.bar {
+    display: flex; align-items: center; gap: 14px; padding: 9px 14px;
+    background: var(--surface); border-bottom: 1px solid var(--line); flex-shrink: 0;
+  }
+  header.bar .home { display: flex; align-items: center; gap: 8px; color: var(--text);
+    text-decoration: none; font-weight: 700; font-family: var(--display); font-size: 15px; }
+  header.bar .home img { width: 24px; height: 24px; }
+  header.bar .home:hover { color: var(--accent); }
+  header.bar .crumb { color: var(--dim); font-size: 13px; }
+  header.bar .crumb b { color: var(--muted); font-weight: 600; }
+  header.bar .spacer { flex: 1; }
+  header.bar .meta-stat { color: var(--dim); font-size: 12px; font-family: var(--mono); }
+  .icon-btn { width: 32px; height: 32px; display: grid; place-items: center; cursor: pointer;
+    background: var(--surface-2); border: 1px solid var(--line); border-radius: 8px;
+    color: var(--muted); }
+  .icon-btn:hover { color: var(--text); border-color: var(--line-strong); }
+  .icon-btn svg { width: 16px; height: 16px; }
+
+  .main { flex: 1; display: flex; min-height: 0; }
+  .canvas-wrap { flex: 1; min-width: 0; position: relative; }
+  /* vis-network clears and owns this container, so overlays must be its siblings. */
+  #graph { position: absolute; inset: 0; background: var(--net-bg); }
+
+  #overlay { position: absolute; inset: 0; display: grid; place-items: center;
+    background: var(--net-bg); z-index: 5; transition: opacity .3s; text-align: center; }
+  #overlay.hidden { opacity: 0; pointer-events: none; }
+  #overlay .spin { width: 30px; height: 30px; border: 3px solid var(--line);
+    border-top-color: var(--accent); border-radius: 50%; margin: 0 auto 14px;
+    animation: spin 0.8s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  @media (prefers-reduced-motion: reduce) { #overlay .spin { animation: none; } }
+  #overlay .msg { color: var(--muted); font-size: 13px; }
+  #overlay .msg.err { color: var(--danger); max-width: 360px; line-height: 1.5; }
+
+  #toolbar { position: absolute; top: 12px; left: 12px; z-index: 4; display: flex; gap: 8px; }
+  #toolbar button { font-family: var(--font); font-size: 12px; padding: 6px 11px;
+    background: var(--surface); border: 1px solid var(--line); color: var(--muted);
+    border-radius: 8px; cursor: pointer; }
+  #toolbar button:hover { color: var(--text); border-color: var(--line-strong); }
+
+  #sidebar { width: 300px; flex-shrink: 0; background: var(--surface);
+    border-left: 1px solid var(--line); display: flex; flex-direction: column; overflow: hidden; }
+  .sect { padding: 12px 14px; border-bottom: 1px solid var(--line); }
+  .sect h3 { font-size: 11px; color: var(--dim); margin-bottom: 8px; text-transform: uppercase;
+    letter-spacing: .06em; font-weight: 600; }
+  #search { width: 100%; background: var(--bg); border: 1px solid var(--line);
+    color: var(--text); padding: 8px 10px; border-radius: 8px; font-size: 13px;
+    font-family: var(--font); outline: none; }
+  #search:focus { border-color: var(--accent); }
+  #search-results { max-height: 150px; overflow-y: auto; margin-top: 6px; display: none; }
+  .search-item { padding: 5px 7px; cursor: pointer; border-radius: 6px; font-size: 12px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .search-item:hover, .search-item.active { background: var(--hover); }
+
+  #info { flex-shrink: 0; }
+  #info-content { font-size: 13px; color: var(--muted); line-height: 1.55; }
+  #info-content .empty { color: var(--dim); font-style: italic; }
+  #info-content .title { font-size: 15px; color: var(--text); font-weight: 600;
+    word-break: break-word; margin-bottom: 6px; }
+  #info-content .field { margin: 3px 0; }
+  #info-content .field b { color: var(--text); font-weight: 500; }
+  #info-content .pill { display: inline-block; padding: 1px 8px; border-radius: 20px;
+    font-size: 11px; color: #08090b; font-weight: 600; }
+  #info-content code { font-family: var(--mono); font-size: 12px; color: var(--muted); }
+  #neighbors { margin-top: 8px; max-height: 30vh; overflow-y: auto; }
+  .nb { display: flex; align-items: baseline; gap: 6px; padding: 3px 6px; margin: 2px 0;
+    border-radius: 6px; cursor: pointer; font-size: 12px; border-left: 3px solid var(--line-strong); }
+  .nb:hover { background: var(--hover); }
+  .nb .rel { color: var(--dim); font-size: 10px; text-transform: uppercase; flex-shrink: 0; }
+  .nb .lbl { color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+  #legend-wrap { flex: 1; overflow-y: auto; }
+  #legend-controls { display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 8px; }
+  #legend-controls label { display: flex; align-items: center; gap: 7px; cursor: pointer;
+    font-size: 12px; color: var(--muted); user-select: none; }
+  #legend { display: flex; flex-direction: column; gap: 1px; }
+  .leg { display: flex; align-items: center; gap: 8px; padding: 4px 5px; cursor: pointer;
+    border-radius: 6px; font-size: 12px; }
+  .leg:hover { background: var(--hover); }
+  .leg.off { opacity: .4; }
+  .leg .dot { width: 11px; height: 11px; border-radius: 50%; flex-shrink: 0; }
+  .leg .nm { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text); }
+  .leg .ct { color: var(--dim); font-size: 11px; font-family: var(--mono); }
+  input[type=checkbox] { accent-color: var(--accent); cursor: pointer; }
+
+  #stats { padding: 9px 14px; border-top: 1px solid var(--line); font-size: 11px;
+    color: var(--dim); font-family: var(--mono); flex-shrink: 0; }
+
+  @media (max-width: 720px) {
+    #sidebar { width: 240px; }
+  }
+</style>
+</head>
+<body>
+<header class="bar">
+  <a class="home" href="/" title="Back to CPOS"><img src="/assets/icon128.png" alt="">CPOS</a>
+  <span class="crumb">/ <b>Architecture graph</b></span>
+  <span class="spacer"></span>
+  <span class="meta-stat" id="commit-stat"></span>
+  <button class="icon-btn" id="theme-btn" title="Toggle theme" aria-label="Toggle theme">
+    <svg id="theme-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></svg>
+  </button>
+</header>
+
+<div class="main">
+  <div class="canvas-wrap">
+    <div id="graph"></div>
+    <div id="toolbar">
+      <button id="cluster-btn">Collapse to communities</button>
+      <button id="fit-btn">Fit view</button>
+    </div>
+    <div id="overlay">
+      <div>
+        <div class="spin" id="spin"></div>
+        <div class="msg" id="overlay-msg">Loading architecture graph…</div>
+      </div>
+    </div>
+  </div>
+
+  <aside id="sidebar">
+    <div class="sect">
+      <h3>Search</h3>
+      <input id="search" type="text" placeholder="Search nodes…" autocomplete="off">
+      <div id="search-results"></div>
+    </div>
+    <div class="sect" id="info">
+      <h3>Node</h3>
+      <div id="info-content"><span class="empty">Click a node to inspect it.</span></div>
+    </div>
+    <div class="sect" id="legend-wrap">
+      <div id="legend-controls">
+        <h3 style="margin:0;">Communities</h3>
+        <label><input type="checkbox" id="select-all" checked> all</label>
+      </div>
+      <div id="legend"></div>
+    </div>
+    <div id="stats">…</div>
+  </aside>
+</div>
+
+<script>
+"use strict";
+const REPO = "Soham109/cpos";
+const SUN = '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>';
+const MOON = '<path d="M20.5 14.5A8.5 8.5 0 0 1 9.5 3.5 7 7 0 1 0 20.5 14.5Z"/>';
+
+/* ---------- theme ---------- */
+const themeBtn = document.getElementById("theme-btn");
+const themeIcon = document.getElementById("theme-icon");
+function applyThemeIcon() {
+  themeIcon.innerHTML = document.documentElement.dataset.theme === "light" ? MOON : SUN;
+}
+themeBtn.addEventListener("click", () => {
+  const next = document.documentElement.dataset.theme === "light" ? "dark" : "light";
+  document.documentElement.dataset.theme = next;
+  try { localStorage.setItem("cpos-theme", next); } catch {}
+  applyThemeIcon();
+  if (network) network.setOptions({
+    nodes: { font: { color: getCSS("--text") } },
+    edges: { color: { color: getCSS("--line-strong"), opacity: 0.35 } },
+  });
+});
+applyThemeIcon();
+
+/* ---------- state ---------- */
+let DATA = null;                 // raw slim graph
+let nodesDS, edgesDS, network;   // vis objects
+const commById = new Map();      // id -> {id,name,color,n}
+const nodeById = new Map();      // id -> slim node
+const neighbors = new Map();     // id -> [{id, rel}]
+const hiddenComm = new Set();    // community ids toggled off
+let clustered = false;
+
+const $ = (id) => document.getElementById(id);
+const overlay = $("overlay");
+function showError(msg) {
+  $("spin").style.display = "none";
+  const m = $("overlay-msg"); m.className = "msg err"; m.textContent = msg;
+  overlay.classList.remove("hidden");
+}
+
+/* ---------- load ---------- */
+fetch("/architecture/graph.json")
+  .then((r) => { if (!r.ok) throw new Error(`graph.json → HTTP ${r.status}`); return r.json(); })
+  .then(init)
+  .catch((e) => showError("Couldn't load the graph data. " + e.message));
+
+function init(data) {
+  DATA = data;
+  data.communities.forEach((c) => commById.set(c.id, c));
+  data.nodes.forEach((n) => { nodeById.set(n.id, n); neighbors.set(n.id, []); });
+
+  // degree (for sizing) + neighbor index (for the info panel)
+  const degree = new Map();
+  for (const [s, t, rel] of data.edges) {
+    degree.set(s, (degree.get(s) || 0) + 1);
+    degree.set(t, (degree.get(t) || 0) + 1);
+    if (neighbors.has(s)) neighbors.get(s).push({ id: t, rel });
+    if (neighbors.has(t)) neighbors.get(t).push({ id: s, rel });
+  }
+
+  const visNodes = data.nodes.map((n) => {
+    const col = (commById.get(n.c) || {}).color || "#888";
+    return {
+      id: n.id, label: n.label, cid: n.c, value: (degree.get(n.id) || 0) + 1,
+      title: `${n.label} — ${(commById.get(n.c) || {}).name || "?"}`,
+      shape: "dot",
+      color: { background: col, border: col,
+               highlight: { background: "#ffffff", border: col },
+               hover: { background: "#ffffff", border: col } },
+    };
+  });
+  const visEdges = data.edges.map(([from, to, rel], i) => ({ id: i, from, to, title: rel }));
+
+  nodesDS = new vis.DataSet(visNodes);
+  edgesDS = new vis.DataSet(visEdges);
+
+  network = new vis.Network($("graph"), { nodes: nodesDS, edges: edgesDS }, {
+    layout: { improvedLayout: false },
+    interaction: { hover: true, tooltipDelay: 150, hideEdgesOnDrag: true, hideEdgesOnZoom: true },
+    nodes: { scaling: { min: 6, max: 40, label: { min: 11, max: 20 } }, borderWidth: 1,
+             font: { color: getCSS("--text"), size: 12, face: "Inter" } },
+    edges: { selectionWidth: 2, width: 0.6, smooth: false,
+             color: { color: getCSS("--line-strong"), opacity: 0.35 } },
+    physics: {
+      enabled: true, minVelocity: 1.2,
+      barnesHut: { gravitationalConstant: -9000, springLength: 130, springConstant: 0.02,
+                   damping: 0.45, avoidOverlap: 0.05 },
+      stabilization: { enabled: true, iterations: 220, updateInterval: 30, fit: true },
+    },
+  });
+
+  network.on("stabilizationProgress", (p) => {
+    $("overlay-msg").textContent = `Laying out ${data.meta.nodes.toLocaleString()} nodes… ${Math.round((p.iterations / p.total) * 100)}%`;
+  });
+  network.once("stabilizationIterationsDone", () => {
+    network.setOptions({ physics: false });
+    overlay.classList.add("hidden");
+    applyDeepLink();
+  });
+  network.on("click", onClick);
+  network.on("doubleClick", onDoubleClick);
+
+  $("commit-stat").textContent = "@ " + (data.meta.built_at_commit || "").slice(0, 7);
+  $("stats").textContent = `${data.meta.nodes} nodes · ${data.meta.edges} edges · ${data.meta.communities} communities`;
+  buildLegend();
+  wireSearch();
+}
+
+function getCSS(v) { return getComputedStyle(document.documentElement).getPropertyValue(v).trim(); }
+
+/* ---------- interaction ---------- */
+function onClick(params) {
+  if (params.nodes.length) selectNode(params.nodes[0], false);
+  else { clearInfo(); setHash(""); }
+}
+function onDoubleClick(params) {
+  const id = params.nodes[0];
+  if (id != null && network.isCluster(id)) { network.openCluster(id); }
+}
+
+function selectNode(id, focus) {
+  if (network.isCluster(id)) { network.openCluster(id); return; }
+  const n = nodeById.get(id);
+  if (!n) return;
+  network.selectNodes([id]);
+  if (focus) network.focus(id, { scale: 1.1, animation: { duration: 400 } });
+  renderInfo(n);
+  setHash("node=" + encodeURIComponent(id));
+}
+
+function renderInfo(n) {
+  const comm = commById.get(n.c) || {};
+  const ghBase = `https://github.com/${REPO}/blob/${DATA.meta.built_at_commit}/`;
+  const nbs = (neighbors.get(n.id) || []);
+  const seen = new Set();
+  const nbHtml = nbs.filter((x) => { if (seen.has(x.id)) return false; seen.add(x.id); return true; })
+    .slice(0, 80)
+    .map((x) => `<div class="nb" data-id="${esc(x.id)}"><span class="rel">${esc(x.rel)}</span><span class="lbl">${esc((nodeById.get(x.id) || {}).label || x.id)}</span></div>`)
+    .join("") || '<div class="empty">No connections.</div>';
+  $("info-content").innerHTML =
+    `<div class="title">${esc(n.label)}</div>` +
+    `<div class="field"><span class="pill" style="background:${comm.color}">${esc(comm.name || "?")}</span></div>` +
+    (n.f ? `<div class="field"><b>File</b> <a href="${ghBase}${encodeURI(n.f)}" target="_blank" rel="noopener"><code>${esc(n.f)}</code></a></div>` : "") +
+    (n.t ? `<div class="field"><b>Type</b> ${esc(n.t)}</div>` : "") +
+    `<div class="field"><b>Connections</b> ${nbs.length}</div>` +
+    `<h3 style="margin:10px 0 4px;">Connected to</h3><div id="neighbors">${nbHtml}</div>`;
+  $("info-content").querySelectorAll(".nb").forEach((el) =>
+    el.addEventListener("click", () => selectNode(el.dataset.id, true)));
+}
+function clearInfo() {
+  network && network.unselectAll();
+  $("info-content").innerHTML = '<span class="empty">Click a node to inspect it.</span>';
+}
+
+/* ---------- search ---------- */
+function wireSearch() {
+  const box = $("search"), results = $("search-results");
+  box.addEventListener("input", () => {
+    const q = box.value.trim().toLowerCase();
+    if (!q) { results.style.display = "none"; return; }
+    const hits = DATA.nodes.filter((n) => n.label.toLowerCase().includes(q)).slice(0, 30);
+    results.innerHTML = hits.map((n) =>
+      `<div class="search-item" data-id="${esc(n.id)}">${esc(n.label)} <span style="color:var(--dim)">· ${esc((commById.get(n.c) || {}).name || "")}</span></div>`).join("");
+    results.style.display = hits.length ? "block" : "none";
+    results.querySelectorAll(".search-item").forEach((el) =>
+      el.addEventListener("click", () => { selectNode(el.dataset.id, true); results.style.display = "none"; box.value = (nodeById.get(el.dataset.id) || {}).label || ""; }));
+  });
+}
+
+/* ---------- legend / community filtering ---------- */
+function buildLegend() {
+  const wrap = $("legend");
+  const sorted = [...DATA.communities].sort((a, b) => b.n - a.n);
+  wrap.innerHTML = sorted.map((c) =>
+    `<div class="leg" data-c="${c.id}"><span class="dot" style="background:${c.color}"></span>` +
+    `<span class="nm" title="${esc(c.name)}">${esc(c.name)}</span><span class="ct">${c.n}</span>` +
+    `<input type="checkbox" checked data-c="${c.id}"></div>`).join("");
+  wrap.querySelectorAll(".leg .nm").forEach((el) =>
+    el.addEventListener("click", () => focusCommunity(+el.parentElement.dataset.c)));
+  wrap.querySelectorAll('.leg input').forEach((cb) =>
+    cb.addEventListener("change", () => toggleCommunity(+cb.dataset.c, cb.checked)));
+  $("select-all").addEventListener("change", (e) => {
+    const on = e.target.checked;
+    hiddenComm.clear();
+    if (!on) DATA.communities.forEach((c) => hiddenComm.add(c.id));
+    wrap.querySelectorAll('.leg').forEach((l) => l.classList.toggle("off", !on));
+    wrap.querySelectorAll('.leg input').forEach((cb) => (cb.checked = on));
+    applyFilter();
+  });
+}
+function toggleCommunity(cid, on) {
+  if (on) hiddenComm.delete(cid); else hiddenComm.add(cid);
+  document.querySelector(`.leg[data-c="${cid}"]`).classList.toggle("off", !on);
+  applyFilter();
+}
+function applyNodeVisibility() {
+  const nUpd = DATA.nodes.map((n) => ({ id: n.id, hidden: hiddenComm.has(n.c) }));
+  nodesDS.update(nUpd);
+  const eUpd = DATA.edges.map(([from, to], i) =>
+    ({ id: i, hidden: hiddenComm.has((nodeById.get(from) || {}).c) || hiddenComm.has((nodeById.get(to) || {}).c) }));
+  edgesDS.update(eUpd);
+}
+function applyFilter() {
+  if (clustered) reclusterFromScratch();   // re-cluster the now-visible set
+  else applyNodeVisibility();
+}
+function focusCommunity(cid) {
+  if (hiddenComm.has(cid)) return;
+  try {
+    if (clustered && network.isCluster("cluster:" + cid)) {
+      network.fit({ nodes: ["cluster:" + cid], animation: { duration: 500 } });
+      return;
+    }
+    const ids = DATA.nodes.filter((n) => n.c === cid).map((n) => n.id);
+    if (ids.length) network.fit({ nodes: ids, animation: { duration: 500 } });
+  } catch (e) { /* node currently inside a cluster — ignore */ }
+}
+
+/* ---------- clustering (community overview) ---------- */
+function clusterByCommunity() {
+  for (const c of DATA.communities) {
+    if (hiddenComm.has(c.id) || c.n < 2) continue;
+    network.cluster({
+      joinCondition: (opts) => opts.cid === c.id,
+      clusterNodeProperties: {
+        id: "cluster:" + c.id, cid: c.id, label: `${shorten(c.name)}\n${c.n}`,
+        shape: "dot", value: c.n * 3,
+        color: { background: c.color, border: c.color, highlight: { background: "#fff", border: c.color } },
+        font: { color: getCSS("--text"), size: 13, face: "Inter", multi: false },
+        title: `${c.name} — ${c.n} nodes (double-click to expand)`,
+      },
+    });
+  }
+}
+function reclusterFromScratch() {
+  openAllClusters();
+  applyNodeVisibility();   // NOT applyFilter() — would recurse while clustered
+  clusterByCommunity();
+}
+function openAllClusters() {
+  // cluster ids live in the network, not the DataSet
+  (network.body.nodeIndices || []).slice().forEach((id) => {
+    if (network.isCluster(id)) network.openCluster(id);
+  });
+}
+$("cluster-btn").addEventListener("click", () => {
+  clustered = !clustered;
+  $("cluster-btn").textContent = clustered ? "Expand all" : "Collapse to communities";
+  if (clustered) { applyNodeVisibility(); clusterByCommunity(); }
+  else { openAllClusters(); }
+  network.fit({ animation: { duration: 500 } });
+});
+$("fit-btn").addEventListener("click", () => network.fit({ animation: { duration: 400 } }));
+
+/* ---------- deep links ---------- */
+function setHash(h) { history.replaceState(null, "", h ? "#" + h : location.pathname + location.search); }
+function applyDeepLink() {
+  const m = location.hash.match(/node=([^&]+)/);
+  if (m) { const id = decodeURIComponent(m[1]); if (nodeById.has(id)) selectNode(id, true); }
+}
+window.addEventListener("hashchange", applyDeepLink);
+
+/* ---------- utils ---------- */
+function esc(s) { return String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c])); }
+function shorten(s) { return s.length > 22 ? s.slice(0, 21) + "…" : s; }
+</script>
+</body>
+</html>

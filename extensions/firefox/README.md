@@ -1,19 +1,20 @@
 # CPOS Companion for Firefox
 
-Firefox build of the CPOS browser companion for Codeforces and CSES. It now has
-**full feature parity with the Chrome companion** — it was previously
-capture/submit only. Alongside capturing public samples, syncing CSES progress,
+Firefox build of the CPOS browser companion for Codeforces, CSES, and AtCoder. It
+now has **full feature parity with the Chrome companion** — it was previously
+capture/submit only. Alongside capturing public samples (Codeforces, CSES, and
+AtCoder), syncing CSES progress,
 and autofilling judge submit pages through the local CPOS endpoints, it adds the
 same optional practice and on-page tooling: profile analytics and compare, the
 in-browser editor, rating predictions, contest reminders, daily problem & streak,
 favorites, problem timer, problemset/standings tools, problem
-tools, marker & notes, code & LaTeX styling, and site themes + Modernize. Every
+tools, pen & marker (a draggable freehand pen plus a statement-text highlighter with notes), code & LaTeX styling, and site themes + Modernize. Every
 feature is individually toggleable from the popup, and everything stays read-only
 (public CF API + localhost), except Compete race delivery/public matching, which
 uses public ntfy.sh topics containing race metadata and replies—not source code,
 cookies, or passwords.
 
-**Current version:** 0.15.1 (see [CHANGELOG.md](../../CHANGELOG.md)).
+**Current version:** 0.15.2 (see [CHANGELOG.md](../../CHANGELOG.md)).
 
 ## Permissions
 

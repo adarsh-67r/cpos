@@ -1,8 +1,8 @@
 # CPOS Companion
 
-Browser extension for Codeforces and CSES. Captures public sample tests and relays them to CPOS on your machine. Autofills judge submit pages when you submit from VS Code or the terminal app.
+Browser extension for Codeforces, CSES, and AtCoder. Captures public sample tests and relays them to CPOS on your machine. Autofills judge submit pages when you submit from VS Code or the terminal app.
 
-**Current version:** 0.15.1 (see [CHANGELOG.md](../../CHANGELOG.md)).
+**Current version:** 0.15.2 (see [CHANGELOG.md](../../CHANGELOG.md)).
 
 ## Install
 
@@ -12,7 +12,7 @@ Also install the **[CPOS VS Code extension](https://marketplace.visualstudio.com
 
 ## What it does
 
-- Reads public samples from Codeforces and CSES problem pages and sends them to `127.0.0.1:27122` (VS Code) and/or `127.0.0.1:27121` (terminal)
+- Reads public samples from Codeforces, CSES, and AtCoder problem pages and sends them to `127.0.0.1:27122` (VS Code) and/or `127.0.0.1:27121` (terminal)
 - Captures the problem statement (Codeforces and CSES) so the VS Code panel can render it natively in a Statement tab
 - On Codeforces, captures sub-test-case block structure when the statement provides it
 - Polls for queued submissions and autofills the judge submit form in your logged-in browser session (picks the newest matching compiler on Codeforces, e.g. C++23 over C++17)
@@ -23,7 +23,7 @@ Compete workflow uses public `ntfy.sh` topics to deliver race invitations,
 accept/decline replies, and public-race discovery; it never sends source code,
 cookies, or passwords. See [PRIVACY.md](PRIVACY.md).
 
-## Interface & features (0.15.1)
+## Interface & features (0.15.2)
 
 Click the toolbar icon for a focused **Settings / Compete** popup:
 
@@ -39,7 +39,7 @@ Click the toolbar icon for a focused **Settings / Compete** popup:
 - **Shared templates** — paste or upload templates in the popup; changes sync to VS Code/TUI over localhost and queue locally while CPOS is offline.
 - **Compete** — challenge a friend or publish an open Codeforces race, discover public matches by rating, and track invites/results in sync with VS Code.
 - **Problem focus** — a small always-available control on Codeforces problem pages that hides the right rail and expands the statement for split-screen solving.
-- **Problem tools** (rating badge, tag-hider/training mode, copy sample input, similar problems), **problemset tools** (solve-status coloring, hide-solved, solve counts), **standings tools** (colorize by language, friends filter), and **marker & notes**.
+- **Problem tools** (rating badge, tag-hider/training mode, copy sample input, similar problems), **problemset tools** (solve-status coloring, hide-solved, solve counts), **standings tools** (colorize by language, friends filter), and **pen & marker** (a draggable floating launcher with a freehand pen, eraser, and a marker that highlights statement text and attaches notes; drawings/highlights persist per problem page).
 
 All UI is gradient-free and shares **one theme palette** across the popup, the site, and every CPOS tool (`themes.js`). Feature toggles live in `chrome.storage.local`; content scripts react live.
 

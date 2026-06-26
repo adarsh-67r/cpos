@@ -1,6 +1,6 @@
 # CPOS Companion — Privacy Policy
 
-**Last updated:** June 20, 2026
+**Last updated:** June 26, 2026
 **Contact:** [github.com/Soham109/cpos/issues](https://github.com/Soham109/cpos/issues)
 
 CPOS Companion is a browser extension for competitive programming. It works together with the [CPOS VS Code extension](https://marketplace.visualstudio.com/items?itemName=sohamaggarwal.cpos-vscode) and/or the CPOS desktop app on your computer.
@@ -11,7 +11,7 @@ CPOS Companion is a browser extension for competitive programming. It works toge
 - **No analytics.** The extension does not use Google Analytics or any third-party tracking.
 - **One remote relay for Compete.** Most extension data stays on your machine. To receive races by Codeforces handle, the companion polls a handle-derived topic on the free, no-account [ntfy.sh](https://ntfy.sh) relay. Creating/accepting races and public matching also use that relay. See [Compete delivery](#compete-delivery).
 - **Local programming workflow.** Problem samples, editor run requests, templates, and queued submissions are sent only to `127.0.0.1` on your machine (ports `27121` and `27122`) when CPOS is running.
-- **Local settings.** Preferences, editor drafts, timers, favorites, reminders, notes/highlights, challenges, and small public-data caches are stored only in Chrome's local extension storage.
+- **Local settings.** Preferences, editor drafts, timers, favorites, reminders, notes/highlights, freehand drawings, challenges, and small public-data caches are stored only in Chrome's local extension storage.
 
 ## Data the extension accesses
 
@@ -48,7 +48,7 @@ The extension **does not** read passwords, cookies, or browsing history outside 
 | Pending submission source code | From localhost CPOS → browser submit page only |
 | Public Codeforces API lookups | Codeforces public API only |
 | Compete invites, replies, and public matching | [ntfy.sh](https://ntfy.sh) public relay |
-| Local preferences, drafts, timers, favorites, reminders, notes/highlights, challenges, and caches | Chrome local extension storage only |
+| Local preferences, drafts, timers, favorites, reminders, notes/highlights, freehand drawings, challenges, and caches | Chrome local extension storage only |
 | Anything else | **Nowhere** — not sent to the developer or a CPOS cloud service |
 
 If CPOS is not running locally, captures fail gracefully and nothing is stored by the extension.
@@ -77,7 +77,7 @@ The extension uses `chrome.storage.local` for user-owned local state, including:
 - Problem timer elapsed time, running state, and position
 - Favorites, daily problem/streak state, contest reminder choices, and reminder lead time
 - Problem tool preferences, including tag/rating reveal state and problem focus mode
-- Marker highlights and notes, when the marker feature is enabled
+- Marker highlights, notes, and freehand pen drawings — saved per problem page and keyed by the page URL — when the Pen & marker feature is enabled
 - User-maintained standings friends list and profile-compare handles
 - In-browser editor templates and pending offline template-sync state
 - Short-lived caches of public Codeforces data, such as problem metadata, solved status, standings languages, contest list, and profile compare data

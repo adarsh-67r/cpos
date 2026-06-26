@@ -33,15 +33,15 @@ CPOS Companion
 
 ### Summary (132 chars max)
 ```
-A Codeforces & CSES companion: capture, edit, practice, analyze profiles, and run submission-refereed races with friends.
+A Codeforces, CSES & AtCoder companion: capture, edit, practice, analyze profiles, and run submission-refereed races with friends.
 ```
 
 ### Description
 ```
-CPOS Companion is a local-first companion for Codeforces and CSES. It connects your browser to CPOS (the VS Code extension and terminal app) and layers optional practice and on-page tooling over the judge sites. There are no CPOS accounts or analytics. Most data stays on your machine; Compete uses the public ntfy.sh relay for race delivery and matchmaking.
+CPOS Companion is a local-first companion for Codeforces, CSES, and AtCoder. It connects your browser to CPOS (the VS Code extension and terminal app) and layers optional practice and on-page tooling over the judge sites (capture and submit work on all three; the on-page practice tools cover Codeforces and CSES). There are no CPOS accounts or analytics. Most data stays on your machine; Compete uses the public ntfy.sh relay for race delivery and matchmaking.
 
 CAPTURE & SUBMIT
-• Open a Codeforces or CSES problem and it captures the public sample tests for CPOS on your machine
+• Open a Codeforces, CSES, or AtCoder problem and it captures the public sample tests for CPOS on your machine
 • Submit from CPOS (VS Code or terminal) and it autofills the submit page in your logged-in tab, picking the newest matching compiler
 • Optionally syncs CSES solved/attempted status when you choose to sync
 
@@ -50,6 +50,7 @@ ON THE PROBLEM PAGE
 • Code & LaTeX styling for statements, editorials and comments
 • Problem focus — hide the Codeforces right rail and expand the statement for split-screen solving
 • Problem tools — rating badge, tag-hider / training mode, one-click sample copy, similar problems, and a per-problem timer
+• Pen & marker — a draggable floating launcher to draw freehand on the page or highlight statement text and attach notes; saved per problem page
 
 PRACTICE & ANALYTICS
 • Profile analytics — activity heatmap, streaks, solved-by-rating / index, tags, verdict and language charts (public CF API, read-only)
@@ -85,7 +86,7 @@ VS Code extension: https://marketplace.visualstudio.com/items?itemName=sohamagga
 
 ### Single purpose
 ```
-A companion for the competitive-programming judges Codeforces and CSES: it captures problem samples to the local CPOS editor and enhances those two sites in place with practice, analytics and editing tools. Every feature operates only on Codeforces, CSES, and the local CPOS endpoint.
+A companion for the competitive-programming judges Codeforces, CSES, and AtCoder: it captures problem samples to the local CPOS editor and (on Codeforces and CSES) enhances the sites in place with practice, analytics and editing tools. Every feature operates only on Codeforces, CSES, AtCoder, and the local CPOS endpoint.
 ```
 
 ---
@@ -107,9 +108,14 @@ Reads public problem and sample data from Codeforces pages the user opens, and a
 Reads public problem and sample data from CSES pages the user opens, syncs task progress from the problem list when requested, and autofills the submit form when the user submits from CPOS.
 ```
 
+### Host permission: `https://atcoder.jp/*`
+```
+Reads public problem and sample data from AtCoder task pages the user opens, and autofills the submit form when the user submits from CPOS while logged into AtCoder in this browser. Used only for sample capture and submit autofill; nothing is sent to CPOS-operated or developer servers.
+```
+
 ### Permission: `scripting`
 ```
-Injects autofill logic only on Codeforces and CSES submit pages when CPOS queues a submission from the local editor. Required because submit pages use dynamic editors that cannot be filled from an ordinary content script alone.
+Injects autofill logic only on Codeforces, CSES, and AtCoder submit pages when CPOS queues a submission from the local editor. Required because submit pages use dynamic editors that cannot be filled from an ordinary content script alone.
 ```
 
 ### Permission: `tabs`

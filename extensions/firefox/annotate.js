@@ -1,13 +1,17 @@
-// CPOS marker-pen + notes — a lightweight text markup-highlighter for problem
-// statements (Codeforces problem pages, CF blog entries, CSES task pages). The
+// CPOS marker-pen + notes — a lightweight text markup-highlighter for supported
+// problem/blog pages (Codeforces problem pages, CF blog entries, CSES task pages). The
 // user selects text and applies one of a few marker colours; clicking an
 // existing highlight lets them recolour it, remove it, or attach a short note
 // (shown as a tooltip; a small dot marks notes). Highlights persist per-problem
 // in chrome.storage.local keyed by URL path and are re-anchored on reload using
 // character offsets within a stable container (tolerant: a mark that can't be
-// resolved is skipped, never throws). Gated on feature "annotate"; the floating
-// toolbar (#cpos-annotate-bar) and all injected spans are removed when off.
-// Additive only — never touches capture/submit, never breaks selection/copy.
+// resolved is skipped, never throws). The markable text scope is page-wide, but
+// form controls and CPOS's own UI are ignored.
+//
+// This is the highlight ENGINE only — it has no toolbar of its own. The single
+// "Marker" tool inside the unified draw launcher (draw.js) drives it through
+// self.CPOS_ANNOTATE. Gated on feature "draw" so it mounts/teardowns alongside
+// the pen. Additive only — never touches capture/submit, never breaks selection.
 (function () {
   const C = self.CPOS;
   const T = self.CPOS_THEMES;
@@ -18,7 +22,7 @@
   const BAR_ID = "cpos-annotate-bar";
   const POP_ID = "cpos-annotate-pop";
   const TIP_ID = "cpos-annotate-tip";
-  const STORE_PREFIX = "cpos.annotate.";
+  const STORE_PREFIX = "cpos.annotate.page.";
 
   // Four flat marker colours (translucent so underlying text stays readable).
   const COLORS = [
@@ -30,21 +34,21 @@
   const colorById = (id) => COLORS.find((c) => c.id === id) || COLORS[0];
 
   // ---- page scope ---------------------------------------------------------
-  // Only build on the supported page kinds, and pick the container we anchor
-  // offsets against (must be stable across reloads).
+  // Only build on supported page kinds. Offsets are anchored against the whole
+  // document body so marker highlights are not trapped inside the problem area.
   function pageScope() {
     const host = location.hostname;
     const path = location.pathname;
     if (host.endsWith("codeforces.com")) {
       if (/\/problem\//.test(path)) {
-        return { kind: "cf-problem", container: document.querySelector(".problem-statement") };
+        return { kind: "cf-problem", container: document.body };
       }
       if (/\/blog\/entry\//.test(path)) {
-        return { kind: "cf-blog", container: document.querySelector(".ttypography") || document.querySelector(".content") };
+        return { kind: "cf-blog", container: document.body };
       }
     }
     if (host.endsWith("cses.fi") && /\/problemset\/task\//.test(path)) {
-      return { kind: "cses-task", container: document.querySelector(".content .md") || document.querySelector(".content") };
+      return { kind: "cses-task", container: document.body };
     }
     return null;
   }
@@ -79,16 +83,21 @@
   }
 
   // ---- offset <-> DOM mapping --------------------------------------------
-  // We measure character offsets over the visible text of the container by
-  // walking text nodes in document order, skipping our own toolbar/popover and
-  // skipping <script>/<style>. This is tolerant: minor DOM changes shift offsets
+  // We measure character offsets over the visible page text by walking text
+  // nodes in document order, skipping our own toolbar/popover, form controls,
+  // and non-content elements. This is tolerant: minor DOM changes shift offsets
   // a little, and unresolved ranges are simply skipped.
   function isSkippable(node) {
     let el = node.parentElement;
     while (el) {
-      if (el.id === BAR_ID || el.id === POP_ID || el.id === TIP_ID) return true;
+      if (el.id === BAR_ID || el.id === POP_ID || el.id === TIP_ID ||
+          el.id === "cpos-draw-bar" || el.id === "cpos-draw-layer") return true;
+      if (el.id && el.id.startsWith("cpos-")) return true;
       const tag = el.tagName;
-      if (tag === "SCRIPT" || tag === "STYLE" || tag === "NOSCRIPT") return true;
+      if (tag === "SCRIPT" || tag === "STYLE" || tag === "NOSCRIPT" ||
+          tag === "TEXTAREA" || tag === "INPUT" || tag === "SELECT" ||
+          tag === "OPTION" || tag === "BUTTON") return true;
+      if (el.isContentEditable) return true;
       el = el.parentElement;
     }
     return false;
@@ -262,57 +271,18 @@
     });
   }
 
-  // ---- toolbar ------------------------------------------------------------
+  // ---- selection state (the toolbar lives in the unified draw launcher) ----
   let activeColor = COLORS[0].id;
 
-  function buildBar() {
-    if (document.getElementById(BAR_ID)) return;
-    const bar = document.createElement("div");
-    bar.id = BAR_ID;
-
-    const label = document.createElement("span");
-    label.className = "cpos-an-label";
-    label.textContent = "Marker";
-    bar.appendChild(label);
-
-    COLORS.forEach((c) => {
-      const sw = document.createElement("button");
-      sw.className = "cpos-an-swatch";
-      sw.type = "button";
-      sw.title = "Marker colour";
-      sw.style.backgroundColor = c.fill;
-      sw.setAttribute("aria-pressed", c.id === activeColor ? "true" : "false");
-      sw.addEventListener("click", () => {
-        activeColor = c.id;
-        bar.querySelectorAll(".cpos-an-swatch").forEach((b) =>
-          b.setAttribute("aria-pressed", b === sw ? "true" : "false"));
-        applySelection();
-      });
-      bar.appendChild(sw);
-    });
-
-    const sep = document.createElement("span");
-    sep.className = "cpos-an-sep";
-    bar.appendChild(sep);
-
-    const markBtn = document.createElement("button");
-    markBtn.className = "cpos-an-btn cpos-an-primary";
-    markBtn.type = "button";
-    markBtn.textContent = "Mark selection";
-    markBtn.addEventListener("click", applySelection);
-    bar.appendChild(markBtn);
-
-    const hint = document.createElement("span");
-    hint.className = "cpos-an-hint";
-    hint.textContent = "select text first";
-    bar.appendChild(hint);
-
-    applyThemeVars(bar);
-    document.body.appendChild(bar);
-  }
-
-  function removeBar() {
-    document.getElementById(BAR_ID)?.remove();
+  // Is there something we could highlight right now — a live page selection, or
+  // a remembered one from just before the user clicked the bar?
+  function hasSelection() {
+    const sel = window.getSelection();
+    if (sel && !sel.isCollapsed && sel.rangeCount > 0) {
+      const range = sel.getRangeAt(0);
+      if (scope && scope.container && scope.container.contains(range.commonAncestorContainer)) return true;
+    }
+    return !!lastRange;
   }
 
   // ---- create a highlight from the current selection ----------------------
@@ -369,7 +339,9 @@
       const sw = document.createElement("button");
       sw.className = "cpos-an-swatch";
       sw.type = "button";
-      sw.style.backgroundColor = c.fill;
+      // !important so the fill survives the page-wide `button { background … }`
+      // that Modernize / site themes inject (see annotate.css shield).
+      sw.style.setProperty("background-color", c.fill, "important");
       sw.setAttribute("aria-pressed", c.id === mark.color ? "true" : "false");
       sw.addEventListener("click", () => {
         mark.color = c.id;
@@ -502,7 +474,6 @@
     const stored = await loadMarks();
     marks = stored.map((m) => ({ id: m.id, color: m.color || "y", note: m.note || "", start: m.start, end: m.end }));
     nextId = marks.reduce((mx, m) => Math.max(mx, m.id + 1), 1);
-    buildBar();
     bindEvents();
     repaintAll();
     restyle();
@@ -514,15 +485,27 @@
     closePopover();
     hideTip();
     unbindEvents();
-    removeBar();
     removeAllSpans();
     marks = [];
     lastRange = null;
   }
 
+  // ---- public API (driven by the unified draw launcher) -------------------
+  // The "Marker" tool in draw.js calls these; everything else stays private.
+  self.CPOS_ANNOTATE = {
+    COLORS,
+    getActiveColor: () => activeColor,
+    setActiveColor: (id) => { if (COLORS.some((c) => c.id === id)) activeColor = id; },
+    applySelection,                 // highlight the current/remembered selection
+    hasSelection,
+    isReady: () => built            // engine mounted on this page?
+  };
+
   // ---- lifecycle ----------------------------------------------------------
+  // Gated on "draw" so the highlight engine mounts/teardowns together with the
+  // pen — they share one launcher and one popup toggle now.
   async function sync() {
-    const on = await C.feature("annotate");
+    const on = await C.feature("draw");
     if (on) await build();
     else teardown();
   }

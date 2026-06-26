@@ -43,14 +43,28 @@ CPOS has three parts — a **browser companion**, a **terminal app**, and a **VS
 **The flow:**
 
 1. **Pick your folder** — open any folder in VS Code, or let the terminal app use `~/cpos`.
-2. **Open a problem in your browser** — any Codeforces or CSES problem page.
+2. **Open a problem in your browser** — any Codeforces, CSES, or AtCoder problem page.
 3. **CPOS captures it** — the browser companion reads samples and sends them to CPOS on your machine.
 4. **A file appears** — e.g. `1971D.cpp`, with sample tests attached.
 5. **Write your solution** — in VS Code.
 6. **Run samples** — from the panel or with `T` in the terminal.
-7. **Submit** — CPOS autofills the judge form in your browser (log in to Codeforces/CSES first).
+7. **Submit** — CPOS autofills the judge form in your browser (log in to Codeforces/CSES/AtCoder first).
 
 No copying samples. No manually creating files.
+
+---
+
+## Explore the architecture
+
+CPOS spans a Rust TUI, two browser companions, a VS Code extension, and a docs
+site. To see how it all fits together, open the **interactive architecture
+graph** — every module and how it connects, with search, community clustering,
+and a link from each node to its source file:
+
+**→ [cpos.sohamaggarwal.com/architecture](https://cpos.sohamaggarwal.com/architecture)**
+
+It's generated from the code (`tools/build_graph.py`) and served as a single
+compact data file, so it stays in sync and adds no runtime dependency.
 
 ---
 
@@ -129,7 +143,7 @@ run the samples, or `b` to open the original page.
 
 ## Browser companion
 
-The companion captures samples and autofills the judge submit form — that's the core, and it's unchanged. On top of that it adds an optional layer of practice and on-page tooling for Codeforces and CSES. Everything is read-only (public CF API + localhost), and **every feature toggles individually from the popup**. Available for Chrome/Edge/Brave and Firefox.
+The companion captures samples and autofills the judge submit form for Codeforces, CSES, and AtCoder — that's the core, and it's unchanged. On top of that it adds an optional layer of practice and on-page tooling for Codeforces and CSES. Everything is read-only (public CF API + localhost), and **every feature toggles individually from the popup**. Available for Chrome/Edge/Brave and Firefox.
 
 <p align="center">
   <img src="docs/shots/companion-popup.png" alt="CPOS companion popup — every feature toggles in one place" width="800">
@@ -140,7 +154,7 @@ The companion captures samples and autofills the judge submit form — that's th
 
 **Capture & submit**
 
-- Reads Codeforces/CSES samples and sends them to local CPOS
+- Reads Codeforces/CSES/AtCoder samples and sends them to local CPOS
 - Autofills the judge submit form, reusing your logged-in session
 
 **In-browser editor**
@@ -168,7 +182,7 @@ The companion captures samples and autofills the judge submit form — that's th
 - **Problem focus** — an always-available focus toggle on Codeforces problem pages that hides the right rail and expands the statement for split-screen solving
 - **Problemset tools** — solve-status row coloring, a hide-solved toggle, and per-problem submission counts
 - **Standings tools** — colorize standings rows by language (with a legend) and a friends-only filter
-- **Marker & notes** — highlight statement text and attach notes, saved per problem (off by default)
+- **Pen & marker** — a draggable floating launcher with a freehand pen, eraser, and a marker that highlights statement text and attaches notes; drawings and highlights are saved per problem page (off by default)
 
 **Appearance**
 
